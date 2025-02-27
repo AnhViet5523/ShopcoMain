@@ -8,13 +8,19 @@ import {
   Menu, MenuItem
 } from "@mui/material";
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import Navigation from "./Navigation";
+import QuizTest from '../pages/Quiz/QuizTest';
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import DialogActions from '@mui/material/DialogActions';
 
 const Header = () => {
   const navigate = useNavigate();
   const [searchValue, setSearchValue] = useState("");
   const [accountMenuAnchor, setAccountMenuAnchor] = useState(null);
+  const [open, setOpen] = useState(false);
   
   const handleSearchSubmit = async (event) => {
     event.preventDefault();
@@ -45,6 +51,14 @@ const Header = () => {
       onClick: handleLogout
     }
   ];
+
+  const handleClickOpen = () => {
+    setOpen(true);
+  };
+
+  const handleClose = () => {
+    setOpen(false);
+  };
 
   return (
     <>
@@ -108,6 +122,7 @@ const Header = () => {
                   color: "text.primary",
                   "&:hover": { bgcolor: "action.hover" }
                 }}
+                onClick={handleClickOpen}
               >
                 Quiz
               </Button>
@@ -178,6 +193,18 @@ const Header = () => {
           <Navigation />
         </Container>
       </AppBar>
+
+      <Dialog open={open} onClose={handleClose} fullWidth>
+        <DialogTitle>Quiz</DialogTitle>
+        <DialogContent>
+          <QuizTest />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleClose} color="primary">
+            Đóng
+          </Button>
+        </DialogActions>
+      </Dialog>
     </>
   );
 };
