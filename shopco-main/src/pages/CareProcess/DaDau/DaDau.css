@@ -1,0 +1,21 @@
+Add these styles to change the colors and sizes as requested
+.highlight-yellow {
+    color: #ffbb02; 
+    font-size: 1.5rem; 
+    font-weight: bold; 
+}
+
+.list-black {
+    color: black; 
+    font-size: 1rem; 
+}
+
+body {
+    margin: 0; 
+    padding: 0; 
+
+.container {
+    max-width: 100%; 
+    overflow: hidden; 
+}
+
