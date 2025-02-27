@@ -1,10 +1,8 @@
-
 import { Box, Grid, Typography, Checkbox, FormControlLabel, Paper, Accordion, AccordionSummary, AccordionDetails, Divider } from "@mui/material";
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ProductCard from "./ProductCard";
 import { Search as SearchIcon } from '@mui/icons-material';
 import { InputBase, IconButton } from '@mui/material';
-import { useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import productService from '../apis/productService';
 import categoryService from '../apis/categoryService';
@@ -81,14 +79,23 @@ const processCategoriesData = (rawCategories) => {
     );
 };
 
-export default function CategoryContent() {
+const PRICE_RANGES = [
+    { label: '0-300.000đ', min: 0, max: 300000 },
+    { label: '300.000-800.000đ', min: 300000, max: 800000 },
+    { label: 'Trên 800.000đ', min: 800000, max: Infinity }
+];
+
+const CategoryContent = () => {
     const [selectedCategory, setSelectedCategory] = useState('');
     const [selectedSubItem, setSelectedSubItem] = useState('');
     const [expandedCategory, setExpandedCategory] = useState('');
     const [products, setProducts] = useState([]);
+    const [allProducts, setAllProducts] = useState([]);
+    const [selectedPriceRange, setSelectedPriceRange] = useState(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [categories, setCategories] = useState([]);
+    const [filteredProducts, setFilteredProducts] = useState([]);
 
     // Cập nhật useEffect để xử lý dữ liệu tốt hơn
     useEffect(() => {
@@ -125,7 +132,7 @@ export default function CategoryContent() {
         };
 
         loadCategories();
-    }, []); // Chỉ chạy một lần khi component mount
+    }, []); 
 
     const fetchProductsByCategory = async (categoryId) => {
         try {
@@ -133,10 +140,10 @@ export default function CategoryContent() {
             console.log('Fetching products for categoryId:', categoryId);
             const response = await productService.getProducts();
 
-            // FILTER THEO CATEGORY
+            
             const data = response.filter(x => x.categoryId == categoryId);
             
-            // Map response to match ProductCard props
+            
             const mappedProducts = data.map(product => ({
                 id: product.productId,
                 name: product.productName,
@@ -150,6 +157,7 @@ export default function CategoryContent() {
 
             console.log('Mapped products:', mappedProducts);
             setProducts(mappedProducts);
+            setAllProducts(mappedProducts); 
         } catch (error) {
             console.error('Error fetching products:', error);
             setProducts([]);
@@ -179,17 +187,34 @@ export default function CategoryContent() {
         }
     };
 
-    // Rename handleSubItem to avoid unused variable warning
     const handleSubItemSelection = async (subItem, categoryId) => {
         setSelectedSubItem(subItem);
         await fetchProductsByCategory(categoryId);
     };
 
-    // Trong phần render products (thay thế phần cũ)
+    // Hàm lọc sản phẩm theo khoảng giá
+    const filterProductsByPrice = (products) => {
+        if (!selectedPriceRange) return products;
+        return products.filter(product => 
+            product.price >= selectedPriceRange.min && product.price < selectedPriceRange.max
+        );
+    };
+
+    // Hàm xử lý khi người dùng chọn khoảng giá
+    const handlePriceRangeSelect = (priceRange) => {
+        setSelectedPriceRange(priceRange);
+        const filtered = allProducts.filter(product => 
+            product.price >= priceRange.min && product.price < priceRange.max
+        );
+        setFilteredProducts(filtered);
+    };
+
+    // Trong phần render products 
     const renderProducts = () => {
+        const productsToDisplay = selectedPriceRange ? filteredProducts : products;
         if (loading) return <Typography>Đang tải...</Typography>;
         if (error) return <Typography color="error">{error}</Typography>;
-        if (!products || products.length === 0) {
+        if (!productsToDisplay || productsToDisplay.length === 0) {
             return (
                 <Box sx={{ textAlign: 'center', py: 4 }}>
                     <Typography variant="h6">Không tìm thấy sản phẩm</Typography>
@@ -202,7 +227,7 @@ export default function CategoryContent() {
 
         return (
             <Grid container spacing={2}>
-                {products.map((product) => (
+                {productsToDisplay.map((product) => (
                     <Grid item xs={12} sm={6} md={4} key={product.id}>
                         <ProductCard product={product} />
                     </Grid>
@@ -408,25 +433,22 @@ export default function CategoryContent() {
                                 <Typography variant="h6" sx={{ fontWeight: 600 }}>Khoảng Giá</Typography>
                             </AccordionSummary>
                             <AccordionDetails sx={{ px: 0 }}>
-                                {[
-                                    { label: '0-300.000đ', color: '#FFE5BA' },
-                                    { label: '300.000-800.000đ', color: '#D4E9C7' },
-                                    { label: 'Trên 800.000đ', color: '#FFCCCB' }
-                                ].map((price) => (
+                                {PRICE_RANGES.map((priceRange) => (
                                     <Box
-                                        key={price.label}
+                                        key={priceRange.label}
+                                        onClick={() => handlePriceRangeSelect(priceRange)}
                                         sx={{
                                             mb: 1,
                                             p: 1,
                                             borderRadius: 1,
-                                            backgroundColor: price.color,
+                                            backgroundColor: '#f0f0f0',
                                             cursor: 'pointer',
                                             '&:hover': {
-                                                opacity: 0.8
+                                                backgroundColor: '#e0e0e0'
                                             }
                                         }}
                                     >
-                                        <Typography variant="body2">{price.label}</Typography>
+                                        <Typography variant="body2">{priceRange.label}</Typography>
                                     </Box>
                                 ))}
                             </AccordionDetails>
@@ -518,4 +540,6 @@ export default function CategoryContent() {
             </Grid>
         </Box>
     );
-}
+};
+
+export default CategoryContent;

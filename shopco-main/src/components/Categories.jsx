@@ -2,13 +2,14 @@ import { Grid, Typography, Paper, Stack } from "@mui/material";
 import LocalOfferIcon from "@mui/icons-material/LocalOffer";
 import LocalShippingIcon from "@mui/icons-material/LocalShipping";
 import CompareIcon from "@mui/icons-material/Compare";
-import SupportAgentIcon from "@mui/icons-material/SupportAgent";
+import PropTypes from 'prop-types';
+import AssignmentReturnIcon from "@mui/icons-material/AssignmentReturn";
 
 const categories = [
   { title: "Voucher", icon: <LocalOfferIcon fontSize="medium" /> },
   { title: "Giao hàng", icon: <LocalShippingIcon fontSize="medium" /> },
   { title: "So sánh sản phẩm", icon: <CompareIcon fontSize="medium" /> },
-  { title: "Quy trình chăm sóc da", icon: <SupportAgentIcon fontSize="medium" /> },
+  { title: "Đổi hàng dễ dàng", icon: <AssignmentReturnIcon fontSize="medium" /> },
 ];
 
 export default function Categories() {
@@ -44,4 +45,9 @@ const CategoryItem = ({ title, icon }) => {
       </Paper>
     </Grid>
   );
+};
+
+CategoryItem.propTypes = {
+  title: PropTypes.string.isRequired,
+  icon: PropTypes.element.isRequired,
 };

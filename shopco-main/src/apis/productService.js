@@ -18,22 +18,17 @@ const productService = {
     },
 
     // Lấy sản phẩm theo category
-    getProductsByCategory: async (categoryId) => {
-        try {
-            return await axiosClient.get(`/api/Products/${categoryId}`);
-        } catch (error) {
-            console.error('Error:', error);
-            return [];
-        }
+    getProductsByCategory: async (categoryName) => {
+        const url = `/api/Products/category/${categoryName}`;
+        return await axiosClient.get(url);
     },
 
     // Tìm kiếm sản phẩm
-    searchProducts: async (searchTerm, params = {}) => {
-        const url = '/Products/search';
+    searchProducts: async (searchTerm) => {
+        const url = '/api/Products/search';
         return await axiosClient.get(url, { 
             params: { 
-                ...params,
-                q: searchTerm 
+                name: searchTerm
             } 
         });
     }

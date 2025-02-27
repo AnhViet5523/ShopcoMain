@@ -1,13 +1,13 @@
 import { Box } from "@mui/material";
 import Header from "../../components/Header";
 import Footer from "../../components/Footer/Footer";
-import ProductDetail from "./ProductDetail";
+import CategoryContent from "../../components/CategoryContent";
 
-export default function ProductScreen() {
+export default function CategoryScreen() {
   return (
     <Box sx={{ width: "99vw", overflowX: "hidden" }}>
       <Header />
-      <ProductDetail />
+      <CategoryContent />
       <Footer />
     </Box>
   );

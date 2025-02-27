@@ -5,7 +5,7 @@ import EmailIcon from "@mui/icons-material/Email";
 
 const Footer = () => {
   return (
-    <Box sx={{ bgcolor: "#eaeaea", py: 4, borderTop: "1px solid #ccc" }}>
+    <Box sx={{ bgcolor: "#eaeaea", py: 4, borderTop: "1px solid #ccc", width: '100%', margin: 0 }}>
       <Container maxWidth="lg">
         <Grid container spacing={4}>
           {/* Cột 1: Logo & Thông tin liên hệ */}

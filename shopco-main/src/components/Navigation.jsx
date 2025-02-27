@@ -1,5 +1,3 @@
-
-
 import { Box, Button, Container, MenuItem, MenuList, Paper, Popper, Grow, ClickAwayListener } from "@mui/material";
 import { Menu as MenuIcon, KeyboardArrowDown, KeyboardArrowRight } from "@mui/icons-material";
 import { useState } from "react";
@@ -19,15 +17,16 @@ const menuItems = [
   { name: "Dụng Cụ/Phụ Kiện Chăm Sóc Da", subItems: ["Bông Tẩy Trang", "Dụng Cụ/Máy Rửa Mặt", "Máy Xông Mặt/Đẩy Tinh Chất"] }
 ];
 
-const extraMenuItems = ["Hot Deals", "Thương Hiệu", "Bán chạy", "Hàng mới về", "Blog", "Tra cứu đơn hàng"];
+const extraMenuItems = ["Hot Deals", "Thương Hiệu", "Bán chạy", "Blog", "Tra cứu đơn hàng", "Quy trình chăm sóc da"];
+
+const skinTypes = ["Da Dầu", "Da Khô", "Da Thường", "Da Hỗn Hợp", "Da Nhạy Cảm"];
 
 const Navigation = () => {
-  const theme = useTheme();
   const [anchorEl, setAnchorEl] = useState(null);
   const [activeCategory, setActiveCategory] = useState(null);
   const [subMenuAnchorEl, setSubMenuAnchorEl] = useState(null);
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [skinTypeAnchorEl, setSkinTypeAnchorEl] = useState(null);
 
   const handleMenuOpen = (event) => {
     setAnchorEl(event.currentTarget);
@@ -37,6 +36,7 @@ const Navigation = () => {
     setAnchorEl(null);
     setActiveCategory(null);
     setSubMenuAnchorEl(null);
+
   };
 
   const handleCategoryHover = (event, category) => {
@@ -49,15 +49,23 @@ const Navigation = () => {
     }
   };
 
-  const handleCategoryClick = (category, subItem) => {
+  const handleCategoryClick = (category) => {
     handleMenuClose();
     navigate("/category", { 
       state: { 
-        selectedCategory: category.name,
-        selectedSubItem: subItem 
+        selectedCategory: category.name
       }
     });
   };
+
+const handleSkinTypesOpen = (event) => {
+  setSkinTypeAnchorEl(skinTypeAnchorEl ? null : event.currentTarget);
+};
+
+// Thêm hàm để ẩn dropdown khi nhấn ra ngoài
+const handleClickAway = () => {
+  setSkinTypeAnchorEl(null);
+};
 
   return (
     <Box sx={{ 
@@ -70,7 +78,7 @@ const Navigation = () => {
       zIndex: 1000
     }}>
       <Container maxWidth="xl">
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 4, position: 'relative' }}>
           {/* Categories Menu */}
           <Button
             startIcon={<MenuIcon />}
@@ -157,7 +165,7 @@ const Navigation = () => {
                     {activeCategory?.subItems.map((subItem) => (
                       <MenuItem
                         key={subItem}
-                        onClick={() => handleCategoryClick(activeCategory, subItem)}
+                        onClick={() => handleCategoryClick(activeCategory)}
                         sx={{
                           py: 1.5,
                           '&:hover': {
@@ -177,32 +185,77 @@ const Navigation = () => {
 
           {/* Extra Menu Items */}
           {extraMenuItems.map((item) => (
-            <Button
-              key={item}
-              sx={{
-                color: 'text.primary',
-                position: 'relative',
-                '&:hover': {
+            <Button 
+              key={item} 
+              onClick={item === "Quy trình chăm sóc da" ? handleSkinTypesOpen : undefined} 
+              sx={{ 
+                color: 'text.primary', 
+                position: 'relative', 
+                '&:hover': { 
+                  bgcolor: 'primary.lighter',
                   color: "#ffbb02",
-                  '&::after': {
-                    width: '100%'
-                  }
-                },
-                '&::after': {
-                  content: '""',
-                  position: 'absolute',
-                  bottom: 0,
-                  left: 0,
-                  width: 0,
-                  height: '2px',
-                  backgroundColor: "#ffbb02",
-                  transition: 'width 0.3s ease'
-                }
+                  '&::after': { width: '100%' } 
+                }, 
+                '&::after': { 
+                  content: '""', 
+                  position: 'absolute', 
+                  bottom: 0, 
+                  left: 0, 
+                  width: 0, 
+                  height: '2px', 
+                  backgroundColor: "#ffbb02", 
+                  transition: 'width 0.3s ease' 
+                } 
               }}
             >
               {item}
             </Button>
           ))}
+
+          {/* Dropdown cho Quy trình chăm sóc da */}
+          <Popper open={Boolean(skinTypeAnchorEl)} anchorEl={skinTypeAnchorEl} placement="bottom-start" transition sx={{ zIndex: 1200 }}>
+            {({ TransitionProps }) => (
+              <Grow {...TransitionProps}>
+                <Paper sx={{ mt: 1, width: 200, boxShadow: 3 }}>
+                  <ClickAwayListener onClickAway={handleClickAway}>
+                    <MenuList>
+                      {skinTypes.map((type) => {
+                        const pathMap = {
+                          "Da Dầu": "/da-dau",
+                          "Da Khô": "/da-kho",
+                          "Da Thường": "/da-thuong",
+                          "Da Hỗn Hợp": "/da-hon-hop",
+                          "Da Nhạy Cảm": "/da-nhay-cam"
+                        };
+                        return (
+                          <MenuItem 
+                            key={type} 
+                            onClick={() => {
+                              const path = pathMap[type];
+                              if (path) {
+                                navigate(path);
+                              } else {
+                                console.log(type);
+                              }
+                            }} 
+                            sx={{
+                              py: 1.5,
+                              '&:hover': {
+                                bgcolor: 'primary.lighter',
+                                color: "#ffbb02"
+                              }
+                            }}
+                          >
+                            {type}
+                          </MenuItem>
+                        );
+                      })}
+                    </MenuList>
+                  </ClickAwayListener>
+                </Paper>
+              </Grow>
+            )}
+          </Popper>
         </Box>
       </Container>
     </Box>
@@ -210,3 +263,4 @@ const Navigation = () => {
 };
 
 export default Navigation; 
+

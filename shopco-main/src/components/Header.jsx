@@ -1,4 +1,3 @@
-
 import { 
   AccountCircle, ShoppingCart, Search, Edit, Phone, 
   Person, ShoppingBag, HeadsetMic, ExitToApp 
@@ -17,10 +16,14 @@ const Header = () => {
   const [searchValue, setSearchValue] = useState("");
   const [accountMenuAnchor, setAccountMenuAnchor] = useState(null);
   
-  const handleSearchSubmit = (event) => {
+  const handleSearchSubmit = async (event) => {
     event.preventDefault();
     console.log("Searching:", searchValue);
-    // Thêm logic tìm kiếm ở đây
+    
+    // Chuyển hướng đến trang tìm kiếm với từ khóa
+    if (searchValue.trim()) {
+        navigate(`/search?name=${encodeURIComponent(searchValue.trim())}`);
+    }
   };
 
   const handleAccountMenuOpen = (event) => setAccountMenuAnchor(event.currentTarget);

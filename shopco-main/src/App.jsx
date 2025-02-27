@@ -2,13 +2,20 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import SigninPage from "./pages/SigninPage";
 import MainScreen from "./pages/MainScreen";
-import CategoryScreen from "./pages/CategoryScreen";
+import CategoryScreen from "./pages/Category/CategoryScreen";
+import ProductDetail from "./pages/Product/ProductDetail";
+import SearchResults from "./pages/Product/SearchResults";
 import { Box, CssBaseline } from "@mui/material";
-import ProductScreen from "./pages/Product/ProductScreen";
 import CustomerSp from "./pages/CustomerSp/CustomerSp";
 import Info from "./pages/Account/Info";
 import Order from "./pages/Account/Order";
 import CategoryContent from "./components/CategoryContent";
+import DaDau from "./pages/CareProcess/DaDau/DaDau";
+import DaKho from "./pages/CareProcess/DaKho/DaKho";
+import DaThuong from "./pages/CareProcess/DaThuong/DaThuong";
+import DaHonHop from "./pages/CareProcess/DaHonHop/DaHonHop";
+import DaNhayCam from "./pages/CareProcess/DaNhayCam/DaNhayCam";
+
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -55,7 +62,11 @@ export default function App() {
         />
         <Route
           path="/product/:id"
-          element={isAuthenticated ? <ProductScreen /> : <Navigate to="/" />}
+          element={isAuthenticated ? <ProductDetail /> : <Navigate to="/" />}
+        />
+        <Route
+          path="/search"
+          element={<SearchResults />}
         />
         <Route
           path="/customer-support"
@@ -71,6 +82,13 @@ export default function App() {
         />
         <Route path="/categories" element={<CategoryContent />} />
         <Route path="/categories/:id" element={<CategoryContent />} />
+        
+        
+        <Route path="/da-dau" element={<DaDau />} />
+        <Route path="/da-kho" element={<DaKho />} />
+        <Route path="/da-thuong" element={<DaThuong />} />
+        <Route path="/da-hon-hop" element={<DaHonHop />} />
+        <Route path="/da-nhay-cam" element={<DaNhayCam />} />
       </Routes>
     </BrowserRouter>
   );
