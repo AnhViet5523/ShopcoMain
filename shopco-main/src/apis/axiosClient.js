@@ -7,7 +7,7 @@ const axiosClient = axios.create({
     },
 });
 
-// Add a request interceptor
+
 axiosClient.interceptors.request.use(
     (config) => {
         console.log('Requesting:', config.url);

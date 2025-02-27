@@ -13,8 +13,7 @@ import {
   Paper
 } from '@mui/material';
 import { Home as HomeIcon, Add as AddIcon, Remove as RemoveIcon } from '@mui/icons-material';
-// import { getProductById } from '../data/products';
-import { getProductById } from '../../data/products'; // Đường dẫn đúng
+import { getProductById } from '../../data/products'; 
 export default function ProductDetail() {
   const { id } = useParams();
   const [quantity, setQuantity] = useState(1);

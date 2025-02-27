@@ -3,7 +3,6 @@ import HomePage from '../pages/Home';
 import CategoryPage from '../pages/Category';
 import ProductDetailPage from '../pages/Product/Detail';
 import AuthPage from '../pages/Auth';
-import { registerUser, loginUser } from '../controllers/userController';
 
 // Lazy load các components
 const Home = lazy(() => import('../pages/Home'));
@@ -33,9 +32,9 @@ const routes = [
     protected: false
   },
   {
-    path: '/api/Users/login',
-    method: 'post',
-    handler: loginUser
+    path: '/api/Users/login', // Thêm route cho login
+    method: 'POST',
+    handler: loginUser // Đảm bảo import loginUser từ userController
   }
 ];
 

@@ -1,33 +1,40 @@
-
-
 import { useState } from 'react';
-import { Button, Stack, TextField, Typography, colors } from '@mui/material';
+import { Button, Stack, TextField, Typography, colors, Checkbox, FormControlLabel } from '@mui/material';
 import { ScreenMode } from '../../pages/SigninPage';
+import userService from '../../apis/userService';
 
 const SignupForm = ({ onSwitchMode }) => {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleRegister = async () => {
+    
+    if (!/^[A-Za-z]+$/.test(username)) {
+      setError('Tên đăng nhập chỉ được chứa chữ cái.');
+      return;
+    }
+
     try {
-      const response = await fetch('/api/Users/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, email, password }),
-      });
-
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.message || 'Đăng ký thất bại');
-      }
-
+      await userService.register(username, email, password);
       alert('Đăng ký thành công! Vui lòng đăng nhập.');
       onSwitchMode(ScreenMode.SIGN_IN);
     } catch (err) {
-      setError(err.message);
+      if (err.response && err.response.data && err.response.data.message) {
+        setError(err.response.data.message);
+      } else if (err.response && err.response.status === 400) {
+        if (err.response.data.message.includes('Email không hợp lệ')) {
+          setError('Email không hợp lệ. Vui lòng nhập lại.');
+        } else if (err.response.data.message.includes('Mật khẩu không hợp lệ')) {
+          setError('Mật khẩu không hợp lệ. Mật khẩu phải ít nhất 8 ký tự, bao gồm 1 chữ cái và 1 ký tự đặc biệt.');
+        } else {
+          setError('Đã xảy ra lỗi. Vui lòng thử lại sau.');
+        }
+      } else {
+        setError('Đã xảy ra lỗi. Vui lòng thử lại sau.');
+      }
     }
   };
 
@@ -47,7 +54,7 @@ const SignupForm = ({ onSwitchMode }) => {
           {error && <Typography color='error'>{error}</Typography>}
           <Stack spacing={2}>
             <TextField 
-              label='Tên tài khoản' 
+              label='Tên đăng nhập' 
               value={username} 
               onChange={(e) => setUsername(e.target.value)} 
               fullWidth 
@@ -61,10 +68,19 @@ const SignupForm = ({ onSwitchMode }) => {
             />
             <TextField 
               label='Mật khẩu' 
-              type='password' 
+              type={showPassword ? 'text' : 'password'}
               value={password} 
               onChange={(e) => setPassword(e.target.value)} 
               fullWidth 
+            />
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={showPassword}
+                  onChange={() => setShowPassword(!showPassword)}
+                />
+              }
+              label="Hiện mật khẩu"
             />
           </Stack>
           <Button 
