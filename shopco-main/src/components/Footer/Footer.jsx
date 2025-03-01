@@ -45,13 +45,13 @@ const Footer = () => {
             <Typography variant="h6" fontWeight="bold" mb={2} color="#000">
               HỖ TRỢ KHÁCH HÀNG
             </Typography>
-            <Link href="#" underline="hover" color="#000" display="block" sx={{ mb: 1 }}>
+            <Link href="/buy" underline="hover" color="#000" display="block" sx={{ mb: 1 }}>
               Hướng dẫn mua hàng
             </Link>
-            <Link href="#" underline="hover" color="#000" display="block" sx={{ mb: 1 }}>
+            <Link href="/complaint" underline="hover" color="#000" display="block" sx={{ mb: 1 }}>
               Góp ý - Khiếu nại
             </Link>
-            <Link href="#" underline="hover" color="#000" display="block">
+            <Link href="/return" underline="hover" color="#000" display="block">
               Chính sách đổi trả
             </Link>
           </Grid>
@@ -61,13 +61,13 @@ const Footer = () => {
             <Typography variant="h6" fontWeight="bold" mb={2} color="#000">
               THÔNG TIN CÔNG TY
             </Typography>
-            <Link href="#" underline="hover" color="#000" display="block" sx={{ mb: 1 }}>
+            <Link href="/intro" underline="hover" color="#000" display="block" sx={{ mb: 1 }}>
               Giới thiệu
             </Link>
-            <Link href="#" underline="hover" color="#000" display="block" sx={{ mb: 1 }}>
+            <Link href="/policy" underline="hover" color="#000" display="block" sx={{ mb: 1 }}>
               Chính sách bảo mật
             </Link>
-            <Link href="#" underline="hover" color="#000" display="block">
+            <Link href="/term" underline="hover" color="#000" display="block">
               Điều khoản dịch vụ
             </Link>
           </Grid>

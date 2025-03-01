@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import productService from '../../apis/productService';
 import { Grid, Typography } from '@mui/material';
-// import ProductCard from '../components/ProductCard';
 import ProductCard from '../../components/ProductCard';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer/Footer';
