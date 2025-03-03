@@ -1,4 +1,6 @@
-import User from '../models/User'; 
+import User from '../models/User';
+import { poolPromise } from '../config/db';
+
 // controller có nhiệm vụ xử lý các yêu cầu từ client
 
 export const registerUser = async (req, res) => {
@@ -43,4 +45,21 @@ export const loginUser = async (req, res) => {
     } catch (error) {
         return res.status(500).json({ message: 'Đã xảy ra lỗi', error });
     }
-}; 
+};
+
+export const saveSkinType = async (req, res) => {
+    const { userId, skinType } = req.body;
+
+    try {
+        const pool = await poolPromise;
+        const result = await pool.request()
+            .input('UserId', sql.Int, userId)
+            .input('SkinType', sql.NVarChar, skinType)
+            .query('INSERT INTO UserSkinTypeResults (UserId, SkinType) VALUES (@UserId, @SkinType)');
+
+        res.status(200).json({ message: 'SkinType saved successfully' });
+    } catch (error) {
+        console.error('Error saving SkinType:', error);
+        res.status(500).json({ message: 'Error saving SkinType' });
+    }
+};

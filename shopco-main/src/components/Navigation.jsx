@@ -28,6 +28,8 @@ const Navigation = () => {
   const navigate = useNavigate();
   const [skinTypeAnchorEl, setSkinTypeAnchorEl] = useState(null);
 
+  const isAuthenticated = !!localStorage.getItem("user");
+
   const handleMenuOpen = (event) => {
     setAnchorEl(event.currentTarget);
   };
@@ -50,12 +52,16 @@ const Navigation = () => {
   };
 
   const handleCategoryClick = (category) => {
-    handleMenuClose();
-    navigate("/category", { 
-      state: { 
-        selectedCategory: category.name
-      }
-    });
+    if (!isAuthenticated) {
+      navigate("/login");
+    } else {
+      handleMenuClose();
+      navigate("/category", { 
+        state: { 
+          selectedCategory: category.name
+        }
+      });
+    }
   };
 
 const handleSkinTypesOpen = (event) => {

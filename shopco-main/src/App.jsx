@@ -1,3 +1,4 @@
+
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import SigninPage from "./pages/SigninPage";
@@ -21,6 +22,7 @@ import Term from "./pages/PagesOfFooter/Term";
 import PrivacyPolicy from "./pages/PagesOfFooter/Policy";
 import Complaint from "./pages/PagesOfFooter/Complaint";
 import Return from "./pages/PagesOfFooter/Return";
+import Cart from "./pages/Cart/Cart";
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -87,6 +89,7 @@ export default function App() {
         />
         <Route path="/categories" element={<CategoryContent />} />
         <Route path="/categories/:id" element={<CategoryContent />} />
+        <Route path="/cart" element={<Cart />} />
         
         
         <Route path="/da-dau" element={<DaDau />} />

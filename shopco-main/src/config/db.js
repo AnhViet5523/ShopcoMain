@@ -1,10 +1,10 @@
 import sql from 'mssql';
 
 const config = {
-    user: 'sa', // Thay thế bằng tên người dùng của bạn
+    user: 'sa1', // Thay thế bằng tên người dùng của bạn
     password: '12345', // Thay thế bằng mật khẩu của bạn
     server: 'http://localhost:5173/', // Thay thế bằng địa chỉ server của bạn
-    database: 'update', // Thay thế bằng tên database của bạn
+    database: 'asd', // Thay thế bằng tên database của bạn
     options: {
         encrypt: true, 
         trustServerCertificate: true 
