@@ -8,7 +8,7 @@ import {
   Menu, MenuItem
 } from "@mui/material";
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import Navigation from "./Navigation";
 import QuizTest from '../pages/Quiz/QuizTest';
 import Dialog from '@mui/material/Dialog';
@@ -21,12 +21,11 @@ const Header = () => {
   const [searchValue, setSearchValue] = useState("");
   const [accountMenuAnchor, setAccountMenuAnchor] = useState(null);
   const [open, setOpen] = useState(false);
-  
+
   const handleSearchSubmit = async (event) => {
     event.preventDefault();
     console.log("Searching:", searchValue);
     
-    // Chuyển hướng đến trang tìm kiếm với từ khóa
     if (searchValue.trim()) {
         navigate(`/search?name=${encodeURIComponent(searchValue.trim())}`);
     }
@@ -60,9 +59,29 @@ const Header = () => {
     setOpen(false);
   };
 
+  const handleQuizClick = () => {
+    handleClickOpen();
+  };
+
+  const handleCartClick = () => {
+    navigate("/cart");
+  };
+
+  const handleSupportClick = () => {
+    navigate("/customer-support");
+  };
+
+  const handleAccountMenuItemClick = (item) => {
+    if (item.onClick) {
+      item.onClick();
+    } else if (item.path) {
+      navigate(item.path);
+      handleAccountMenuClose();
+    }
+  };
+
   return (
     <>
-      {/* Announcement Bar */}
       <Box sx={{ bgcolor: "black", color: "white", py: 1 }}>
         <Container>
           <Typography variant="body2" align="center">
@@ -73,9 +92,7 @@ const Header = () => {
 
       <AppBar position="static" sx={{ bgcolor: "white", color: "black", boxShadow: "none" }}>
         <Container maxWidth="xl">
-          {/* Main Toolbar */}
           <Toolbar sx={{ py: 2, gap: 2 }}>
-            {/* Logo */}
             <Box sx={{ flexShrink: 0 }}>
               <IconButton onClick={() => navigate("/")} sx={{ p: 0 }}>
                 <Avatar
@@ -87,7 +104,6 @@ const Header = () => {
               </IconButton>
             </Box>
 
-            {/* Search Bar */}
             <Paper
               component="form"
               onSubmit={handleSearchSubmit}
@@ -113,23 +129,20 @@ const Header = () => {
               </IconButton>
             </Paper>
 
-            {/* Actions */}
             <Box sx={{ display: "flex", alignItems: "center", gap: 3 }}>
-              {/* Quiz Button */}
               <Button
                 startIcon={<Edit />}
                 sx={{
                   color: "text.primary",
                   "&:hover": { bgcolor: "action.hover" }
                 }}
-                onClick={handleClickOpen}
+                onClick={handleQuizClick}
               >
                 Quiz
               </Button>
 
-              {/* Support */}
               <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                <IconButton color="inherit" onClick={() => navigate("/customer-support")}>
+                <IconButton color="inherit" onClick={handleSupportClick}>
                   <Phone />
                 </IconButton>
                 <Box>
@@ -142,14 +155,12 @@ const Header = () => {
                 </Box>
               </Box>
 
-              {/* Cart */}
-              <IconButton color="inherit">
+              <IconButton color="inherit" onClick={handleCartClick}>
                 <Badge badgeContent={3} color="error">
                   <ShoppingCart />
                 </Badge>
               </IconButton>
 
-              {/* Account */}
               <Button
                 startIcon={<AccountCircle />}
                 sx={{ color: "text.primary", "&:hover": { bgcolor: "action.hover" } }}
@@ -169,14 +180,7 @@ const Header = () => {
                 {accountMenuItems.map((item) => (
                   <MenuItem
                     key={item.text}
-                    onClick={() => {
-                      if (item.onClick) {
-                        item.onClick();
-                      } else {
-                        handleAccountMenuClose();
-                        navigate(item.path);
-                      }
-                    }}
+                    onClick={() => handleAccountMenuItemClick(item)}
                     sx={{ display: "flex", alignItems: "center", gap: 1, py: 1 }}
                   >
                     {item.icon}
@@ -189,7 +193,6 @@ const Header = () => {
 
           <Divider />
 
-          {/* Navigation component */}
           <Navigation />
         </Container>
       </AppBar>

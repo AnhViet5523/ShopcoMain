@@ -13,7 +13,7 @@ const productService = {
 
     // Lấy chi tiết một sản phẩm
     getProductById: async (id) => {
-        const url = `/Products/${id}`;
+        const url = `/api/Products/${id}`;
         return await axiosClient.get(url);
     },
 
