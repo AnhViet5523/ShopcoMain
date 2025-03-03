@@ -132,12 +132,13 @@ const CategoryContent = () => {
         };
 
         loadCategories();
+        console.log("Cate: " + categories)
     }, []); 
 
     const fetchProductsByCategory = async (categoryId) => {
         try {
             setLoading(true);
-            console.log('Fetching products for categoryId:', categoryId);
+            // console.log('Fetching products for categoryId:', categoryId);
             const response = await productService.getProducts();
 
             
