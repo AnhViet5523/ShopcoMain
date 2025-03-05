@@ -139,7 +139,7 @@ export default function ProductDetail() {
   const { id } = useParams();
   const [quantity, setQuantity] = useState(1);
   const [tabValue, setTabValue] = useState(0);
-  const [product, setProduct] = useState(defaultProduct);
+  const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -284,10 +284,7 @@ export default function ProductDetail() {
                           src={getImageUrl(product.imgUrl)}
                           alt={`Thumbnail ${index + 1}`}
                           style={{ width: '100%', cursor: 'pointer' }}
-                          onError={(e) => {
-                            e.target.onerror = null;
-                            e.target.src = '/images/placeholder.jpg';
-                          }}
+                
                         />
                       ) : (
                         <Box 
@@ -333,10 +330,7 @@ export default function ProductDetail() {
                       src={getImageUrl(product.imgUrl)}
                       alt={product.productName}
                       style={{ width: '100%', cursor: 'pointer' }}
-                      onError={(e) => {
-                        e.target.onerror = null;
-                        e.target.src = '/images/placeholder.jpg';
-                      }}
+      
                     />
                   ) : (
                     <Box 
@@ -653,10 +647,7 @@ export default function ProductDetail() {
                       height="200"
                       image={related.image || "/images/placeholder.jpg"}
                       alt={related.name}
-                      onError={(e) => {
-                        e.target.onerror = null;
-                        e.target.src = '/images/placeholder.jpg';
-                      }}
+        
                     />
                     <CardContent>
                       <Typography variant="body1" component="div" noWrap>
