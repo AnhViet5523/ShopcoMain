@@ -137,6 +137,7 @@ FlashDealTimer.propTypes = {
 
 export default function ProductDetail() {
   const { id } = useParams();
+  console.log("Product ID: ", id);
   const [quantity, setQuantity] = useState(1);
   const [tabValue, setTabValue] = useState(0);
   const [product, setProduct] = useState(null);
