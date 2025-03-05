@@ -101,7 +101,7 @@ export default function  TopSelling() {
       <Container sx={{ py: 5, maxWidth: "100%" }}>
         <Typography variant="h2" fontWeight="bold" style={{color:"black", fontFamily:"inherit"}} textAlign="center">TOP SELLING</Typography>
         <Grid container spacing={3} sx={{ mt: 3 }}>
-          {products.map((product) => (
+          {products?.map((product) => (
             <Grid item xs={12} sm={6} md={3} key={product.id}>
               <ProductCard product={product} />
             </Grid>

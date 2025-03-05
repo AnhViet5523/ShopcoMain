@@ -6,8 +6,8 @@ export const API_ENDPOINTS = {
         SEARCH: '/Products/search'
     },
     CATEGORIES: {
-        LIST: '/Categories',
-        DETAIL: (id) => `/Categories/${id}`
+        LIST: '/Category',
+        DETAIL: (id) => `/Category/${id}`
     },
     QUIZ: {
         QUESTIONS: '/Quiz/questions',

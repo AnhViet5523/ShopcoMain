@@ -29,7 +29,7 @@ export default function App() {
 
   // Kiểm tra trạng thái đăng nhập khi component mount
   useEffect(() => {
-    const user = localStorage.getItem("user");
+    const user = localStorage.getItem("user");  
     setIsAuthenticated(!!user);
   }, []);
 

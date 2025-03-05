@@ -11,7 +11,7 @@ const Home = () => {
     <div>
       <Banner />
       <section className="grid grid-cols-2 gap-4 p-4">
-        {products.map((product) => (
+        {products?.map((product) => (
           <ProductCard key={product.id} product={product} />
         ))}
       </section>
