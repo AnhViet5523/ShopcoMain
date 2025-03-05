@@ -5,7 +5,12 @@ export default function ProductCard({ product }) {
   const navigate = useNavigate();
 
   const handleClick = () => {
-    navigate(`/product/${product.id}`);
+    //chỗ nãy một số sản phảm lưu ID theo id, một số lại lưu theo productId
+    if(product.id){
+      navigate(`/product/${product.id}`);
+      return;
+    }
+    navigate(`/product/${product.productId}`);
   };
 
   return (

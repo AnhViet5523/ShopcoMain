@@ -22,7 +22,7 @@ export default function MainScreen() {
       <Categories />
       <NewArrivals products={products} />
       <Divider sx={{ mx: 10, my: 3 }} />
-      <TopSelling products={products} />
+      {/* <TopSelling products={products} /> */}
       <Divider sx={{ mx: 10, my: 3 }} />
       <BrowserBySkin />
       <Footer />

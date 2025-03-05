@@ -20,11 +20,12 @@ export default function  NewArrivals()  {
             
             const response = await productService.getProducts({
                 page: 1,
-                limit: 10,
+                limit: 10, 
             });
             
             console.log('API Response:', response);
-            setProducts(response);
+            const _products = response['$values'];
+            setProducts(_products);
             
             console.log('Products state updated:', response);
         } catch (error) {
@@ -35,10 +36,6 @@ export default function  NewArrivals()  {
         }
     };
 
-    console.log('Current products state:', products);
-    console.log('Loading state:', loading);
-    console.log('Error state:', error);
-
     if (loading) return <div>Loading...</div>;
     if (error) return <div>Error: {error}</div>;
 
@@ -46,7 +43,7 @@ export default function  NewArrivals()  {
       <Container sx={{ py: 5, maxWidth: "100%" }}>
         <Typography variant="h2" fontWeight="bold" style={{color:"black", fontFamily:"inherit"}} textAlign="center">NEW ARRIVALS</Typography>
         <Grid container spacing={3} sx={{ mt: 3 }}>
-          {products.map((product) => (
+          {products && products.length > 0 &&  products.map((product) => (
             <Grid item xs={12} sm={6} md={3} key={product.id}>
               <ProductCard product={product} />
             </Grid>

@@ -17,6 +17,8 @@ const SearchResults = () => {
         const fetchProducts = async () => {
             try {
                 const response = await productService.searchProducts(query);
+                const _products = response['$values'];
+                setProducts(_products);
                 setProducts(response);
             } catch (err) {
                 setError('Không tìm thấy sản phẩm');
@@ -39,7 +41,7 @@ const SearchResults = () => {
                 Kết quả tìm kiếm cho: "{query}"
             </Typography>
             <Grid container spacing={2}>
-                {products.map(product => (
+                {products?.map(product => (
                     <Grid item xs={12} sm={6} md={4} key={product.id}>
                         <ProductCard product={product} />
                     </Grid>
