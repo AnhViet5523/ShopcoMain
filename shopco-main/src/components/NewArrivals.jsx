@@ -35,10 +35,6 @@ export default function  NewArrivals()  {
         }
     };
 
-    console.log('Current products state:', products);
-    console.log('Loading state:', loading);
-    console.log('Error state:', error);
-
     if (loading) return <div>Loading...</div>;
     if (error) return <div>Error: {error}</div>;
 

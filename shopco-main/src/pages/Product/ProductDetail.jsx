@@ -148,8 +148,47 @@ export default function ProductDetail() {
       
       try {
         const fetchedProduct = await productService.getProductById(id);
-        console.log("Product by Id: ", fetchedProduct);
-        setProduct(fetchedProduct);
+        const _fetchedProduct = {
+          ...fetchedProduct,
+          reviews: [
+            {
+              id: 1,
+              userName: "Kristin Watson",
+              date: "March 14, 2021",
+              rating: 5,
+              content: "bị lỗi"
+            },
+            {
+              id: 2,
+              userName: "Jenny Wilson",
+              date: "January 28, 2021",
+              rating: 5,
+              content: "ok!"
+            },
+            {
+              id: 3,
+              userName: "Bessie Cooper",
+              date: "January 11, 2021",
+              rating: 4,
+              content: "Dùng ổn"
+            }
+          ],
+          relatedProducts: [
+            {
+              id: 1,
+              name: "Sữa rửa mặt GGGGGGGG",
+              price: 115000,
+              originalPrice: 250000,
+              discountPercent: 47,
+              rating: 4,
+              reviewCount: 243,
+              soldCount: 657,
+              image: "/path/to/image.jpg"
+            }
+          ]
+          
+        }
+        setProduct(_fetchedProduct);
       } catch (error) {
         console.error("Error fetching product:", error);
       } finally {
@@ -179,9 +218,7 @@ export default function ProductDetail() {
 
   return (
     <>
-      <Container style={{
-        background:'#f8f8f8'
-      }}>
+      <Container>
         <Breadcrumbs aria-label="breadcrumb" sx={{ my: 2 }}>
           <Link color="inherit" href="/">
             <HomeIcon />
