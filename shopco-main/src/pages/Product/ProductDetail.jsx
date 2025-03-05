@@ -150,6 +150,7 @@ export default function ProductDetail() {
         const fetchedProduct = await productService.getProductById(id);
         const _fetchedProduct = {
           ...fetchedProduct,
+          discountedPrice: fetchedProduct.price - (fetchedProduct.price * 15 / 100),
           reviews: [
             {
               id: 1,
@@ -431,7 +432,7 @@ export default function ProductDetail() {
                         ml: 2
                       }}
                     >
-                      {product?.originalPrice?.toLocaleString()}đ
+                      {product?.price?.toLocaleString()}đ
                     </Typography>
                     <Badge 
                       sx={{ ml: 2 }}
