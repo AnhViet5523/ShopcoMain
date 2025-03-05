@@ -42,7 +42,8 @@ const CustomerSupport = () => {
   };
 
   return (
-    <Box sx={{ bgcolor: '#f5f5f5', minHeight: '100vh', py: 0, mt: 0 }}>
+    <Box sx={{ bgcolor: "#f0f0f0", minHeight: "100vh", width: "99vw", overflowX: "hidden" }}>
+
       <Header />
       <Breadcrumbs aria-label="breadcrumb" sx={{ mb: 3, ml: 10}}>
           <Link underline="hover" color="inherit" href="/" display="flex" alignItems="center">
