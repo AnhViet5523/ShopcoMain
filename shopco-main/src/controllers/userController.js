@@ -1,5 +1,6 @@
 import User from '../models/User';
 import { poolPromise } from '../config/db';
+import sql from 'mssql';
 
 // controller có nhiệm vụ xử lý các yêu cầu từ client
 
@@ -25,19 +26,18 @@ export const registerUser = async (req, res) => {
 
 // Hàm đăng nhập
 export const loginUser = async (req, res) => {
-    const { Name, Password } = req.body;
+    const { username, password } = req.body;
 
     try {
-        // Tìm người dùng theo Name
-        const user = await User.findOne({ Name });
+        // Tìm người dùng theo username
+        const user = await User.findOne({ username });
         if (!user) {
-            return res.status(400).json({ message: 'Người dùng không tồn tại' });
+            return res.status(404).json({ message: 'Người dùng không tồn tại' });
         }
 
         // Kiểm tra mật khẩu
-        const isMatch = user.Password === Password;
-        if (!isMatch) {
-            return res.status(400).json({ message: 'Mật khẩu không chính xác' });
+        if (user.password !== password) {
+            return res.status(401).json({ message: 'Mật khẩu không đúng' });
         }
 
         // Trả về thông tin người dùng (có thể thêm token nếu cần)
@@ -52,14 +52,14 @@ export const saveSkinType = async (req, res) => {
 
     try {
         const pool = await poolPromise;
-        const result = await pool.request()
+        await pool.request()
             .input('UserId', sql.Int, userId)
             .input('SkinType', sql.NVarChar, skinType)
             .query('INSERT INTO UserSkinTypeResults (UserId, SkinType) VALUES (@UserId, @SkinType)');
 
-        res.status(200).json({ message: 'SkinType saved successfully' });
+        res.status(200).json({ message: 'SkinType đã được lưu thành công' });
     } catch (error) {
-        console.error('Error saving SkinType:', error);
-        res.status(500).json({ message: 'Error saving SkinType' });
+        console.error('Lỗi khi lưu SkinType:', error);
+        res.status(500).json({ message: 'Lỗi khi lưu SkinType' });
     }
 };

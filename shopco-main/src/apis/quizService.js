@@ -2,7 +2,7 @@ import axiosClient from './axiosClient';
 
 const quizService = {
     getQuestions: async () => {
-        const response = await axiosClient.get('/api/Quiz/questions');
+        const response = await axiosClient.get('/api/Quiz/Questions');
         return response.map(({ id, questionText, answers }) => ({
             id,
             questionText,
