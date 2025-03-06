@@ -62,7 +62,7 @@ export default function App() {
           }
         />
         
-        {/* Protected Routes - Chỉ truy cập được khi đã đăng nhập */}
+        {/* Protected Routes - Chỉ truy cập được khi đã đăng nhập! */}
         <Route
           path="/category"
           element={isAuthenticated ? <CategoryScreen /> : <Navigate to="/" />}
