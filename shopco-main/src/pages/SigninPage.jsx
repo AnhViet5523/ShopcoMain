@@ -44,8 +44,19 @@ const img2 = "https://png.pngtree.com/background/20210716/original/pngtree-hello
   };
 
   return (
-    <Grid container sx={{ height: "100vh" }}>
-      <Grid item xs={4} sx={{ position: "relative", padding: 3 }}>
+    <Grid container sx={{ 
+      height: "100vh", 
+      width: "100vw",
+      margin: 0,
+      padding: 0,
+      overflow: "hidden"
+    }}>
+      <Grid item xs={4} sx={{ 
+        position: "relative", 
+        padding: 3,
+        bgcolor: "white",
+        margin: 0
+      }}>
         {
           currMode === ScreenMode.SIGN_IN ? (
             <SigninForm onSwitchMode={onSwitchMode} onSignIn={onSignIn} />
@@ -69,7 +80,8 @@ const img2 = "https://png.pngtree.com/background/20210716/original/pngtree-hello
         backgroundImage: `url(${backgroundImage})`,
         backgroundPosition: "center",
         backgroundSize: "cover",
-        backgroundRepeat: "no-repeat"
+        backgroundRepeat: "no-repeat",
+        margin: 0
       }}>
         <Box sx={{
           position: "absolute",

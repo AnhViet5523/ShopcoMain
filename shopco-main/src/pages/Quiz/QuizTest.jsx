@@ -46,21 +46,20 @@ const QuizTest = () => {
         }
 
         try {
-            // Format responses for API
-            const responses = Object.entries(selectedAnswers).map(([questionId, selectedAnswerId]) => ({
-                questionId: parseInt(questionId),
-                selectedAnswerId: selectedAnswerId
-            }));
-
-            // Get user ID from localStorage (assuming it's stored there after login)
-            const user = JSON.parse(localStorage.getItem('user'));
-            const userId = user?.id || 6; // Fallback to 6 if no user ID found
+            // Format responses theo đúng cấu trúc API yêu cầu
+            const requestData = {
+                userId: 6, // Sử dụng userId cố định
+                responses: Object.entries(selectedAnswers).map(([questionId, selectedAnswerId]) => ({
+                    questionId: parseInt(questionId),
+                    selectedAnswerId: selectedAnswerId
+                }))
+            };
 
             // Save quiz results
-            await quizService.saveQuizResult(userId, responses);
+            await quizService.saveQuizResult(requestData);
             console.log('Quiz results saved successfully');
 
-            // Calculate skin type from responses
+            // Tính toán skin type từ responses
             const skinTypeCount = {};
             questions.forEach((question) => {
                 const selectedAnswerId = selectedAnswers[question.id];
@@ -75,9 +74,9 @@ const QuizTest = () => {
             const maxSkinTypes = Object.keys(skinTypeCount).filter(skinType => skinTypeCount[skinType] === maxCount);
             setResults(maxSkinTypes);
 
-            // Save skin type result
+            // Save skin type result với userId cố định
             if (maxSkinTypes.length > 0) {
-                await handleQuizCompletion(userId, maxSkinTypes[0]);
+                await handleQuizCompletion(6, maxSkinTypes[0]);
             }
         } catch (error) {
             console.error('Error saving quiz results:', error);
