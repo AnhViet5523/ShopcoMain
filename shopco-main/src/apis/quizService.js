@@ -4,30 +4,34 @@ const quizService = {
     getQuestions: async () => {
         try {
             const response = await axiosClient.get('/api/Quiz/Questions');
-            
-            // Truy cập vào thuộc tính $values để lấy mảng câu hỏi
-            const questions = response.$values;
+            console.log("Fetched Quiz Data:", response);
 
-            // Kiểm tra xem questions có phải là mảng không
-            if (!Array.isArray(questions)) {
-                throw new Error('API response does not contain an array of questions');
+            // Kiểm tra nếu API trả về object có "$values"
+            if (response.$values && Array.isArray(response.$values)) {
+                return response.$values.map(q => ({
+                    id: q.id,
+                    questionText: q.questionText,
+                    answers: q.answers?.$values || [] // Lấy danh sách câu trả lời nếu có
+                }));
             }
 
-            return questions.map(({ id, questionText, answers }) => ({
-                id,
-                questionText,
-                // Truy cập vào $values của answers để lấy mảng câu trả lời
-                answers: answers.$values
-            }));
+            throw new Error("API response is not an array");
         } catch (error) {
-            console.error('Error fetching quiz data:', error);
-            throw error;
+            console.error("Error fetching quiz data:", error);
+            return [];
         }
     },
+
     getAnswers: async () => {
-        const response = await axiosClient.get('/api/QuizAnswers');
-        return response;
+        try {
+            const response = await axiosClient.get('/api/QuizAnswers');
+            return response;
+        } catch (error) {
+            console.error('Error fetching answers:', error);
+            return [];
+        }
     },
+
     saveQuizResult: async (userId, responses) => {
         try {
             const promises = responses.map(({ questionId, selectedAnswerId }) => 
