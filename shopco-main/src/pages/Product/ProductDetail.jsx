@@ -138,36 +138,9 @@ export default function ProductDetail() {
 
     fetchProduct();
 
-<<<<<<<<< Temporary merge branch 1
+    console.log("Product: ", product);
+    console.log("loading", loading);
   }, []);
-=========
-  }, [id]);
-
-//   {
-//     "productId": 2,
-//     "productCode": "LSD002",
-//     "categoryId": 1,
-//     "productName": "Nước Tẩy Trang Bioderma Dành Cho Da Nhạy Cảm 500ml",
-//     "quantity": 10,
-//     "capacity": "110ml, 250ml, 500ml",
-//     "price": 525000,
-//     "brand": "Bioderma",
-//     "origin": "Pháp",
-//     "status": "Available",
-//     "imgUrl": "2",
-//     "skinType": "Da nhạy cảm",
-//     "description": "Dành Cho Da Nhạy Cảm Bioderma Sensibio H2O là sản phẩm nước tẩy trang công nghệ Micellar đầu tiên trên thế giới, do thương hiệu dược mỹ phẩm Bioderma nổi tiếng của Pháp phát minh. Dung dịch giúp làm sạch sâu da và loại bỏ lớp trang điểm nhanh chóng mà không cần rửa lại bằng nước. Công thức dịu nhẹ, không kích ứng, không gây khô căng da, đặc biệt phù hợp với làn da nhạy cảm  HSD: ~3 năm (chưa mở), ~6-12 tháng (sau khi mở)",
-//     "ingredients": "NULL\"1. Nước Tẩy Trang Bioderma Dành Cho Da Nhạy Cảm\r\n- Thành phần chính: Công nghệ Micellar: Các hạt micelle, có thành phần được lấy cảm hứng từ lipid của da, là những hạt làm sạch vô hình siêu nhỏ. Chúng có khả năng thu giữ các tạp chất trong khi vẫn duy trì lớp màng bảo vệ tự nhiên của da.\r\n- Sáng chế D.A.F: Các tác động từ bên ngoài có thể làm cho da trở nên kích ứng và nhạy cảm. Hợp chất này giúp làm tăng khả năng dung nạp của làn da - bất kể đối với loại da nào - nhằm tăng cường sức đề kháng cho da.\r\n- Thành phần chi tiết: Aqua/Water/Eau, Peg-6 Caprylic/Capric Glycerides, Fructooligosaccharides, Mannitol, Xylitol, Rhamnose, Cucumis Sativus (Cucumber) Fruit Extract, Propylene Glycol, Cetrimonium Bromide, Disodium Edta. [Bi 446]\r\n\r\n2. Nước Tẩy Trang Bioderma Dành Cho Da Dầu & Hỗn Hợp\r\n - Thành phần chính: Công nghệ Micellar: Các hạt micelle, có thành phần được lấy cảm hứng từ lipid của da, là những hạt làm sạch vô hình siêu nhỏ. Chúng có khả năng thu giữ các tạp chất trong khi vẫn duy trì lớp màng bảo vệ tự nhiên của da.\r\n- Sáng chế D.A.F: Các tác động từ bên ngoài có thể làm cho da trở nên kích ứng và nhạy cảm. Hợp chất này giúp làm tăng khả năng dung nạp của làn da - bất kể đối với loại da nào - nhằm tăng cường sức đề kháng cho da.\r\n- Thành phần đầy đủ: Water (Aqua), Peg-6 Caprylic/Capric Glycerides, Sodium Citrate , Zinc Gluconate, Copper Sulfate, Ginkgo Biloba Extract – Chiết Xuất Lá Bạch Quả, Mannitol, Xylitol, Rhamnose, Fructooligosaccharides, Propylene Glycol, Citric Acid, Disodium Edta, Cetrimonium Bromide, Fragrance (Parfum).\"",
-//     "usageInstructions": "\"- Thấm nước tẩy trang lên bông tẩy trang.\n- Nhẹ nhàng làm sạch vùng mặt và mắt.\n- Không cần rửa lại với nước.\n- Sử dụng vào hằng ngày để làm sạch da.\"",
-//     "manufactureDate": "2024-03-26T00:00:00",
-//     "category": null,
-//     "orderItems": [],
-//     "promotions": [],
-//     "reviews": []
-// }
-console.log("Product: ", product);
-console.log("loading",loading);
->>>>>>>>> Temporary merge branch 2
 
   if (loading) {
     return <Typography>Đang tải sản phẩm...</Typography>;
@@ -576,4 +549,5 @@ console.log("loading",loading);
       </Container>
     </>
   );
-} 
+}
+
