@@ -42,15 +42,7 @@ const userService = {
         }
     },
     // Lấy thông tin người dùng theo UserID
-    getUserById: async (userId) => {
-        try {
-            const response = await axiosClient.get(`/api/Users/${userId}`);
-            return response; 
-        } catch (error) {
-            console.error('Error fetching user:', error);
-            throw error; 
-        }
-    }
+    
 };
 
 export default userService; 

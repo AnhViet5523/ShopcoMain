@@ -68,7 +68,9 @@ const SigninForm = ({ onSwitchMode, onSignIn }) => {
           setErrors(prev => ({ ...prev, username: 'Tên không tồn tại' })); 
         } else if (error.response && error.response.status === 401) {
           setErrors(prev => ({ ...prev, password: 'Tên đăng nhập hoặc mật khẩu sai' })); 
-        } else {
+        } else if (error.response && error.response.status === 400) {
+          setErrors(prev => ({ ...prev, password: 'CONCAC' })); 
+        }else {
           setErrors(prev => ({ ...prev, password: 'Đã xảy ra lỗi. Vui lòng thử lại.' })); 
         }
       }
@@ -82,8 +84,9 @@ const SigninForm = ({ onSwitchMode, onSignIn }) => {
       justifyContent="center"
       alignItems="center"
       sx={{
-        height: "100%",
-        color: colors.grey[800]
+        minHeight: "100vh",
+        color: colors.grey[800],
+        bgcolor: "white"
       }}
     >
       <Stack spacing={5} sx={{
