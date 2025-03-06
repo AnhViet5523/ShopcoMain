@@ -7,20 +7,6 @@ import { useState, useEffect } from 'react';
 import productService from '../apis/productService';
 import categoryService from '../apis/categoryService';
 
-// Thêm constant cho brands
-const BRANDS = [
-  "L'Oreal", "Bioderma", "Cocoon", "Simple", "La Roche-Posay", "CeraVe", 
-  "Cetaphil", "Hada Labo", "Paula's Choice", "Caryophy", "So'Natural", 
-  "Rosette", "Klairs", "Skin1004", "Paris", "Garnier", "Obagi Medical", 
-  "SVR", "Gamma Chemicals", "Evoluderm", "Avène", "Cerave", "Hatomugi", 
-  "Olay", "Vichy", "Embryolisse", "Compliment", "Torriden", "Anessa", 
-  "MartiDerm", "Sur.Medic+", "JMsolution", "Meishoku", "Kumargic", "DHC", 
-  "Hotosu", "Ipek Klasik", "Silcot", "Mihoo", "Bông Bạch Tuyết", "Emmié", 
-  "HALIO", "Vacosi", "Neutrogena", "GoodnDoc", "d'Alba", "Some By Mi", 
-  "Tia'm", "oh!oh!", "Laneige", "Care:Nel", "Mediheal", "Beplain", 
-  "Naruko", "WonJin", "Banobagi"
-];
-
 // Thêm constant cho thứ tự danh mục
 const CATEGORY_ORDER = [
     "Làm Sạch Da",
@@ -96,6 +82,9 @@ const CategoryContent = () => {
     const [error, setError] = useState(null);
     const [categories, setCategories] = useState([]);
     const [filteredProducts, setFilteredProducts] = useState([]);
+    const [brands, setBrands] = useState([]);
+    const [selectedBrands, setSelectedBrands] = useState([]);
+    const [skinTypes, setSkinTypes] = useState([]);
 
     // Cập nhật useEffect để xử lý dữ liệu tốt hơn
     useEffect(() => {
@@ -104,6 +93,9 @@ const CategoryContent = () => {
                 setLoading(true);
                 const response = await categoryService.getCategories();
                 const _response = response['$values'];
+                
+                // Thêm log để kiểm tra dữ liệu nhận được
+                console.log('Categories response:', _response);
                 
                 if (Array.isArray(_response) && _response.length > 0) {
                     const processedCategories = processCategoriesData(_response);
@@ -136,10 +128,34 @@ const CategoryContent = () => {
         console.log("Cate: " + categories)
     }, []); 
 
+    useEffect(() => {
+        const loadProducts = async () => {
+            try {
+                const response = await productService.getProducts();
+                const products = response['$values'];
+
+                // Lấy các thương hiệu duy nhất
+                if (Array.isArray(products)) {
+                    const uniqueBrands = [...new Set(products.map(product => product.brand))];
+                    setBrands(uniqueBrands);
+
+                    // Lấy các loại da duy nhất
+                    const uniqueSkinTypes = [...new Set(products.map(product => product.skinType))];
+                    setSkinTypes(uniqueSkinTypes);
+                } else {
+                    console.error('API response is not an array:', response);
+                }
+            } catch (error) {
+                console.error('Error loading products:', error);
+            }
+        };
+
+        loadProducts();
+    }, []);
+
     const fetchProductsByCategory = async (categoryId) => {
         try {
             setLoading(true);
-            // console.log('Fetching products for categoryId:', categoryId);
             const response = await productService.getProducts();
             const _response = response['$values'];
             
@@ -212,9 +228,90 @@ const CategoryContent = () => {
         setFilteredProducts(filtered);
     };
 
+    // Hàm xử lý khi người dùng chọn thương hiệu
+    const handleBrandChange = (brand) => {
+        setSelectedBrands((prev) => {
+            if (prev.includes(brand)) {
+                return prev.filter((b) => b !== brand);
+            } else {
+                return [...prev, brand];
+            }
+        });
+    };
+
+    // Hàm lọc sản phẩm dựa trên thương hiệu đã chọn
+    const getFilteredProducts = () => {
+        if (selectedBrands.length === 0) return allProducts;
+        return allProducts.filter(product => selectedBrands.includes(product.brand));
+    };
+
+    // Hàm xử lý khi người dùng chọn loại da
+    const handleSkinTypeChange = async (skinType) => {
+        setSelectedSubItem(skinType);
+        await fetchProductsBySkinType(skinType);
+    };
+
+    const fetchProductsBySkinType = async (skinType) => {
+        try {
+            setLoading(true);
+            const response = await productService.getProductsBySkinType(skinType);
+            const _response = response['$values'];
+
+            const mappedProducts = _response.map(product => ({
+                id: product.productId,
+                name: product.productName,
+                price: product.price,
+                brand: product.brand,
+                capacity: product.capacity,
+                image: product.imgURL || '/placeholder.jpg',
+                quantity: product.quantity,
+                status: product.status
+            }));
+
+            console.log('Mapped products by skin type:', mappedProducts);
+            // Cập nhật sản phẩm hiển thị theo loại da
+            setProducts(mappedProducts);
+            setAllProducts(mappedProducts);
+        } catch (error) {
+            console.error('Error fetching products by skin type:', error);
+            setProducts([]);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Cập nhật phần render loại da
+    const renderSkinTypes = () => {
+        return skinTypes.map((type) => (
+            <FormControlLabel
+                key={type}
+                control={
+                    <Checkbox 
+                        checked={selectedSubItem === type}
+                        onChange={() => handleSkinTypeChange(type)}
+                        sx={{ 
+                            '&.Mui-checked': {
+                                color: 'primary.main',
+                            }
+                        }}
+                    />
+                }
+                label={type}
+                sx={{ 
+                    display: 'block',
+                    mb: 1,
+                    '& .MuiTypography-root': {
+                        fontSize: '0.9rem'
+                    }
+                }}
+            />
+        ));
+    };
+
     // Trong phần render products 
     const renderProducts = () => {
-        const productsToDisplay = selectedPriceRange ? filteredProducts : products;
+        const productsToDisplay = selectedPriceRange ? filteredProducts : getFilteredProducts();
+        
         if (loading) return <Typography>Đang tải...</Typography>;
         if (error) return <Typography color="error">{error}</Typography>;
         if (!productsToDisplay || productsToDisplay.length === 0) {
@@ -379,8 +476,8 @@ const CategoryContent = () => {
 
                         {/* Loại Da */}
                         <Accordion 
-                            defaultExpanded={!!selectedSubItem}
-                            elevation={0} 
+                            defaultExpanded 
+                            elevation={0}
                             sx={{ 
                                 '&:before': { display: 'none' },
                                 backgroundColor: 'transparent'
@@ -393,30 +490,7 @@ const CategoryContent = () => {
                                 <Typography variant="h6" sx={{ fontWeight: 600 }}>Loại Da</Typography>
                             </AccordionSummary>
                             <AccordionDetails sx={{ px: 0 }}>
-                                {['Da Dầu', 'Da Thường', 'Da Khô','Da Hỗn Hợp', 'Da Nhạy Cảm'].map((type) => (
-                                    <FormControlLabel
-                                        key={type}
-                                        control={
-                                            <Checkbox 
-                                                checked={selectedSubItem === type}
-                                                onChange={() => setSelectedSubItem(type)}
-                                                sx={{ 
-                                                    '&.Mui-checked': {
-                                                        color: 'primary.main',
-                                                    }
-                                                }}
-                                            />
-                                        }
-                                        label={type}
-                                        sx={{ 
-                                            display: 'block',
-                                            mb: 1,
-                                            '& .MuiTypography-root': {
-                                                fontSize: '0.9rem'
-                                            }
-                                        }}
-                                    />
-                                ))}
+                                {renderSkinTypes()}
                             </AccordionDetails>
                         </Accordion>
 
@@ -494,7 +568,7 @@ const CategoryContent = () => {
                                     }}
                                 >
                                     <Grid container spacing={1}>
-                                        {BRANDS.map((brand) => (
+                                        {brands.map((brand) => (
                                             <Grid item xs={6} key={brand}>
                                                 <FormControlLabel
                                                     control={
@@ -505,6 +579,8 @@ const CategoryContent = () => {
                                                                     color: 'primary.main',
                                                                 }
                                                             }}
+                                                            checked={selectedBrands.includes(brand)}
+                                                            onChange={() => handleBrandChange(brand)}
                                                         />
                                                     }
                                                     label={
