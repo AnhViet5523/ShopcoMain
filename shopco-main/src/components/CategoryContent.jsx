@@ -103,9 +103,10 @@ const CategoryContent = () => {
             try {
                 setLoading(true);
                 const response = await categoryService.getCategories();
+                const _response = response['$values'];
                 
-                if (Array.isArray(response) && response.length > 0) {
-                    const processedCategories = processCategoriesData(response);
+                if (Array.isArray(_response) && _response.length > 0) {
+                    const processedCategories = processCategoriesData(_response);
                     setCategories(processedCategories);
                     
                     // Tự động chọn category đầu tiên nếu chưa có selection
@@ -140,9 +141,10 @@ const CategoryContent = () => {
             setLoading(true);
             // console.log('Fetching products for categoryId:', categoryId);
             const response = await productService.getProducts();
-
+            const _response = response['$values'];
             
-            const data = response.filter(x => x.categoryId == categoryId);
+            
+            const data = _response.filter(x => x.categoryId == categoryId);
             
             
             const mappedProducts = data.map(product => ({

@@ -5,7 +5,7 @@ import ProductDetail from "./ProductDetail";
 
 export default function ProductScreen() {
   return (
-    <Box sx={{ width: "99vw", overflowX: "hidden" }}>
+    <Box sx={{ width: "99vw", overflowX: "hidden", backgroundColor: '#f8f8f8' }}>
       <Header />
       <ProductDetail />
       <Footer />

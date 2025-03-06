@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import SigninPage from "./pages/SigninPage";
 import MainScreen from "./pages/MainScreen";
 import CategoryScreen from "./pages/Category/CategoryScreen";
-import ProductDetail from "./pages/Product/ProductDetail";
 import SearchResults from "./pages/Product/SearchResults";
 import { Box, CssBaseline } from "@mui/material";
 import CustomerSp from "./pages/CustomerSp/CustomerSp";
@@ -23,13 +22,14 @@ import PrivacyPolicy from "./pages/PagesOfFooter/Policy";
 import Complaint from "./pages/PagesOfFooter/Complaint";
 import Return from "./pages/PagesOfFooter/Return";
 import Cart from "./pages/Cart/Cart";
+import ProductScreen from "./pages/Product/ProductScreen";
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   // Kiểm tra trạng thái đăng nhập khi component mount
   useEffect(() => {
-    const user = localStorage.getItem("user");
+    const user = localStorage.getItem("user");  
     setIsAuthenticated(!!user);
   }, []);
 
@@ -62,14 +62,14 @@ export default function App() {
           }
         />
         
-        {/* Protected Routes - Chỉ truy cập được khi đã đăng nhập */}
+        {/* Protected Routes - Chỉ truy cập được khi đã đăng nhập! */}
         <Route
           path="/category"
           element={isAuthenticated ? <CategoryScreen /> : <Navigate to="/" />}
         />
         <Route
           path="/product/:id"
-          element={isAuthenticated ? <ProductDetail /> : <Navigate to="/" />}
+          element={isAuthenticated ? <ProductScreen /> : <Navigate to="/" />}
         />
         <Route
           path="/search"
