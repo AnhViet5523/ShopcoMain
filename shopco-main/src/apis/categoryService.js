@@ -4,7 +4,9 @@ const categoryService = {
     // Lấy tất cả categories
     getCategories: async () => {
         try {
-            return await axiosClient.get('/api/Category');
+            const response = await axiosClient.get('/api/Category');
+            console.log('Categories fetched:', response);
+            return response;
         } catch (error) {
             console.error('Error:', error);
             return [];

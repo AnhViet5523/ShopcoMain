@@ -105,6 +105,9 @@ const CategoryContent = () => {
                 const response = await categoryService.getCategories();
                 const _response = response['$values'];
                 
+                // Thêm log để kiểm tra dữ liệu nhận được
+                console.log('Categories response:', _response);
+                
                 if (Array.isArray(_response) && _response.length > 0) {
                     const processedCategories = processCategoriesData(_response);
                     setCategories(processedCategories);
