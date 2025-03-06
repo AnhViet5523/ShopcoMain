@@ -31,7 +31,26 @@ const productService = {
                 name: searchTerm
             } 
         });
-    }
+    },
+
+    // Lấy sản phẩm theo brand
+    getProductsByBrand: async (brand) => {
+        const url = `/api/Products/brand/${brand}`;
+        return await axiosClient.get(url);
+    },
+
+    // Lấy sản phẩm theo skin type
+    getProductsBySkinType: async (skinType) => {
+        const url = `/api/Products/skinType/${skinType}`;
+        return await axiosClient.get(url);
+    },
+
+    // Lấy tất cả skin types
+    getSkinTypes: async () => {
+        const url = '/api/Products/skinTypes'; // Giả sử API này tồn tại
+        return await axiosClient.get(url);
+    },
+    
 };
 
 export default productService;
