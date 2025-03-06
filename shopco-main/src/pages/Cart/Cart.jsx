@@ -49,7 +49,7 @@ const Cart = () => {
   };
 
   return (
-    <Box sx={{ backgroundColor: '#e0f7fa', minHeight: '100vh', overflow: 'hidden' }}>
+    <Box sx={{ backgroundColor: '#e0f7fa', minHeight: '100vh', overflow: 'hidden', width:'99vw' }}>
       <Header />
       <Container sx={{ py: 5, maxWidth: 'lg', overflow: 'hidden' }}>
         <Typography variant="h4" fontWeight="bold" textAlign="center" gutterBottom sx={{ color: 'black' }}>

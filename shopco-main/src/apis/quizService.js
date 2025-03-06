@@ -2,12 +2,27 @@ import axiosClient from './axiosClient';
 
 const quizService = {
     getQuestions: async () => {
-        const response = await axiosClient.get('/api/Quiz/Questions');
-        return response.map(({ id, questionText, answers }) => ({
-            id,
-            questionText,
-            answers
-        }));
+        try {
+            const response = await axiosClient.get('/api/Quiz/Questions');
+            
+            // Truy cập vào thuộc tính $values để lấy mảng câu hỏi
+            const questions = response.$values;
+
+            // Kiểm tra xem questions có phải là mảng không
+            if (!Array.isArray(questions)) {
+                throw new Error('API response does not contain an array of questions');
+            }
+
+            return questions.map(({ id, questionText, answers }) => ({
+                id,
+                questionText,
+                // Truy cập vào $values của answers để lấy mảng câu trả lời
+                answers: answers.$values
+            }));
+        } catch (error) {
+            console.error('Error fetching quiz data:', error);
+            throw error;
+        }
     },
     getAnswers: async () => {
         const response = await axiosClient.get('/api/QuizAnswers');

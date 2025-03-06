@@ -29,7 +29,7 @@ const Order = () => {
   ];
 
   return (
-    <Box sx={{ bgcolor: "#f0f0f0", minHeight: "100vh" }}>
+    <Box sx={{ bgcolor: "#f0f0f0", minHeight: "100vh", width:'99vw' }}>
       <Header />
       <Breadcrumbs aria-label="breadcrumb" sx={{ mb: 3, ml: 10}}>
           <Link underline="hover" color="inherit" href="/" display="flex" alignItems="center">
