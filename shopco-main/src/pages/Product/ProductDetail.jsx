@@ -19,6 +19,36 @@ import {
 import { Home as HomeIcon, Add as AddIcon, Remove as RemoveIcon, LocalShipping } from '@mui/icons-material';
 import productService from '../../apis/productService';
 
+
+// {
+//       "$id": "2",
+//       "productId": 1,
+//       "productCode": "LSD001",
+//       "categoryId": 1,
+//       "productName": "Nước Tẩy Trang L'Oreal Tươi Mát Cho Da Dầu, Hỗn Hợp 400ml",
+//       "quantity": 10,
+//       "capacity": "95ml và 400ml",
+//       "price": 229000,
+//       "brand": "L'Oreal",
+//       "origin": "Pháp",
+//       "status": "Available",
+//       "imgUrl": "1",
+//       "skinType": "Da dầu",
+//       "description": "Nước Tẩy Trang L'Oréal là dòng sản phẩm tẩy trang dạng nước đến từ thương hiệu L'Oreal Paris, được ứng dụng công nghệ Micellar dịu nhẹ giúp làm sạch da, lấy đi bụi bẩn,  dầu thừa và cặn trang điểm chỉ trong một bước, mang lại làn da thông thoáng, mềm mượt mà không hề khô căng.   HSD: ~3 năm (chưa mở), ~6-12 tháng (sau khi mở)",
+//       "ingredients": "\"- Thành phần chính: Chiết xuất hoa hồng Pháp: cân bằng độ ẩm & làm mềm mịn da, làn da vẫn đủ độ ẩm sau khi tẩy trang.\n- Thành phần đầy đủ: Aqua / Water, Hexylene Glycol, Glycerin, Rosa Gallica Flower Extract, Sorbitol, Poloxamer 184, Disodium Cocoamphodiacetate, Disodium Edta, Propylene Glycol, BHT , Polyaminopropyl Biguanide\"",
+//       "usageInstructions": "\"- Thấm nước tẩy trang lên bông tẩy trang.\n- Nhẹ nhàng làm sạch vùng mặt và mắt.\n- Không cần rửa lại với nước.\n- Sử dụng vào hằng ngày để làm sạch da.\"",
+//       "manufactureDate": "2025-02-26T00:00:00",
+//       "category": null,
+//       "orderItems": {
+//         "$id": "3",
+//         "$values": []
+//       },
+//       "reviews": {
+//         "$id": "4",
+//         "$values": []
+//       }
+//     },
+
 // Create a separate memoized component for the timer
 const FlashDealTimer = memo(({ initialHours = 0, initialMinutes = 0, initialSeconds = 45 }) => {
   const [time, setTime] = useState({
@@ -73,7 +103,6 @@ FlashDealTimer.propTypes = {
 
 export default function ProductDetail() {
   const { id } = useParams();
-  console.log("Product ID: ", id);
   const [quantity, setQuantity] = useState(1);
   const [tabValue, setTabValue] = useState(0);
   const [product, setProduct] = useState(null);
@@ -146,6 +175,49 @@ export default function ProductDetail() {
     if (newQuantity >= 1) {
       setQuantity(newQuantity);
     }
+  };
+
+  const addToCart = () => {
+    // Create the cart item from the current product
+    const cartItem = {
+      id: product.id,
+      name: product.productName,
+      price: product.discountedPrice || product.price,
+      originalPrice: product.price,
+      quantity: quantity,
+      imgUrl: product.imgUrl,
+    };
+
+    // Get current cart from localStorage
+    const existingCart = JSON.parse(localStorage.getItem('cart') || '[]');
+    
+    // Check if product already exists in cart
+    const existingItemIndex = existingCart.findIndex(item => item.id === cartItem.id);
+    
+    let updatedCart;
+    if (existingItemIndex >= 0) {
+      // Update quantity if product already in cart
+      updatedCart = existingCart.map((item, index) => 
+        index === existingItemIndex 
+          ? { ...item, quantity: item.quantity + quantity }
+          : item
+      );
+    } else {
+      // Add new item to cart
+      updatedCart = [...existingCart, cartItem];
+    }
+    
+    // Save updated cart to localStorage
+    localStorage.setItem('cart', JSON.stringify(updatedCart));
+    
+    // Dispatch custom event to notify other components (like Header) that cart has been updated
+    window.dispatchEvent(new CustomEvent('cartUpdated'));
+    
+    // Show success message or notification
+    alert(`Đã thêm ${quantity} sản phẩm vào giỏ hàng`);
+    
+    // Reset quantity
+    setQuantity(1);
   };
 
   // Helper function to check if image exists
@@ -417,6 +489,7 @@ export default function ProductDetail() {
                       textTransform: 'none',
                       fontWeight: 'bold'
                     }}
+                    onClick={addToCart}
                   >
                     Mua Ngay
                   </Button>
