@@ -20,34 +20,6 @@ import { Home as HomeIcon, Add as AddIcon, Remove as RemoveIcon, LocalShipping }
 import productService from '../../apis/productService';
 
 
-// {
-//       "$id": "2",
-//       "productId": 1,
-//       "productCode": "LSD001",
-//       "categoryId": 1,
-//       "productName": "Nước Tẩy Trang L'Oreal Tươi Mát Cho Da Dầu, Hỗn Hợp 400ml",
-//       "quantity": 10,
-//       "capacity": "95ml và 400ml",
-//       "price": 229000,
-//       "brand": "L'Oreal",
-//       "origin": "Pháp",
-//       "status": "Available",
-//       "imgUrl": "1",
-//       "skinType": "Da dầu",
-//       "description": "Nước Tẩy Trang L'Oréal là dòng sản phẩm tẩy trang dạng nước đến từ thương hiệu L'Oreal Paris, được ứng dụng công nghệ Micellar dịu nhẹ giúp làm sạch da, lấy đi bụi bẩn,  dầu thừa và cặn trang điểm chỉ trong một bước, mang lại làn da thông thoáng, mềm mượt mà không hề khô căng.   HSD: ~3 năm (chưa mở), ~6-12 tháng (sau khi mở)",
-//       "ingredients": "\"- Thành phần chính: Chiết xuất hoa hồng Pháp: cân bằng độ ẩm & làm mềm mịn da, làn da vẫn đủ độ ẩm sau khi tẩy trang.\n- Thành phần đầy đủ: Aqua / Water, Hexylene Glycol, Glycerin, Rosa Gallica Flower Extract, Sorbitol, Poloxamer 184, Disodium Cocoamphodiacetate, Disodium Edta, Propylene Glycol, BHT , Polyaminopropyl Biguanide\"",
-//       "usageInstructions": "\"- Thấm nước tẩy trang lên bông tẩy trang.\n- Nhẹ nhàng làm sạch vùng mặt và mắt.\n- Không cần rửa lại với nước.\n- Sử dụng vào hằng ngày để làm sạch da.\"",
-//       "manufactureDate": "2025-02-26T00:00:00",
-//       "category": null,
-//       "orderItems": {
-//         "$id": "3",
-//         "$values": []
-//       },
-//       "reviews": {
-//         "$id": "4",
-//         "$values": []
-//       }
-//     },
 
 // Create a separate memoized component for the timer
 const FlashDealTimer = memo(({ initialHours = 0, initialMinutes = 0, initialSeconds = 45 }) => {
