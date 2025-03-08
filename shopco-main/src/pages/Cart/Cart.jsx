@@ -1,33 +1,38 @@
-import React, { useState } from 'react';
-import { Box, Typography, Container, Grid, Button } from '@mui/material';
+import { useState, useEffect } from 'react';
+import { Box, Typography, Container, Button, TextField, Paper } from '@mui/material';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer/Footer';
 import { useNavigate } from 'react-router-dom';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 
 const Cart = () => {
   const navigate = useNavigate();
-  // Dữ liệu mẫu cho giỏ hàng
-  const [cartItems, setCartItems] = useState([
-    {
-      id: 1,
-      name: 'Sữa Rửa Mặt Cho Da Dầu Mụn SVR Sebiaclear Gel Moussant',
-      price: 150000,
-      originalPrice: 175000,
-      quantity: 1,
-      imgUrl: '/images/product1.png',
-    },
-    {
-      id: 2,
-      name: 'Kem Dưỡng Obagi Retinol 1.0%',
-      price: 1538000,
-      originalPrice: 1810000,
-      quantity: 1,
-      imgUrl: '/images/product2.png',
-    },
-  ]);
+  // Initialize cart items from localStorage
+  const [cartItems, setCartItems] = useState([]);
+
+  // Load cart items from localStorage on component mount
+  useEffect(() => {
+    const savedCart = JSON.parse(localStorage.getItem('cart') || '[]');
+    if (savedCart.length > 0) {
+      setCartItems(savedCart);
+    }
+  }, []);
+
+  // Save cart to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('cart', JSON.stringify(cartItems));
+    // Dispatch custom event to notify other components (like Header) that cart has been updated
+    window.dispatchEvent(new CustomEvent('cartUpdated'));
+  }, [cartItems]);
 
   // Tính tổng tiền
   const totalAmount = cartItems.reduce((total, item) => total + item.price * item.quantity, 0);
+  
+  // Giảm giá (hardcoded for now, could be calculated based on business logic)
+  const discount = 45000;
+  
+  // Tổng cộng sau khi giảm giá
+  const finalAmount = totalAmount - discount;
 
   // Hàm tăng số lượng
   const increaseQuantity = (id) => {
@@ -49,50 +54,201 @@ const Cart = () => {
   };
 
   return (
+
+//     <Box sx={{ backgroundColor: '#f5f5f5', minHeight: '100vh',width: "99vw" }}>
     <Box sx={{ backgroundColor: '#e0f7fa', minHeight: '100vh', overflow: 'hidden', width:'99vw' }}>
       <Header />
-      <Container sx={{ py: 5, maxWidth: 'lg', overflow: 'hidden' }}>
-        <Typography variant="h4" fontWeight="bold" textAlign="center" gutterBottom sx={{ color: 'black' }}>
-          Giỏ Hàng Của Bạn
-        </Typography>
-        <Grid container spacing={3}>
-          {cartItems.map(item => (
-            <Grid item xs={12} key={item.id}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid #ccc', borderRadius: '8px', padding: '16px', backgroundColor: '#f9f9f9' }}>
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  <img src={item.imgUrl} alt={item.name} style={{ width: '100px', borderRadius: '8px', marginRight: '16px' }} />
-                  <Box>
-                    <Typography variant="h6" sx={{ color: 'black' }}>{item.name}</Typography>
-                    <Typography variant="body1" sx={{ textDecoration: 'line-through', color: 'red' }}>
-                      {item.originalPrice.toLocaleString()}đ
-                    </Typography>
-                    <Typography variant="body1" sx={{ color: 'black' }}>{item.price.toLocaleString()}đ</Typography>
-                    <Box sx={{ display: 'flex', alignItems: 'center', marginTop: '8px' }}>
-                      <Button onClick={() => decreaseQuantity(item.id)}>-</Button>
-                      <Typography sx={{ margin: '0 8px', color: 'black' }}>{item.quantity}</Typography>
-                      <Button onClick={() => increaseQuantity(item.id)}>+</Button>
-                      <Button onClick={() => removeItem(item.id)} sx={{ marginLeft: '16px', color: 'red' }}>
-                        Xóa
+      <Container maxWidth="lg" sx={{ py: 4 }}>
+        <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 3 }}>
+          {/* Left side - Cart items */}
+          <Box sx={{ flex: '1 1 auto', width: '100%' }}>
+            <Typography variant="h4" sx={{ mb: 3, fontWeight: 'bold', display: 'flex', alignItems: 'center' }}>
+              Giỏ hàng: <Typography component="span" sx={{ ml: 1, fontWeight: 'normal' }}>{cartItems.length} sản phẩm</Typography>
+            </Typography>
+            
+            <Paper elevation={0} sx={{ p: 0, mb: 2, width: '100%' }}>
+              {cartItems.map((item, index) => (
+                <Box key={item.id}>
+                  <Box sx={{ 
+                    display: 'flex', 
+                    p: 2, 
+                    borderBottom: index < cartItems.length - 1 ? '1px solid #eee' : 'none',
+                    alignItems: 'center'
+                  }}>
+                    <Box sx={{ width: 42, height: 42, mr: 2, display: 'flex', alignItems: 'center' }}>
+                      <img 
+                        src={item.imgUrl} 
+                        alt={item.name} 
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                      />
+                    </Box>
+                    
+                    <Box sx={{ flexGrow: 1 }}>
+                      <Typography variant="body1" sx={{ fontWeight: 'medium', mb: 1 }}>
+                        {item.name}
+                      </Typography>
+                      
+                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                        <Typography variant="body2" sx={{ mr: 1 }}>
+                          {item.price.toLocaleString()}đ
+                        </Typography>
+                        <Typography variant="body2" sx={{ textDecoration: 'line-through', color: 'text.secondary' }}>
+                          {item.originalPrice.toLocaleString()}đ
+                        </Typography>
+                      </Box>
+                    </Box>
+                    
+                    <Box sx={{ display: 'flex', alignItems: 'center', mr: 3 }}>
+                      <Button 
+                        onClick={() => decreaseQuantity(item.id)}
+                        sx={{ 
+                          minWidth: 30, 
+                          width: 30, 
+                          height: 30, 
+                          p: 0, 
+                          border: '1px solid #ddd',
+                          borderRadius: '4px'
+                        }}
+                      >
+                        -
+                      </Button>
+                      <Typography sx={{ mx: 2 }}>{item.quantity}</Typography>
+                      <Button 
+                        onClick={() => increaseQuantity(item.id)}
+                        sx={{ 
+                          minWidth: 30, 
+                          width: 30, 
+                          height: 30, 
+                          p: 0, 
+                          border: '1px solid #ddd',
+                          borderRadius: '4px'
+                        }}
+                      >
+                        +
                       </Button>
                     </Box>
+                    
+                    <Box sx={{ textAlign: 'right', minWidth: 100 }}>
+                      <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+                        {(item.price * item.quantity).toLocaleString()}đ
+                      </Typography>
+                    </Box>
+                    
+                    <Button 
+                      onClick={() => removeItem(item.id)}
+                      sx={{ 
+                        color: 'text.secondary', 
+                        textTransform: 'none', 
+                        p: 0,
+                        ml: 2,
+                        minWidth: 'auto'
+                      }}
+                    >
+                      Xóa
+                    </Button>
                   </Box>
+                  
+                  {/* Promotion text for the second item */}
+                  {item.id === 2 && (
+                    <Box sx={{ p: 2, bgcolor: '#f9f9f9', fontSize: '0.875rem', color: 'text.secondary' }}>
+                      Tặng ngay phần quà khi mua tại cửa hàng còn quà
+                    </Box>
+                  )}
                 </Box>
+              ))}
+            </Paper>
+            
+            <Box sx={{ textAlign: 'left', mt: 3 }}>
+              <Button 
+                variant="text" 
+                onClick={() => navigate('/')} 
+                sx={{ 
+                  color: 'primary.main',
+                  textTransform: 'none',
+                  '&:hover': { bgcolor: 'transparent', textDecoration: 'underline' },
+                  pl: 0,
+                  display: 'flex',
+                  alignItems: 'center'
+                }}
+              >
+                ← Tiếp tục mua hàng
+              </Button>
+            </Box>
+          </Box>
+          
+          {/* Right side - Order summary */}
+          <Box sx={{ width: { xs: '100%', md: '380px' }, flexShrink: 0 }}>
+            <Paper elevation={0} sx={{ bgcolor: '#212121', color: 'white', p: 3, borderRadius: 1 }}>
+              <Typography variant="h6" sx={{ mb: 3 }} color='white'>
+                Thông tin đơn hàng
+              </Typography>
+              
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                <Typography color='white'>Tạm tính:</Typography>
+                <Typography sx={{ color: '#ff6b6b', fontWeight: 'bold' }} color='white'>
+                  {totalAmount.toLocaleString()}đ
+                </Typography>
               </Box>
-            </Grid>
-          ))}
-        </Grid>
-        <Box sx={{ marginTop: '20px', textAlign: 'right' }}>
-          <Typography variant="h5" sx={{ color: 'black' }}>Tạm tính: {totalAmount.toLocaleString()}đ</Typography>
-          <Typography variant="h5" sx={{ color: 'black' }}>Giảm giá: 0đ</Typography>
-          <Typography variant="h5" sx={{ color: 'black' }}>Tổng cộng: {totalAmount.toLocaleString()}đ (Đã bao gồm VAT)</Typography>
-          <Button variant="contained" color="primary" sx={{ marginTop: '20px' }}>
-            Tiến hành đặt hàng
-          </Button>
-        </Box>
-        <Box sx={{ marginTop: '20px', textAlign: 'center' }}>
-          <Button variant="outlined" onClick={() => navigate('/')} sx={{ marginTop: '20px' }}>
-            Tiếp tục mua hàng
-          </Button>
+              
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                <Typography color='white'>Giá giảm:</Typography>
+                <Typography sx={{ color: '#ff6b6b', fontWeight: 'bold' }} color='white'>
+                  {discount.toLocaleString()}đ
+                </Typography>
+              </Box>
+              
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
+                <Typography color='white'>Tổng cộng:</Typography>
+                <Typography sx={{ color: '#ff6b6b', fontWeight: 'bold' }} color='white'>
+                  {finalAmount.toLocaleString()}đ
+                </Typography>
+              </Box>
+              
+              <Box sx={{ mb: 3, display: 'flex', alignItems: 'center' }}>
+                <CheckCircleIcon sx={{ color: '#ff6b6b', mr: 1 }} />
+              </Box>
+              
+              <Typography variant="h6" sx={{ mb: 2 }} color='white'>
+                Ghi chú đơn hàng
+              </Typography>
+              
+              <TextField
+                fullWidth
+                multiline
+                rows={3}
+                placeholder="Ghi chú"
+                variant="outlined"
+                sx={{ 
+                  mb: 3,
+                  bgcolor: '#333',
+                  '& .MuiOutlinedInput-root': {
+                    '& fieldset': { borderColor: '#444' },
+                    '&:hover fieldset': { borderColor: '#666' },
+                    '&.Mui-focused fieldset': { borderColor: '#888' },
+                  },
+                  '& .MuiInputBase-input': { color: 'white' }
+                }}
+              />
+              
+              <Typography variant="h6" sx={{ mb: 2 }} color='white'>
+                Thông tin xuất hoá đơn
+              </Typography>
+              
+              <Button 
+                fullWidth 
+                variant="contained" 
+                sx={{ 
+                  bgcolor: '#ff6b6b', 
+                  color: 'white', 
+                  py: 1.5,
+                  fontWeight: 'bold',
+                  '&:hover': { bgcolor: '#ff5252' }
+                }}
+              >
+                THANH TOÁN NGAY
+              </Button>
+            </Paper>
+          </Box>
         </Box>
       </Container>
       <Footer />

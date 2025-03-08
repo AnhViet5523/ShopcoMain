@@ -1,10 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import productService from '../../apis/productService';
-import { Grid, Typography } from '@mui/material';
+import { Grid, Typography, Box } from '@mui/material';
 import ProductCard from '../../components/ProductCard';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer/Footer';
+import { styled } from '@mui/material/styles';
+
+const SearchResultsTitle = styled(Typography)(({ theme }) => ({
+    backgroundColor: '#f0f0f0',
+    padding: '10px',
+    borderRadius: '5px',
+}));
 
 const SearchResults = () => {
     const location = useLocation();
@@ -17,10 +24,15 @@ const SearchResults = () => {
         const fetchProducts = async () => {
             try {
                 const response = await productService.searchProducts(query);
-                const _products = response['$values'];
+                const _products = response['$values'] || [];
                 setProducts(_products);
-                setProducts(response);
-            } catch (err) {
+                if (_products.length > 0) {
+                    setError(null);
+                } else {
+                    setError('Không tìm thấy sản phẩm');
+                }
+            } catch (error) {
+                console.error(error);
                 setError('Không tìm thấy sản phẩm');
             } finally {
                 setLoading(false);
@@ -31,22 +43,26 @@ const SearchResults = () => {
     }, [query]);
 
     if (loading) return <Typography>Đang tải...</Typography>;
-    if (error) return <Typography color="error">{error}</Typography>;
 
     return (
         <>
             <Header />
-            
-            <Typography variant="h4" align="center" gutterBottom>
-                Kết quả tìm kiếm cho: "{query}"
-            </Typography>
+            <Box sx={{  width: "99vw", overflowX: "hidden" }}>
+            <SearchResultsTitle variant="h4" align="center" gutterBottom>
+                {error ? error : `Kết quả tìm kiếm cho: ${query}`}
+            </SearchResultsTitle>
             <Grid container spacing={2}>
-                {products?.map(product => (
-                    <Grid item xs={12} sm={6} md={4} key={product.id}>
-                        <ProductCard product={product} />
-                    </Grid>
-                ))}
+                {error ? null : (
+                    Array.isArray(products) && products.length > 0 ? (
+                        products.map(product => (
+                            <Grid item xs={12} sm={6} md={4} key={product.id}>
+                                <ProductCard product={product} />
+                            </Grid>
+                        ))
+                    ) : null
+                )}
             </Grid>
+            </Box>
             <Footer />
         </>
     );
