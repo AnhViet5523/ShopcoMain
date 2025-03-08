@@ -6,32 +6,32 @@ import { Info, Policy, Assignment, Help, Phone } from '@mui/icons-material';
 import footerImage from '/images/footerSp.webp';
 import { useNavigate } from 'react-router-dom';
 
-const menuItems = [
-  {
-    title: "THÔNG TIN CÔNG TY",
-    items: [
-      { text: 'Giới thiệu', icon: <Info />, action: () => navigate('/intro'), active: false },
-      { text: 'Chính sách bảo mật', icon: <Policy />, action: () => navigate('/policy'), active: false },
-      { text: 'Điều khoản dịch vụ', icon: <Assignment />, action: () => navigate('/term'), active: false },
-    ],
-  },
-  {
-    title: "HỖ TRỢ KHÁCH HÀNG",
-    items: [
-      { text: 'Hướng dẫn mua hàng', icon: <Help />, action: () => navigate('/buy'), active: false },
-      { text: 'Góp ý - Khiếu nại', icon: <Phone />, action: () => navigate('/complaint'), active: false },
-      { text: 'Chính sách đổi trả', icon: <Assignment />, action: () => navigate('/return'), active: false },
-    ],
-  },
-];
-
 const Buy = () => {
   const navigate = useNavigate();
 
+  const menuItems = [
+    {
+      title: "THÔNG TIN CÔNG TY",
+      items: [
+        { text: 'Giới thiệu', icon: <Info />, action: () => navigate('/intro'), active: false },
+        { text: 'Chính sách bảo mật', icon: <Policy />, action: () => navigate('/policy'), active: false },
+        { text: 'Điều khoản dịch vụ', icon: <Assignment />, action: () => navigate('/term'), active: false },
+      ],
+    },
+    {
+      title: "HỖ TRỢ KHÁCH HÀNG",
+      items: [
+        { text: 'Hướng dẫn mua hàng', icon: <Help />, action: () => navigate('/buy'), active: false },
+        { text: 'Góp ý - Khiếu nại', icon: <Phone />, action: () => navigate('/complaint'), active: false },
+        { text: 'Chính sách đổi trả', icon: <Assignment />, action: () => navigate('/return'), active: false },
+      ],
+    },
+  ];
+
   return (
-    <Box sx={{ bgcolor: "#f0f0f0", minHeight: "100vh" }}>
+    <Box sx={{ bgcolor: "#f0f0f0", minHeight: "100vh", width:'99vw' }}>
       <Header />
-      <img src={footerImage} alt="Footer" style={{ width: '100%', height: 'auto' }} />
+      
       <Container maxWidth="lg" sx={{ my: 4, px: 2 }}>
         <Grid container spacing={3}>
           <Grid item xs={12} md={3}>
