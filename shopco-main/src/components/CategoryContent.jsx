@@ -501,7 +501,7 @@ const CategoryContent = () => {
                             fontSize: '1rem'
                         }}
                     >
-                        Vui lòng thay đổi bộ lọc hoặc chọn danh mục khác
+                        Vui lòng chọn lại các danh mục khác
                     </Typography>
                 </Box>
             );

@@ -23,6 +23,7 @@ import Return from "./pages/PagesOfFooter/Return";
 import Cart from "./pages/Cart/Cart";
 import ProductScreen from "./pages/Product/ProductScreen";
 import ProtectedRoute from "./components/ProtectedRoute";
+import BrandProducts from "./components/BrandProducts";
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -58,6 +59,7 @@ export default function App() {
         <Route path="/category" element={<CategoryScreen />} />
         <Route path="/categories" element={<CategoryContent />} />
         <Route path="/categories/:id" element={<CategoryContent />} />
+        <Route path="/brand/:brandName" element={<BrandProducts />} />
         
         {/* Static Pages - Ai cũng truy cập được */}
         <Route path="/da-dau" element={<DaDau />} />

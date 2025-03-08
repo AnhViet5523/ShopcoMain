@@ -43,5 +43,36 @@
     font-weight: bold;
   }
   
+  .brand-box {
+    position: relative;
+    border-radius: 8px;
+    overflow: hidden;
+    background-color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0px 2px 8px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s, box-shadow 0.3s;
+    cursor: pointer;
+  }
+  
+  .brand-box:hover {
+    transform: translateY(-5px);
+    box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.2);
+  }
+  
+  .brand-box img {
+    max-width: 80%;
+    max-height: 80%;
+    object-fit: contain;
+  }
+  
+  @media (max-width: 600px) {
+    .brand-box {
+      width: 100%;
+      max-width: 120px;
+    }
+  }
+  
 
    
