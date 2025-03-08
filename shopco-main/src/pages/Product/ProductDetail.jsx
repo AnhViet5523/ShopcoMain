@@ -16,7 +16,9 @@ import {
   Tab,
   Badge
 } from '@mui/material';
-import { Home as HomeIcon, Add as AddIcon, Remove as RemoveIcon, LocalShipping } from '@mui/icons-material';
+import { Home as HomeIcon, Add as AddIcon, Remove as RemoveIcon } from '@mui/icons-material';
+import Header from '../../components/Header';
+import Footer from '../../components/Footer/Footer';
 import productService from '../../apis/productService';
 
 
@@ -136,7 +138,14 @@ export default function ProductDetail() {
     };
 
     fetchProduct();
-  }, [id]);
+
+    console.log("Product: ", product);
+    console.log("loading", loading);
+  }, []);
+
+  if (loading) {
+    return <Typography>Đang tải sản phẩm...</Typography>;
+  }
 
   if (!product) {
     return <Typography>Không tìm thấy sản phẩm</Typography>;
@@ -585,4 +594,5 @@ export default function ProductDetail() {
       </Container>
     </>
   );
-} 
+}
+

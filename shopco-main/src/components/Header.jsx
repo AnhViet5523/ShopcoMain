@@ -5,22 +5,17 @@ import {
 import {
   AppBar, IconButton, InputBase, Toolbar, Typography, 
   Box, Badge, Avatar, Button, Container, Paper, Divider, 
-  Menu, MenuItem
+  Menu, MenuItem, Dialog, DialogTitle, DialogContent, DialogActions
 } from "@mui/material";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Navigation from "./Navigation";
 import QuizTest from '../pages/Quiz/QuizTest';
-import Dialog from '@mui/material/Dialog';
-import DialogTitle from '@mui/material/DialogTitle';
-import DialogContent from '@mui/material/DialogContent';
-import DialogActions from '@mui/material/DialogActions';
 
 const Header = () => {
   const navigate = useNavigate();
   const [searchValue, setSearchValue] = useState("");
   const [accountMenuAnchor, setAccountMenuAnchor] = useState(null);
-  const [open, setOpen] = useState(false);
   const [cartItemCount, setCartItemCount] = useState(0);
 
   // Update cart count from localStorage
@@ -44,6 +39,17 @@ const Header = () => {
       window.removeEventListener('storage', updateCartCount);
       window.removeEventListener('cartUpdated', updateCartCount);
     };
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  
+  // Thêm state mới cho dialog yêu cầu đăng nhập
+  const [openAuthDialog, setOpenAuthDialog] = useState(false);
+  const [authDialogMessage, setAuthDialogMessage] = useState("");
+  
+  // Kiểm tra trạng thái đăng nhập
+  useEffect(() => {
+    const user = localStorage.getItem("user");
+    setIsAuthenticated(!!user);
+
   }, []);
 
   const handleSearchSubmit = async (event) => {
@@ -55,7 +61,14 @@ const Header = () => {
     }
   };
 
-  const handleAccountMenuOpen = (event) => setAccountMenuAnchor(event.currentTarget);
+  const handleAccountMenuOpen = (event) => {
+    if (isAuthenticated) {
+      setAccountMenuAnchor(event.currentTarget);
+    } else {
+      showAuthRequiredDialog("tài khoản");
+    }
+  };
+
   const handleAccountMenuClose = () => setAccountMenuAnchor(null);
 
   const handleLogout = () => {
@@ -83,16 +96,45 @@ const Header = () => {
     setOpen(false);
   };
 
+  // Hàm mới để hiển thị dialog yêu cầu đăng nhập
+  const showAuthRequiredDialog = (feature) => {
+    setAuthDialogMessage(`Bạn cần đăng nhập để sử dụng ${feature}`);
+    setOpenAuthDialog(true);
+  };
+
+  // Đóng dialog yêu cầu đăng nhập
+  const handleAuthDialogClose = () => {
+    setOpenAuthDialog(false);
+  };
+
+  // Chuyển hướng đến trang đăng nhập
+  const handleGoToLogin = () => {
+    setOpenAuthDialog(false);
+    navigate("/login");
+  };
+
   const handleQuizClick = () => {
-    handleClickOpen();
+    if (isAuthenticated) {
+      handleClickOpen();
+    } else {
+      showAuthRequiredDialog("tính năng Quiz");
+    }
   };
 
   const handleCartClick = () => {
-    navigate("/cart");
+    if (isAuthenticated) {
+      navigate("/cart");
+    } else {
+      showAuthRequiredDialog("giỏ hàng");
+    }
   };
 
   const handleSupportClick = () => {
-    navigate("/customer-support");
+    if (isAuthenticated) {
+      navigate("/customer-support");
+    } else {
+      showAuthRequiredDialog("hỗ trợ khách hàng");
+    }
   };
 
   const handleAccountMenuItemClick = (item) => {
@@ -221,6 +263,7 @@ const Header = () => {
         </Container>
       </AppBar>
 
+      {/* Dialog cho Quiz */}
       <Dialog open={open} onClose={handleClose} fullWidth>
         <DialogTitle>Quiz</DialogTitle>
         <DialogContent>
@@ -229,6 +272,27 @@ const Header = () => {
         <DialogActions>
           <Button onClick={handleClose} color="primary">
             Đóng
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Dialog yêu cầu đăng nhập mới */}
+      <Dialog open={openAuthDialog} onClose={handleAuthDialogClose}>
+        <DialogTitle>Yêu cầu đăng nhập</DialogTitle>
+        <DialogContent>
+          <Typography>{authDialogMessage}</Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleAuthDialogClose} color="primary">
+            Hủy
+          </Button>
+          <Button 
+            onClick={handleGoToLogin} 
+            color="primary" 
+            variant="contained"
+            autoFocus
+          >
+            Đăng nhập
           </Button>
         </DialogActions>
       </Dialog>

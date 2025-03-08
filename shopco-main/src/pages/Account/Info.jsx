@@ -1,5 +1,5 @@
 import Header from '../../components/Header';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -34,22 +34,53 @@ import {
 } from '@mui/icons-material';
 import Banner from '../../components/Banner';
 import Footer from '../../components/Footer/Footer';
+import userService from '../../apis/userService';
 
 const Info = () => {
   const navigate = useNavigate();
   const [userInfo, setUserInfo] = useState({
-    name: 'Việt Nguyễn',
+    name: '',
     phone: '',
     email: '',
     password: '********',
-    address: '76 Đường số 120, phường 8, quận 8, Hồ Chí Minh',
+    confirmPassword: '',
+    address: '',
   });
 
   const [open, setOpen] = useState(false);
   const [updatedInfo, setUpdatedInfo] = useState(userInfo);
 
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      try {
+        const currentUser = userService.getCurrentUser();
+        if (!currentUser || !currentUser.userId) {
+          navigate('/login');
+          return;
+        }
+
+        console.log('Fetching profile for userId:', currentUser.userId);
+        const response = await userService.getUserProfile(currentUser.userId);
+        console.log('API response:', response.data);
+        
+        setUserInfo({
+          name: response.data.name || '',
+          phone: response.data.phone || '',
+          email: response.data.email || '',
+          password: '********',
+          confirmPassword: '',
+          address: response.data.address || '',
+        });
+      } catch (error) {
+        console.error('Lỗi khi lấy thông tin người dùng:', error);
+      }
+    };
+
+    fetchUserProfile();
+  }, [navigate]);
+
   const handleLogout = () => {
-    localStorage.removeItem("user");
+    userService.logout();
     window.location.href = "/";
   };
 
@@ -80,15 +111,15 @@ const Info = () => {
   ];
 
   return (
-    <Box sx={{ bgcolor: "#f0f0f0", minHeight: "100vh" }}>
+    <Box sx={{ bgcolor: "#f0f0f0", minHeight: "100vh", width:'99vw' }}>
       <Header />
       <Breadcrumbs aria-label="breadcrumb" sx={{ mb: 3, ml: 10}}>
-          <Link underline="hover" color="inherit" href="/" display="flex" alignItems="center">
-            <Home sx={{ mr: 0.5 }} fontSize="inherit" />
-            Trang chủ
-          </Link>
-          <Typography color="text.primary">Tài khoản</Typography>
-        </Breadcrumbs>
+        <Link underline="hover" color="inherit" href="/" display="flex" alignItems="center">
+          <Home sx={{ mr: 0.5 }} fontSize="inherit" />
+          Trang chủ
+        </Link>
+        <Typography color="text.primary">Tài khoản</Typography>
+      </Breadcrumbs>
       <Banner />
       
       <Container maxWidth="lg" sx={{ my: 4 }}>
@@ -127,39 +158,101 @@ const Info = () => {
               </Typography>
               <Grid container spacing={3}>
                 <Grid item xs={12}>
-                  <TextField fullWidth placeholder="Cập nhật số điện thoại" variant="outlined" size="small" sx={{ mb: 2 }} />
-                  <TextField fullWidth placeholder="Cập nhật email" variant="outlined" size="small" sx={{ mb: 2 }} />
+                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                    Thông tin cá nhân
+                  </Typography>
+                  <TextField 
+                    fullWidth 
+                    label="Họ và tên" 
+                    name="name" 
+                    value={updatedInfo.name} 
+                    onChange={handleChange} 
+                    margin="dense" 
+                    sx={{ mb: 2 }}
+                  />
+                  <TextField 
+                    fullWidth 
+                    label="Số điện thoại" 
+                    name="phone" 
+                    value={updatedInfo.phone} 
+                    onChange={handleChange} 
+                    margin="dense" 
+                    sx={{ mb: 2 }}
+                  />
+                  <TextField 
+                    fullWidth 
+                    label="Email" 
+                    name="email" 
+                    value={updatedInfo.email} 
+                    onChange={handleChange} 
+                    margin="dense" 
+                    sx={{ mb: 2 }}
+                  />
                 </Grid>
                 <Grid item xs={12}>
                   <Typography variant="subtitle2" color="text.secondary" gutterBottom>
                     Đổi mật khẩu
                   </Typography>
-                  <TextField fullWidth placeholder="Cập nhật mật khẩu" variant="outlined" size="small" sx={{ mb: 2 }} />
-                </Grid>
-                <Grid item xs={12}>
-                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                    Liên kết mạng xã hội
-                  </Typography>
-                  <Button startIcon={<Facebook />} variant="outlined" sx={{ mr: 2 }}>
-                    Facebook
-                  </Button>
-                  <Button startIcon={<Google />} variant="outlined">
-                    Google
-                  </Button>
+                  <TextField 
+                    fullWidth 
+                    label="Mật khẩu mới" 
+                    name="password" 
+                    type="password" 
+                    value={updatedInfo.password} 
+                    onChange={handleChange} 
+                    margin="dense" 
+                    sx={{ mb: 2 }}
+                  />
+                  <TextField 
+                    fullWidth 
+                    label="Xác nhận mật khẩu mới" 
+                    name="confirmPassword" 
+                    type="password" 
+                    value={updatedInfo.confirmPassword} 
+                    onChange={handleChange} 
+                    margin="dense" 
+                    sx={{ mb: 2 }}
+                    error={updatedInfo.password !== updatedInfo.confirmPassword && updatedInfo.confirmPassword !== ''}
+                    helperText={updatedInfo.password !== updatedInfo.confirmPassword && updatedInfo.confirmPassword !== '' ? "Mật khẩu xác nhận không khớp" : ""}
+                  />
                 </Grid>
                 <Grid item xs={12}>
                   <Typography variant="subtitle2" color="text.secondary" gutterBottom>
                     Địa chỉ
                   </Typography>
-                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <LocationOn sx={{ mr: 1 }} />
-                    <Typography variant="body2" sx={{ flexGrow: 1 }}>
-                      {userInfo.address}
-                    </Typography>
-                    <Button variant="outlined" size="small" startIcon={<Edit />} onClick={handleOpenDialog}>
-                      Cập nhật
-                    </Button>
-                  </Box>
+                  <TextField 
+                    fullWidth 
+                    label="Địa chỉ" 
+                    name="address" 
+                    value={updatedInfo.address} 
+                    onChange={handleChange} 
+                    margin="dense" 
+                    multiline
+                    rows={3}
+                    sx={{ mb: 2 }}
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                    Liên kết mạng xã hội
+                  </Typography>
+                  <Button startIcon={<Facebook />} variant="outlined" sx={{ mr: 2, mb: 2 }}>
+                    Facebook
+                  </Button>
+                  <Button startIcon={<Google />} variant="outlined" sx={{ mb: 2 }}>
+                    Google
+                  </Button>
+                </Grid>
+                <Grid item xs={12}>
+                  <Button 
+                    variant="contained" 
+                    color="primary" 
+                    onClick={handleOpenDialog}
+                    startIcon={<Edit />}
+                    sx={{ mb: 3 }}
+                  >
+                    Cập nhật thông tin
+                  </Button>
                 </Grid>
               </Grid>
             </Paper>
@@ -168,15 +261,15 @@ const Info = () => {
       </Container>
       <Footer />
       <Dialog open={open} onClose={handleCloseDialog}>
-        <DialogTitle>Cập nhật thông tin</DialogTitle>
+        <DialogTitle>Xác nhận cập nhật</DialogTitle>
         <DialogContent>
-          <TextField fullWidth label="Tên" name="name" value={updatedInfo.name} onChange={handleChange} margin="dense" />
-          <TextField fullWidth label="Số điện thoại" name="phone" value={updatedInfo.phone} onChange={handleChange} margin="dense" />
-          <TextField fullWidth label="Địa chỉ" name="address" value={updatedInfo.address} onChange={handleChange} margin="dense" />
+          <Typography>
+            Bạn có chắc chắn muốn cập nhật thông tin không?
+          </Typography>
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseDialog} color="secondary">Hủy</Button>
-          <Button onClick={handleSave} color="primary" variant="contained">Lưu</Button>
+          <Button onClick={handleSave} color="primary" variant="contained">Xác nhận</Button>
         </DialogActions>
       </Dialog>
     </Box>
