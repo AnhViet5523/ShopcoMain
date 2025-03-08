@@ -57,9 +57,6 @@ const Header = () => {
 
   }, []);
 
-  // Add missing state declaration for the quiz dialog
-  const [open, setOpen] = useState(false);
-
   const handleSearchSubmit = async (event) => {
     event.preventDefault();
     console.log("Searching:", searchValue);
