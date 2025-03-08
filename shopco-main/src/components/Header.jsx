@@ -17,7 +17,6 @@ const Header = () => {
   const [searchValue, setSearchValue] = useState("");
   const [accountMenuAnchor, setAccountMenuAnchor] = useState(null);
   const [cartItemCount, setCartItemCount] = useState(0);
-  const [open, setOpen] = useState(false);
 
   // Update cart count from localStorage
   useEffect(() => {
@@ -41,7 +40,7 @@ const Header = () => {
       window.removeEventListener('cartUpdated', updateCartCount);
     };
   }, []);
-
+  
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   
   // Add this line to fix the error
@@ -57,6 +56,9 @@ const Header = () => {
     setIsAuthenticated(!!user);
 
   }, []);
+
+  // Add missing state declaration for the quiz dialog
+  const [open, setOpen] = useState(false);
 
   const handleSearchSubmit = async (event) => {
     event.preventDefault();
