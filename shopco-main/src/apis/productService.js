@@ -34,9 +34,30 @@ const productService = {
     },
 
     // Lấy sản phẩm theo brand
-    getProductsByBrand: async (brand) => {
-        const url = `/api/Products/brand/${brand}`;
-        return await axiosClient.get(url);
+    getProductsByBrand: async (brandName) => {
+        try {
+            console.log('Fetching products by brand:', brandName);
+            const response = await axiosClient.get('/api/Products');
+            
+            // Nếu response có dạng array hoặc object với $values
+            let allProducts = [];
+            if (response && response.$values) {
+                allProducts = response.$values;
+            } else if (Array.isArray(response)) {
+                allProducts = response;
+            }
+            
+            // Lọc sản phẩm theo brand
+            const filteredProducts = allProducts.filter(product => 
+                product.brand && product.brand.toLowerCase() === brandName.toLowerCase()
+            );
+            
+            console.log(`Found ${filteredProducts.length} products for brand ${brandName}`);
+            return filteredProducts;
+        } catch (error) {
+            console.error('Error fetching products by brand:', error);
+            return [];
+        }
     },
 
     // Lấy sản phẩm theo skin type
