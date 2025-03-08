@@ -39,6 +39,8 @@ const Header = () => {
       window.removeEventListener('storage', updateCartCount);
       window.removeEventListener('cartUpdated', updateCartCount);
     };
+  }, []);
+
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   
   // Thêm state mới cho dialog yêu cầu đăng nhập
