@@ -35,6 +35,7 @@ import {
 import Banner from '../../components/Banner';
 import Footer from '../../components/Footer/Footer';
 import userService from '../../apis/userService';
+import axiosClient from '../../apis/axiosClient';
 
 const Info = () => {
   const navigate = useNavigate();
@@ -42,13 +43,16 @@ const Info = () => {
     name: '',
     phone: '',
     email: '',
-    password: '********',
-    confirmPassword: '',
     address: '',
   });
 
   const [open, setOpen] = useState(false);
   const [updatedInfo, setUpdatedInfo] = useState(userInfo);
+  const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState({
+    email: '',
+    phone: ''
+  });
 
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -61,16 +65,20 @@ const Info = () => {
 
         console.log('Fetching profile for userId:', currentUser.userId);
         const response = await userService.getUserProfile(currentUser.userId);
-        console.log('API response:', response.data);
+        console.log('API response:', response);
         
-        setUserInfo({
-          name: response.data.name || '',
-          phone: response.data.phone || '',
-          email: response.data.email || '',
-          password: '********',
-          confirmPassword: '',
-          address: response.data.address || '',
-        });
+        if (response) {
+          const newUserInfo = {
+            name: response.name || '',
+            phone: response.phone || '',
+            email: response.email || '',
+            address: response.address || '',
+          };
+          setUserInfo(newUserInfo);
+          setUpdatedInfo(newUserInfo);
+        } else {
+          console.error('Không nhận được dữ liệu người dùng từ API');
+        }
       } catch (error) {
         console.error('Lỗi khi lấy thông tin người dùng:', error);
       }
@@ -85,7 +93,18 @@ const Info = () => {
   };
 
   const handleOpenDialog = () => {
-    setUpdatedInfo(userInfo);
+    // Kiểm tra xem thông tin có thay đổi không
+    const isInfoChanged = 
+      userInfo.name !== updatedInfo.name ||
+      userInfo.phone !== updatedInfo.phone ||
+      userInfo.email !== updatedInfo.email ||
+      userInfo.address !== updatedInfo.address;
+    
+    if (!isInfoChanged) {
+      alert('Bạn chưa thay đổi thông tin nào!');
+      return;
+    }
+    
     setOpen(true);
   };
 
@@ -93,14 +112,107 @@ const Info = () => {
     setOpen(false);
   };
 
-  const handleSave = () => {
-    setUserInfo(updatedInfo);
-    setOpen(false);
+  const validateEmail = (email) => {
+    const re = /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+    return re.test(String(email).toLowerCase());
+  };
+
+  const validatePhone = (phone) => {
+    const re = /^[0-9]{10,11}$/;
+    return re.test(String(phone));
   };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setUpdatedInfo((prev) => ({ ...prev, [name]: value }));
+    
+    // Validate input
+    if (name === 'email') {
+      if (value && !validateEmail(value)) {
+        setErrors(prev => ({ ...prev, email: 'Email không hợp lệ' }));
+      } else {
+        setErrors(prev => ({ ...prev, email: '' }));
+      }
+    } else if (name === 'phone') {
+      if (value && !validatePhone(value)) {
+        setErrors(prev => ({ ...prev, phone: 'Số điện thoại phải có 10-11 chữ số' }));
+      } else {
+        setErrors(prev => ({ ...prev, phone: '' }));
+      }
+    }
+  };
+
+  const handleSave = async () => {
+    try {
+      // Validate before saving
+      if (errors.email || errors.phone) {
+        alert('Vui lòng sửa các lỗi trước khi cập nhật thông tin!');
+        return;
+      }
+      
+      // Kiểm tra xem thông tin có thay đổi không
+      const isInfoChanged = 
+        userInfo.name !== updatedInfo.name ||
+        userInfo.phone !== updatedInfo.phone ||
+        userInfo.email !== updatedInfo.email ||
+        userInfo.address !== updatedInfo.address;
+      
+      if (!isInfoChanged) {
+        alert('Bạn chưa thay đổi thông tin nào!');
+        setOpen(false);
+        return;
+      }
+      
+      setLoading(true);
+      const currentUser = userService.getCurrentUser();
+      if (!currentUser || !currentUser.userId) {
+        navigate('/login');
+        return;
+      }
+
+      // Lấy thông tin đầy đủ của người dùng
+      const userResponse = await axiosClient.get(`/api/Users/${currentUser.userId}`);
+      
+      if (!userResponse) {
+        throw new Error('Không thể lấy thông tin người dùng');
+      }
+      
+      // Chuẩn bị dữ liệu cần cập nhật - giữ nguyên các trường khác
+      const userData = {
+        ...userResponse,
+        fullName: updatedInfo.name,
+        email: updatedInfo.email,
+        phone: updatedInfo.phone,
+        address: updatedInfo.address
+      };
+      
+      // Gọi API cập nhật thông tin
+      const response = await axiosClient.put(`/api/Users/${currentUser.userId}`, userData);
+      
+      // Cập nhật localStorage với thông tin mới
+      if (response) {
+        const updatedUser = { 
+          ...currentUser, 
+          fullName: updatedInfo.name,
+          email: updatedInfo.email,
+          phone: updatedInfo.phone,
+          address: updatedInfo.address
+        };
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+      }
+      
+      // Cập nhật state với thông tin mới
+      setUserInfo(updatedInfo);
+      setOpen(false);
+      
+      // Hiển thị thông báo thành công
+      alert('Cập nhật thông tin thành công!');
+    } catch (error) {
+      console.error('Lỗi khi cập nhật thông tin:', error);
+      alert('Có lỗi xảy ra khi cập nhật thông tin!');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const menuItems = [
@@ -128,7 +240,9 @@ const Info = () => {
             <Paper elevation={0} sx={{ p: 2, bgcolor: "#f5f5f5", textAlign: "center" }}>
               <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", mb: 2 }}>
                 <Avatar src="/path-to-avatar.jpg" sx={{ width: 50, height: 50, mb: 1 }} />
-                <Typography variant="subtitle1" fontWeight="bold">Chào bạn!</Typography>
+                <Typography variant="subtitle1" fontWeight="bold">
+                  {userInfo.name ? `Chào ${userInfo.name}!` : 'Chào bạn!'}
+                </Typography>
               </Box>
               <List>
                 {menuItems.map((item) => (
@@ -178,6 +292,8 @@ const Info = () => {
                     onChange={handleChange} 
                     margin="dense" 
                     sx={{ mb: 2 }}
+                    error={!!errors.phone}
+                    helperText={errors.phone}
                   />
                   <TextField 
                     fullWidth 
@@ -187,33 +303,8 @@ const Info = () => {
                     onChange={handleChange} 
                     margin="dense" 
                     sx={{ mb: 2 }}
-                  />
-                </Grid>
-                <Grid item xs={12}>
-                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                    Đổi mật khẩu
-                  </Typography>
-                  <TextField 
-                    fullWidth 
-                    label="Mật khẩu mới" 
-                    name="password" 
-                    type="password" 
-                    value={updatedInfo.password} 
-                    onChange={handleChange} 
-                    margin="dense" 
-                    sx={{ mb: 2 }}
-                  />
-                  <TextField 
-                    fullWidth 
-                    label="Xác nhận mật khẩu mới" 
-                    name="confirmPassword" 
-                    type="password" 
-                    value={updatedInfo.confirmPassword} 
-                    onChange={handleChange} 
-                    margin="dense" 
-                    sx={{ mb: 2 }}
-                    error={updatedInfo.password !== updatedInfo.confirmPassword && updatedInfo.confirmPassword !== ''}
-                    helperText={updatedInfo.password !== updatedInfo.confirmPassword && updatedInfo.confirmPassword !== '' ? "Mật khẩu xác nhận không khớp" : ""}
+                    error={!!errors.email}
+                    helperText={errors.email}
                   />
                 </Grid>
                 <Grid item xs={12}>
@@ -250,8 +341,9 @@ const Info = () => {
                     onClick={handleOpenDialog}
                     startIcon={<Edit />}
                     sx={{ mb: 3 }}
+                    disabled={loading || !!errors.email || !!errors.phone}
                   >
-                    Cập nhật thông tin
+                    {loading ? 'Đang cập nhật...' : 'Cập nhật thông tin'}
                   </Button>
                 </Grid>
               </Grid>
@@ -268,8 +360,15 @@ const Info = () => {
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseDialog} color="secondary">Hủy</Button>
-          <Button onClick={handleSave} color="primary" variant="contained">Xác nhận</Button>
+          <Button onClick={handleCloseDialog} color="secondary" disabled={loading}>Hủy</Button>
+          <Button 
+            onClick={handleSave} 
+            color="primary" 
+            variant="contained" 
+            disabled={loading}
+          >
+            {loading ? 'Đang cập nhật...' : 'Xác nhận'}
+          </Button>
         </DialogActions>
       </Dialog>
     </Box>
