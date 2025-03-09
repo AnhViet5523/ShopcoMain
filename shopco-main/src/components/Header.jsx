@@ -11,19 +11,52 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Navigation from "./Navigation";
 import QuizTest from '../pages/Quiz/QuizTest';
+import orderService from '../apis/orderService';
+
 
 const Header = () => {
   const navigate = useNavigate();
   const [searchValue, setSearchValue] = useState("");
   const [accountMenuAnchor, setAccountMenuAnchor] = useState(null);
   const [cartItemCount, setCartItemCount] = useState(0);
+  const [open, setOpen] = useState(false);
 
-  // Update cart count from localStorage
+  // Update cart count from orderService
   useEffect(() => {
-    const updateCartCount = () => {
-      const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-      const count = cart.reduce((total, item) => total + item.quantity, 0);
-      setCartItemCount(count);
+    const updateCartCount = async () => {
+      try {
+        // Get user ID from localStorage
+        const user = JSON.parse(localStorage.getItem('user'));
+        
+        if (user && user.userId) {
+          // Fetch cart items from orderService
+          const orders = await orderService.getOrders(user.userId);
+          
+          // Find the pending order (cart)
+          const pendingOrder = orders.find(order => order.orderStatus === "Pending");
+          
+          if (pendingOrder && pendingOrder.orderItems && pendingOrder.orderItems.$values) {
+            // Calculate total quantity from order items
+            const count = pendingOrder.orderItems.$values.reduce(
+              (total, item) => total + item.quantity, 0
+            );
+            setCartItemCount(count);
+          } else {
+            setCartItemCount(0);
+          }
+        } else {
+          // Fallback to localStorage for non-authenticated users
+          const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+          const count = cart.reduce((total, item) => total + item.quantity, 0);
+          setCartItemCount(count);
+        }
+      } catch (error) {
+        console.error('Error fetching cart:', error);
+        // Fallback to localStorage on error
+        const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+        const count = cart.reduce((total, item) => total + item.quantity, 0);
+        setCartItemCount(count);
+      }
     };
 
     // Initial count
@@ -42,9 +75,6 @@ const Header = () => {
   }, []);
   
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  
-  // Add this line to fix the error
-  const [open, setOpen] = useState(false);
   
   // Thêm state mới cho dialog yêu cầu đăng nhập
   const [openAuthDialog, setOpenAuthDialog] = useState(false);

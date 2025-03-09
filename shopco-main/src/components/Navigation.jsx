@@ -189,7 +189,13 @@ const handleClickAway = () => {
           {extraMenuItems.map((item) => (
             <Button 
               key={item} 
-              onClick={item === "Quy trình chăm sóc da" ? handleSkinTypesOpen : undefined} 
+              onClick={
+                item === "Quy trình chăm sóc da" 
+                  ? handleSkinTypesOpen 
+                  : item === "Blog"
+                    ? () => navigate("/blog")
+                    : undefined
+              } 
               sx={{ 
                 color: 'text.primary', 
                 position: 'relative', 
