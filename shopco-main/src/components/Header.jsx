@@ -75,9 +75,6 @@ const Header = () => {
   
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   
-  // Add this line to fix the error
-  const [open, setOpen] = useState(false);
-  
   // Thêm state mới cho dialog yêu cầu đăng nhập
   const [openAuthDialog, setOpenAuthDialog] = useState(false);
   const [authDialogMessage, setAuthDialogMessage] = useState("");

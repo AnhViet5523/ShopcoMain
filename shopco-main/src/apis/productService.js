@@ -62,19 +62,15 @@ const productService = {
 
     // Lấy sản phẩm theo skin type
     getProductsBySkinType: async (skinType) => {
-        const url = `/api/Products/skintype/${skinType}`;
+        const url = `/api/Products/skinType/${skinType}`;
         return await axiosClient.get(url);
     },
 
-    getProductsByPrice: async (minPrice, maxPrice) => {
-        const url = '/api/Products/price';
-        return await axiosClient.get(url, {
-            params: {
-                min: minPrice,
-                max: maxPrice
-            }
-        });
-    }
+    // Lấy tất cả skin types
+    getSkinTypes: async () => {
+        const url = '/api/Products/skinTypes'; // Giả sử API này tồn tại
+        return await axiosClient.get(url);
+    },
     
 };
 

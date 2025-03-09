@@ -159,9 +159,9 @@ const CategoryContent = () => {
         try {
             setLoading(true);
             const response = await productService.getProducts();
-            const _response = response['$values'];
+            const _response = response['$values'];           
             
-            const data = _response.filter(x => x.categoryId == categoryId);
+            const data = _response.filter(x => x.categoryId == categoryId);            
             
             const mappedProducts = data.map(product => ({
                 id: product.productId,
@@ -225,7 +225,7 @@ const CategoryContent = () => {
             product.price >= selectedPriceRange.min && product.price < selectedPriceRange.max
         );
     };
-
+   
     // Hàm lọc sản phẩm dựa trên thương hiệu đã chọn - thêm lại hàm này
     const getFilteredProducts = () => {
         // Nếu không có thương hiệu được chọn, trả về tất cả sản phẩm
@@ -477,7 +477,7 @@ const CategoryContent = () => {
         if (error) return <Typography color="error">{error}</Typography>;
         if (!products || products.length === 0) {
             return (
-                <Box sx={{ 
+                 <Box sx={{ 
                     textAlign: 'center', 
                     py: 4,
                     backgroundColor: 'rgba(255, 255, 255, 0.9)',
@@ -501,7 +501,7 @@ const CategoryContent = () => {
                             fontSize: '1rem'
                         }}
                     >
-                        Vui lòng chọn lại các danh mục khác
+                        Vui lòng thay đổi bộ lọc hoặc chọn danh mục khác
                     </Typography>
                 </Box>
             );
@@ -597,7 +597,7 @@ const CategoryContent = () => {
                             {/* Kiểm tra xem có bộ lọc nào đang được áp dụng không */}
                             {(selectedBrands.length === 0 && !selectedSkinType && !selectedPriceRange) ? (
                                 // Nếu không có bộ lọc, hiển thị danh mục và tên danh mục con
-                                <>
+                                <>                                    
                                     {selectedCategory}
                                     {selectedCategory && selectedSubItem && (
                                         <>
@@ -716,7 +716,7 @@ const CategoryContent = () => {
                                                 sx={{
                                                     py: 1,
                                                     cursor: 'pointer',
-                                                    color: selectedSubItem === category.categoryName ? 'primary.main' : 'inherit',
+                                                    color: selectedSubItem === category.categoryName ? 'primary.main' : 'inherit',                               
                                                     borderRadius: 1,
                                                     px: 1,
                                                     transition: 'all 0.2s ease',
@@ -748,7 +748,7 @@ const CategoryContent = () => {
                             }}
                         >
                             <AccordionSummary
-                                expandIcon={<ExpandMoreIcon />}
+                                expandIcon={<ExpandMoreIcon />}             
                                 sx={{ 
                                     px: 0,
                                     borderRadius: 1,
