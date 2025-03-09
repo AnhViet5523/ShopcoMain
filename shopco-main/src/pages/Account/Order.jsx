@@ -1,16 +1,32 @@
-
 import { Box, Button, Container, Typography, Tabs, Tab, Grid, Paper, Avatar, List, ListItem, ListItemIcon, ListItemText } from "@mui/material";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Home, Person, Phone, Email, ExitToApp } from "@mui/icons-material";
 import {Link, Breadcrumbs} from '@mui/material'
 import Banner from "../../components/Banner";
 import Footer from "../../components/Footer/Footer";
 import Header from "../../components/Header";
+import userService from "../../apis/userService";
 
 const Order = () => {
   const [tabIndex, setTabIndex] = useState(0);  
   const navigate = useNavigate();
+  const [userName, setUserName] = useState('');
+
+  useEffect(() => {
+    const fetchUserName = () => {
+      try {
+        const currentUser = userService.getCurrentUser();
+        if (currentUser && currentUser.name) {
+          setUserName(currentUser.name);
+        }
+      } catch (error) {
+        console.error('Lỗi khi lấy thông tin người dùng:', error);
+      }
+    };
+
+    fetchUserName();
+  }, []);
 
   const handleTabChange = (event, newIndex) => {
     setTabIndex(newIndex);
@@ -45,7 +61,9 @@ const Order = () => {
                   <Paper elevation={0} sx={{ p: 2, bgcolor: "#f5f5f5", textAlign: "center" }}>
                     <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", mb: 2 }}>
                       <Avatar src="/path-to-avatar.jpg" sx={{ width: 50, height: 50, mb: 1 }} />
-                      <Typography variant="subtitle1" fontWeight="bold">Chào bạn!</Typography>
+                      <Typography variant="subtitle1" fontWeight="bold">
+                        {userName ? `Chào ${userName}!` : 'Chào bạn!'}
+                      </Typography>
                     </Box>
                     <List>
                       {menuItems.map((item) => (
