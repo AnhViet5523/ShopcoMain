@@ -1,9 +1,7 @@
-import { useState, useEffect, useRef } from 'react';
-import { Button, Stack, TextField, Typography, colors, Checkbox, FormControlLabel, CircularProgress, InputAdornment, IconButton } from '@mui/material';
+import { useState } from 'react';
+import { Button, Stack, TextField, Typography, colors, CircularProgress, InputAdornment, IconButton } from '@mui/material';
 import { ScreenMode } from '../../pages/SigninPage';
 import userService from '../../apis/userService';
-import axiosClient from '../../apis/axiosClient';
-import axios from 'axios';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
 
 const SignupForm = ({ onSwitchMode }) => {
@@ -12,127 +10,145 @@ const SignupForm = ({ onSwitchMode }) => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [formErrors, setFormErrors] = useState({
     username: '',
     email: '',
     password: '',
     confirmPassword: ''
   });
-  
-  // Sử dụng useRef để theo dõi component đã unmounted chưa
-  const isMounted = useRef(true);
-  
-  // Thiết lập cleanup khi component unmount
-  useEffect(() => {
-    return () => {
-      isMounted.current = false;
-      // Hủy tất cả các request liên quan đến đăng ký
-      axiosClient.cancelAllRequests();
-    };
-  }, []);
 
-  const validateEmail = (email) => {
-    const regex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-    return regex.test(email);
+  // Validation patterns
+  const patterns = {
+    username: /^[a-zA-Z0-9_]{3,30}$/,
+    email: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
+    password: /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,}$/
+  };
+
+  const validateField = (name, value) => {
+    let error = '';
+    
+    switch (name) {
+      case 'username':
+        if (!value) {
+          error = 'Vui lòng nhập tên đăng nhập';
+        } else if (value.length < 3) {
+          error = 'Tên đăng nhập phải có ít nhất 3 ký tự';
+        } else if (value.length > 30) {
+          error = 'Tên đăng nhập không được quá 30 ký tự';
+        } else if (!patterns.username.test(value)) {
+          error = 'Tên đăng nhập chỉ được chứa chữ cái, số và dấu gạch dưới';
+        }
+        break;
+
+      case 'email':
+        if (!value) {
+          error = 'Vui lòng nhập email';
+        } else if (!patterns.email.test(value)) {
+          error = 'Email không hợp lệ';
+        }
+        break;
+
+      case 'password':
+        if (!value) {
+          error = 'Vui lòng nhập mật khẩu';
+        } else if (value.length < 8) {
+          error = 'Mật khẩu phải có ít nhất 8 ký tự';
+        } else if (!patterns.password.test(value)) {
+          error = 'Mật khẩu phải chứa ít nhất 1 chữ cái, 1 số và 1 ký tự đặc biệt';
+        }
+        break;
+
+      case 'confirmPassword':
+        if (!value) {
+          error = 'Vui lòng xác nhận mật khẩu';
+        } else if (value !== password) {
+          error = 'Mật khẩu xác nhận không khớp';
+        }
+        break;
+
+      default:
+        break;
+    }
+
+    return error;
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    
+    // Cập nhật giá trị
+    switch (name) {
+      case 'username':
+        setUsername(value);
+        break;
+      case 'email':
+        setEmail(value);
+        break;
+      case 'password':
+        setPassword(value);
+        break;
+      case 'confirmPassword':
+        setConfirmPassword(value);
+        break;
+      default:
+        break;
+    }
+
+    // Validate và cập nhật lỗi
+    const error = validateField(name, value);
+    setFormErrors(prev => ({
+      ...prev,
+      [name]: error
+    }));
   };
 
   const validateForm = () => {
-    let isValid = true;
-    const newErrors = {
-      username: '',
-      email: '',
-      password: '',
-      confirmPassword: ''
+    const errors = {
+      username: validateField('username', username),
+      email: validateField('email', email),
+      password: validateField('password', password),
+      confirmPassword: validateField('confirmPassword', confirmPassword)
     };
 
-    // Kiểm tra username
-    if (!username) {
-      newErrors.username = 'Vui lòng nhập tên đăng nhập';
-      isValid = false;
-    } else if (!/^[A-Za-z]+$/.test(username)) {
-      newErrors.username = 'Tên đăng nhập chỉ được chứa chữ cái';
-      isValid = false;
-    }
+    setFormErrors(errors);
 
-    // Kiểm tra email
-    if (!email) {
-      newErrors.email = 'Vui lòng nhập email';
-      isValid = false;
-    } else if (!validateEmail(email)) {
-      newErrors.email = 'Email không hợp lệ';
-      isValid = false;
-    }
-
-    // Kiểm tra password
-    if (!password) {
-      newErrors.password = 'Vui lòng nhập mật khẩu';
-      isValid = false;
-    } else if (password.length < 8) {
-      newErrors.password = 'Mật khẩu phải có ít nhất 8 ký tự';
-      isValid = false;
-    } else if (!/[A-Za-z]/.test(password) || !/[^A-Za-z0-9]/.test(password)) {
-      newErrors.password = 'Mật khẩu phải bao gồm ít nhất 1 chữ cái và 1 ký tự đặc biệt';
-      isValid = false;
-    }
-
-    // Kiểm tra xác nhận mật khẩu
-    if (password !== confirmPassword) {
-      newErrors.confirmPassword = 'Mật khẩu xác nhận không khớp';
-      isValid = false;
-    }
-
-    setFormErrors(newErrors);
-    return isValid;
+    return !Object.values(errors).some(error => error !== '');
   };
 
   const handleRegister = async () => {
-    setError('');
-    
     if (!validateForm()) {
+      setError('Vui lòng kiểm tra lại thông tin đăng ký');
       return;
     }
 
+    setError('');
     setLoading(true);
-    
+
     try {
-      const response = await userService.register(username, email, password);
-      // Kiểm tra nếu component vẫn mounted trước khi cập nhật state
-      if (isMounted.current) {
-        alert('Đăng ký thành công! Vui lòng đăng nhập.');
-        onSwitchMode(ScreenMode.SIGN_IN);
-      }
+      await userService.register(username, email, password);
+      alert('Đăng ký thành công!');
+      onSwitchMode(ScreenMode.SIGN_IN);
     } catch (err) {
-      // Kiểm tra nếu component vẫn mounted và lỗi không phải do hủy yêu cầu
-      if (isMounted.current) {
-        console.error('Registration error:', err);
-        
-        if (err.name === 'AbortError' || err.message?.includes('aborted') || axios.isCancel(err)) {
-          setError('Yêu cầu đã bị hủy, vui lòng thử lại.');
-        } else if (err.response && err.response.data && err.response.data.message) {
-          setError(err.response.data.message);
-        } else if (err.response && err.response.status === 400) {
-          if (err.response.data.message?.includes('Email không hợp lệ')) {
-            setError('Email không hợp lệ. Vui lòng nhập lại.');
-          } else if (err.response.data.message?.includes('Mật khẩu không hợp lệ')) {
-            setError('Mật khẩu không hợp lệ. Mật khẩu phải ít nhất 8 ký tự, bao gồm 1 chữ cái và 1 ký tự đặc biệt.');
-          } else {
-            setError('Đã xảy ra lỗi. Vui lòng thử lại sau.');
-          }
+      console.error('Lỗi đăng ký:', err);
+      if (err.response?.status === 409) {
+        if (err.response.data?.message?.includes('Username')) {
+          setError('Tên đăng nhập đã tồn tại');
+        } else if (err.response.data?.message?.includes('Email')) {
+          setError('Email đã được sử dụng');
         } else {
-          setError('Đã xảy ra lỗi. Vui lòng thử lại sau.');
+          setError('Tên đăng nhập hoặc email đã tồn tại');
         }
+      } else {
+        setError(err.response?.data?.message || 'Đã có lỗi xảy ra');
       }
     } finally {
-      // Kiểm tra nếu component vẫn mounted trước khi cập nhật state
-      if (isMounted.current) {
-        setLoading(false);
-      }
+      setLoading(false);
     }
   };
 
-  const handleTogglePasswordVisibility = () => {
+  const handleTogglePassword = () => {
     setShowPassword(!showPassword);
   };
 
@@ -150,92 +166,82 @@ const SignupForm = ({ onSwitchMode }) => {
 
         <Stack spacing={4}>
           {error && (
-            <Typography color='error' sx={{ backgroundColor: '#ffebee', padding: '10px', borderRadius: '4px' }}>
+            <Typography color='error' sx={{ bgcolor: '#ffebee', p: 2, borderRadius: 1 }}>
               {error}
             </Typography>
           )}
           <Stack spacing={2}>
             <TextField 
+              name="username"
               label='Tên đăng nhập' 
               value={username} 
-              onChange={(e) => {
-                setUsername(e.target.value);
-                setFormErrors({...formErrors, username: ''});
-              }} 
-              fullWidth 
-              required
+              onChange={handleInputChange}
               error={!!formErrors.username}
               helperText={formErrors.username}
               disabled={loading}
+              fullWidth 
+              required
             />
             <TextField 
+              name="email"
               label='Email' 
               type='email' 
               value={email} 
-              onChange={(e) => {
-                setEmail(e.target.value);
-                setFormErrors({...formErrors, email: ''});
-              }} 
-              fullWidth 
-              required
+              onChange={handleInputChange}
               error={!!formErrors.email}
               helperText={formErrors.email}
               disabled={loading}
+              fullWidth 
+              required
             />
             <TextField 
+              name="password"
               label='Mật khẩu' 
               type={showPassword ? 'text' : 'password'}
               value={password} 
-              onChange={(e) => {
-                setPassword(e.target.value);
-                setFormErrors({...formErrors, password: ''});
-              }} 
-              fullWidth 
-              required
+              onChange={handleInputChange}
               error={!!formErrors.password}
               helperText={formErrors.password}
               disabled={loading}
+              fullWidth 
+              required
               InputProps={{
                 endAdornment: (
                   <InputAdornment position="end">
                     <IconButton
-                      aria-label="toggle password visibility"
-                      onClick={handleTogglePasswordVisibility}
+                      onClick={handleTogglePassword}
                       edge="end"
                       disabled={loading}
                     >
                       {showPassword ? <VisibilityOff /> : <Visibility />}
                     </IconButton>
                   </InputAdornment>
-                )
+                ),
               }}
             />
             <TextField 
+              name="confirmPassword"
               label='Xác nhận mật khẩu' 
               type={showPassword ? 'text' : 'password'}
               value={confirmPassword} 
-              onChange={(e) => {
-                setConfirmPassword(e.target.value);
-                setFormErrors({...formErrors, confirmPassword: ''});
-              }} 
-              fullWidth 
-              required
+              onChange={handleInputChange}
               error={!!formErrors.confirmPassword}
               helperText={formErrors.confirmPassword}
               disabled={loading}
+              fullWidth 
+              required
               InputProps={{
                 endAdornment: (
                   <InputAdornment position="end">
                     <IconButton
-                      aria-label="toggle password visibility"
-                      onClick={handleTogglePasswordVisibility}
+                      onClick={handleTogglePassword}
                       edge="end"
                       disabled={loading}
                     >
                       {showPassword ? <VisibilityOff /> : <Visibility />}
                     </IconButton>
                   </InputAdornment>
-                )
+                ),
               }}
             />
           </Stack>
@@ -260,7 +266,7 @@ const SignupForm = ({ onSwitchMode }) => {
             onClick={() => !loading && onSwitchMode(ScreenMode.SIGN_IN)} 
             fontWeight={600} 
             sx={{ 
-              cursor: loading ? 'default' : 'pointer', 
+              cursor: loading ? 'default' : 'pointer',
               userSelect: 'none',
               color: loading ? colors.grey[400] : 'inherit'
             }}
