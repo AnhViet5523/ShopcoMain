@@ -17,9 +17,8 @@ import {
   Badge
 } from '@mui/material';
 import { Home as HomeIcon, Add as AddIcon, Remove as RemoveIcon } from '@mui/icons-material';
-import Header from '../../components/Header';
-import Footer from '../../components/Footer/Footer';
 import productService from '../../apis/productService';
+import orderService from '../../apis/orderService';
 
 
 
@@ -91,29 +90,6 @@ export default function ProductDetail() {
         const _fetchedProduct = {
           ...fetchedProduct,
           discountedPrice: fetchedProduct.price - (fetchedProduct.price * 15 / 100),
-          reviews: [
-            {
-              id: 1,
-              userName: "Kristin Watson",
-              date: "March 14, 2021",
-              rating: 5,
-              content: "bị lỗi"
-            },
-            {
-              id: 2,
-              userName: "Jenny Wilson",
-              date: "January 28, 2021",
-              rating: 5,
-              content: "ok!"
-            },
-            {
-              id: 3,
-              userName: "Bessie Cooper",
-              date: "January 11, 2021",
-              rating: 4,
-              content: "Dùng ổn"
-            }
-          ],
           relatedProducts: [
             {
               id: 1,
@@ -139,8 +115,6 @@ export default function ProductDetail() {
 
     fetchProduct();
 
-    console.log("Product: ", product);
-    console.log("loading", loading);
   }, []);
 
   if (loading) {
@@ -158,47 +132,29 @@ export default function ProductDetail() {
     }
   };
 
-  const addToCart = () => {
-    // Create the cart item from the current product
-    const cartItem = {
-      id: product.id,
-      name: product.productName,
-      price: product.discountedPrice || product.price,
-      originalPrice: product.price,
-      quantity: quantity,
-      imgUrl: product.imgUrl,
-    };
-
-    // Get current cart from localStorage
-    const existingCart = JSON.parse(localStorage.getItem('cart') || '[]');
+  const addToCart = async () => {
+    if (!product) return;
     
-    // Check if product already exists in cart
-    const existingItemIndex = existingCart.findIndex(item => item.id === cartItem.id);
-    
-    let updatedCart;
-    if (existingItemIndex >= 0) {
-      // Update quantity if product already in cart
-      updatedCart = existingCart.map((item, index) => 
-        index === existingItemIndex 
-          ? { ...item, quantity: item.quantity + quantity }
-          : item
-      );
-    } else {
-      // Add new item to cart
-      updatedCart = [...existingCart, cartItem];
+    try {
+      // Get user ID from localStorage
+      const user = JSON.parse(localStorage.getItem('user'));
+      const userId = user?.id || 1; // Fallback to 1 if no user ID found
+      
+      // Call the API to add item to cart
+      await orderService.addtocard(userId, product.productId, quantity);
+      
+      // Dispatch custom event to notify other components (like Header) that cart has been updated
+      window.dispatchEvent(new CustomEvent('cartUpdated'));
+      
+      // Show success message
+      alert(`Đã thêm ${quantity} sản phẩm vào giỏ hàng`);
+      
+      // Reset quantity
+      setQuantity(1);
+    } catch (error) {
+      console.error('Error adding to cart:', error);
+      alert('Có lỗi xảy ra khi thêm vào giỏ hàng. Vui lòng thử lại sau.');
     }
-    
-    // Save updated cart to localStorage
-    localStorage.setItem('cart', JSON.stringify(updatedCart));
-    
-    // Dispatch custom event to notify other components (like Header) that cart has been updated
-    window.dispatchEvent(new CustomEvent('cartUpdated'));
-    
-    // Show success message or notification
-    alert(`Đã thêm ${quantity} sản phẩm vào giỏ hàng`);
-    
-    // Reset quantity
-    setQuantity(1);
   };
 
   // Helper function to check if image exists
@@ -470,7 +426,6 @@ export default function ProductDetail() {
                       textTransform: 'none',
                       fontWeight: 'bold'
                     }}
-                    onClick={addToCart}
                   >
                     Mua Ngay
                   </Button>
@@ -483,6 +438,7 @@ export default function ProductDetail() {
                       textTransform: 'none',
                       fontWeight: 'bold'
                     }}
+                    onClick={addToCart}
                   >
                     Thêm vào giỏ
                   </Button>

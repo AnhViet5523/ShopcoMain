@@ -82,6 +82,11 @@ const SigninForm = ({ onSwitchMode, onSignIn }) => {
       
       try {
         // Gọi hàm đăng nhập từ userService
+
+        const respones = await userService.login(formData.username, formData.password); 
+        console.log('Login success:', respones);
+        onSignIn(respones.userId); 
+
         const response = await userService.login(formData.username, formData.password);
         
         console.log('Login successful, response:', response);
@@ -92,6 +97,7 @@ const SigninForm = ({ onSwitchMode, onSignIn }) => {
         
         // Gọi callback onSignIn để cập nhật trạng thái đăng nhập
         onSignIn(response);
+
       } catch (error) {
         console.error('Login failed:', error);
         
