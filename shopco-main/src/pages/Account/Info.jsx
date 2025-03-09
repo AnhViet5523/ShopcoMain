@@ -55,6 +55,9 @@ const Info = () => {
   });
 
   useEffect(() => {
+    let isMounted = true;
+    const abortController = new AbortController();
+
     const fetchUserProfile = async () => {
       try {
         const currentUser = userService.getCurrentUser();
@@ -67,7 +70,8 @@ const Info = () => {
         const response = await userService.getUserProfile(currentUser.userId);
         console.log('API response:', response);
         
-        if (response) {
+        // Kiểm tra nếu component vẫn mounted trước khi cập nhật state
+        if (isMounted && response) {
           const newUserInfo = {
             name: response.name || '',
             phone: response.phone || '',
@@ -76,15 +80,30 @@ const Info = () => {
           };
           setUserInfo(newUserInfo);
           setUpdatedInfo(newUserInfo);
-        } else {
+        } else if (isMounted) {
           console.error('Không nhận được dữ liệu người dùng từ API');
         }
       } catch (error) {
-        console.error('Lỗi khi lấy thông tin người dùng:', error);
+        // Kiểm tra xem lỗi có phải do hủy request không
+        if (error.name === 'CanceledError' || error.name === 'AbortError') {
+          console.log('Request bị hủy do chuyển trang hoặc request khác:', error.message);
+        } else {
+          console.error('Lỗi khi lấy thông tin người dùng:', error);
+          // Chỉ hiển thị thông báo nếu component vẫn mounted
+          if (isMounted) {
+            alert('Không thể lấy thông tin người dùng. Vui lòng thử lại sau.');
+          }
+        }
       }
     };
 
     fetchUserProfile();
+
+    // Cleanup function để tránh memory leak và hủy request khi unmount
+    return () => {
+      isMounted = false;
+      abortController.abort();
+    };
   }, [navigate]);
 
   const handleLogout = () => {
@@ -189,8 +208,9 @@ const Info = () => {
       // Gọi API cập nhật thông tin
       const response = await axiosClient.put(`/api/Users/${currentUser.userId}`, userData);
       
-      // Cập nhật localStorage với thông tin mới
-      if (response) {
+      // Kiểm tra phản hồi - với PUT có thể không có dữ liệu mà chỉ có status
+      if (response && (response.success || response.status === 200 || response.status === 204)) {
+        // Cập nhật localStorage với thông tin mới
         const updatedUser = { 
           ...currentUser, 
           fullName: updatedInfo.name,
@@ -199,17 +219,27 @@ const Info = () => {
           address: updatedInfo.address
         };
         localStorage.setItem('user', JSON.stringify(updatedUser));
+        
+        // Cập nhật state với thông tin mới
+        setUserInfo(updatedInfo);
+        setOpen(false);
+        
+        // Hiển thị thông báo thành công
+        alert('Cập nhật thông tin thành công!');
+      } else {
+        throw new Error('Cập nhật thông tin không thành công');
       }
-      
-      // Cập nhật state với thông tin mới
-      setUserInfo(updatedInfo);
-      setOpen(false);
-      
-      // Hiển thị thông báo thành công
-      alert('Cập nhật thông tin thành công!');
     } catch (error) {
       console.error('Lỗi khi cập nhật thông tin:', error);
-      alert('Có lỗi xảy ra khi cập nhật thông tin!');
+      
+      // Hiển thị thông báo lỗi cụ thể hơn
+      if (error.name === 'CanceledError' || error.name === 'AbortError') {
+        alert('Yêu cầu đã bị hủy. Vui lòng thử lại.');
+      } else if (error.response && error.response.status) {
+        alert(`Có lỗi xảy ra khi cập nhật thông tin! (Mã lỗi: ${error.response.status})`);
+      } else {
+        alert('Có lỗi xảy ra khi cập nhật thông tin! Vui lòng thử lại sau.');
+      }
     } finally {
       setLoading(false);
     }
