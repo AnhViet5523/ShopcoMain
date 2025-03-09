@@ -90,29 +90,6 @@ export default function ProductDetail() {
         const _fetchedProduct = {
           ...fetchedProduct,
           discountedPrice: fetchedProduct.price - (fetchedProduct.price * 15 / 100),
-          reviews: [
-            {
-              id: 1,
-              userName: "Kristin Watson",
-              date: "March 14, 2021",
-              rating: 5,
-              content: "bị lỗi"
-            },
-            {
-              id: 2,
-              userName: "Jenny Wilson",
-              date: "January 28, 2021",
-              rating: 5,
-              content: "ok!"
-            },
-            {
-              id: 3,
-              userName: "Bessie Cooper",
-              date: "January 11, 2021",
-              rating: 4,
-              content: "Dùng ổn"
-            }
-          ],
           relatedProducts: [
             {
               id: 1,
@@ -138,8 +115,6 @@ export default function ProductDetail() {
 
     fetchProduct();
 
-    console.log("Product: ", product);
-    console.log("loading", loading);
   }, []);
 
   if (loading) {
@@ -166,7 +141,7 @@ export default function ProductDetail() {
       const userId = user?.id || 1; // Fallback to 1 if no user ID found
       
       // Call the API to add item to cart
-      await orderService.addtocard(userId, product.id, quantity);
+      await orderService.addtocard(userId, product.productId, quantity);
       
       // Dispatch custom event to notify other components (like Header) that cart has been updated
       window.dispatchEvent(new CustomEvent('cartUpdated'));
@@ -451,7 +426,6 @@ export default function ProductDetail() {
                       textTransform: 'none',
                       fontWeight: 'bold'
                     }}
-                    onClick={addToCart}
                   >
                     Mua Ngay
                   </Button>
@@ -464,6 +438,7 @@ export default function ProductDetail() {
                       textTransform: 'none',
                       fontWeight: 'bold'
                     }}
+                    onClick={addToCart}
                   >
                     Thêm vào giỏ
                   </Button>
