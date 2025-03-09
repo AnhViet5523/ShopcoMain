@@ -1,4 +1,3 @@
-
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import SigninPage from "./pages/SigninPage";
@@ -23,6 +22,8 @@ import Complaint from "./pages/PagesOfFooter/Complaint";
 import Return from "./pages/PagesOfFooter/Return";
 import Cart from "./pages/Cart/Cart";
 import ProductScreen from "./pages/Product/ProductScreen";
+import ProtectedRoute from "./components/ProtectedRoute";
+import BrandProducts from "./components/BrandProducts";
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -48,50 +49,19 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
+        {/* Public Routes - Ai cũng truy cập được */}
         <Route
           path="/"
-          element={
-            isAuthenticated ? (
-              <MainScreen onSignOut={handleSignOut} />
-            ) : (
-              <Box sx={{ width: "100vw", overflowX: "hidden" }}>
-                <CssBaseline />
-                <SigninPage onSignIn={handleSignIn} />
-              </Box>
-            )
-          }
+          element={<MainScreen onSignOut={handleSignOut} />}
         />
-        
-        {/* Protected Routes - Chỉ truy cập được khi đã đăng nhập */}
-        <Route
-          path="/category"
-          element={isAuthenticated ? <CategoryScreen /> : <Navigate to="/" />}
-        />
-        <Route
-          path="/product/:id"
-          element={isAuthenticated ? <ProductScreen /> : <Navigate to="/" />}
-        />
-        <Route
-          path="/search"
-          element={<SearchResults />}
-        />
-        <Route
-          path="/customer-support"
-          element={isAuthenticated ? <CustomerSp /> : <Navigate to="/" />}
-        />
-        <Route
-          path="/account"
-          element={isAuthenticated ? <Info onSignOut={handleSignOut} /> : <Navigate to="/" />}
-        />
-        <Route
-          path="/orders"
-          element={isAuthenticated ? <Order onSignOut={handleSignOut} /> : <Navigate to="/" />}
-        />
+        <Route path="/product/:id" element={<ProductScreen />} />
+        <Route path="/search" element={<SearchResults />} />
+        <Route path="/category" element={<CategoryScreen />} />
         <Route path="/categories" element={<CategoryContent />} />
         <Route path="/categories/:id" element={<CategoryContent />} />
-        <Route path="/cart" element={<Cart />} />
+        <Route path="/brand/:brandName" element={<BrandProducts />} />
         
-        
+        {/* Static Pages - Ai cũng truy cập được */}
         <Route path="/da-dau" element={<DaDau />} />
         <Route path="/da-kho" element={<DaKho />} />
         <Route path="/da-thuong" element={<DaThuong />} />
@@ -103,6 +73,45 @@ export default function App() {
         <Route path="/policy" element={<PrivacyPolicy />} />
         <Route path="/complaint" element={<Complaint />} />
         <Route path="/return" element={<Return />} />
+        
+        {/* Auth Routes */}
+        <Route path="/login" element={
+          isAuthenticated ? <Navigate to="/" /> : <SigninPage onSignIn={handleSignIn} />
+        } />
+        
+        {/* Protected Routes - Chỉ truy cập được khi đã đăng nhập */}
+        <Route
+          path="/cart"
+          element={
+            <ProtectedRoute>
+              <Cart />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/customer-support"
+          element={
+            <ProtectedRoute>
+              <CustomerSp />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/account"
+          element={
+            <ProtectedRoute>
+              <Info onSignOut={handleSignOut} />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/orders"
+          element={
+            <ProtectedRoute>
+              <Order onSignOut={handleSignOut} />
+            </ProtectedRoute>
+          }
+        />
       </Routes>
     </BrowserRouter>
   );

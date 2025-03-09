@@ -1,4 +1,3 @@
-Add these styles to change the colors and sizes as requested
 .highlight-yellow {
     color: #ffbb02; 
     font-size: 1.5rem; 
@@ -10,12 +9,36 @@ Add these styles to change the colors and sizes as requested
     font-size: 1rem; 
 }
 
+.product-item {
+    margin-bottom: 10px; 
+    cursor: pointer; 
+}
+
+.product-title {
+    color: #ffbb02; 
+    font-weight: bold; 
+}
+
+.product-name {
+    color: black; 
+    transition: color 0.3s, text-decoration 0.3s;
+}
+
+.product-name:hover {
+    color: blue; 
+    text-decoration: underline; 
+}
+
 body {
     margin: 0; 
     padding: 0; 
+}
 
 .container {
     max-width: 100%; 
     overflow: hidden; 
 }
+
+
+
 
