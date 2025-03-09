@@ -1,7 +1,7 @@
-import { Button, Stack, TextField, Typography, colors, Checkbox, FormControlLabel } from '@mui/material';
+import { Button, Stack, TextField, Typography, colors, Checkbox, FormControlLabel, CircularProgress } from '@mui/material';
 import React, { useState } from 'react';
 import { ScreenMode } from '../../pages/SigninPage';
-import userService from '../../apis/userService'; // Thêm import userService
+import userService from '../../apis/userService';
 
 const SigninForm = ({ onSwitchMode, onSignIn }) => {
   // Thêm state để quản lý form
@@ -13,11 +13,15 @@ const SigninForm = ({ onSwitchMode, onSignIn }) => {
   // Thêm state để quản lý lỗi
   const [errors, setErrors] = useState({
     username: '',
-    password: ''
+    password: '',
+    general: ''
   });
 
   // Thêm state để quản lý hiển thị mật khẩu
   const [showPassword, setShowPassword] = useState(false);
+  
+  // Thêm state để quản lý trạng thái loading
+  const [isLoading, setIsLoading] = useState(false);
 
   // Hàm validate form
   const validateForm = () => {
@@ -34,7 +38,7 @@ const SigninForm = ({ onSwitchMode, onSignIn }) => {
       isValid = false;
     }
 
-    setErrors(tempErrors);
+    setErrors({ ...errors, ...tempErrors });
     return isValid;
   };
 
@@ -52,28 +56,71 @@ const SigninForm = ({ onSwitchMode, onSignIn }) => {
         [name]: ''
       }));
     }
+    
+    // Xóa lỗi chung khi người dùng thay đổi input
+    if (errors.general) {
+      setErrors(prev => ({
+        ...prev,
+        general: ''
+      }));
+    }
   };
 
   // Hàm xử lý submit form
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Xóa lỗi trước khi validate
+    setErrors({
+      username: '',
+      password: '',
+      general: ''
+    });
+    
     if (validateForm()) {
+      setIsLoading(true);
+      
       try {
         // Gọi hàm đăng nhập từ userService
+
         const respones = await userService.login(formData.username, formData.password); 
         console.log('Login success:', respones);
         onSignIn(respones.userId); 
+
+        const response = await userService.login(formData.username, formData.password);
+        
+        console.log('Login successful, response:', response);
+        
+        if (!response) {
+          throw new Error('Không nhận được phản hồi từ máy chủ');
+        }
+        
+        // Gọi callback onSignIn để cập nhật trạng thái đăng nhập
+        onSignIn(response);
+
       } catch (error) {
         console.error('Login failed:', error);
-        if (error.response && error.response.status === 404) {
-          setErrors(prev => ({ ...prev, username: 'Tên không tồn tại' })); 
-        } else if (error.response && error.response.status === 401) {
-          setErrors(prev => ({ ...prev, password: 'Tên đăng nhập hoặc mật khẩu sai' })); 
-        } else if (error.response && error.response.status === 400) {
-          setErrors(prev => ({ ...prev, password: 'CONCAC' })); 
-        }else {
-          setErrors(prev => ({ ...prev, password: 'Đã xảy ra lỗi. Vui lòng thử lại.' })); 
+        
+        if (error.response) {
+          // Xử lý lỗi từ server
+          if (error.response.status === 404) {
+            setErrors(prev => ({ ...prev, username: 'Tên đăng nhập không tồn tại' }));
+          } else if (error.response.status === 401) {
+            setErrors(prev => ({ ...prev, password: 'Tên đăng nhập hoặc mật khẩu không đúng' }));
+          } else if (error.response.status === 400) {
+            setErrors(prev => ({ ...prev, general: 'Dữ liệu không hợp lệ' }));
+          } else {
+            setErrors(prev => ({ ...prev, general: `Lỗi máy chủ: ${error.response.status}` }));
+          }
+        } else if (error.request) {
+          // Xử lý lỗi không nhận được phản hồi
+          setErrors(prev => ({ ...prev, general: 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối mạng.' }));
+        } else {
+          // Xử lý lỗi khác
+          setErrors(prev => ({ ...prev, general: error.message || 'Đã xảy ra lỗi. Vui lòng thử lại.' }));
         }
+      } finally {
+        setIsLoading(false);
       }
     }
   };
@@ -103,6 +150,12 @@ const SigninForm = ({ onSwitchMode, onSignIn }) => {
           </Typography>
         </Stack>
 
+        {errors.general && (
+          <Typography color="error" textAlign="center">
+            {errors.general}
+          </Typography>
+        )}
+
         <Stack spacing={4}>
           <Stack spacing={2}>
             <Stack spacing={1}>
@@ -113,6 +166,7 @@ const SigninForm = ({ onSwitchMode, onSignIn }) => {
                 onChange={handleChange}
                 error={Boolean(errors.username)}
                 helperText={errors.username}
+                disabled={isLoading}
               />
             </Stack>
             <Stack spacing={1}>
@@ -124,12 +178,14 @@ const SigninForm = ({ onSwitchMode, onSignIn }) => {
                 onChange={handleChange}
                 error={Boolean(errors.password)}
                 helperText={errors.password}
+                disabled={isLoading}
               />
               <FormControlLabel
                 control={
                   <Checkbox
                     checked={showPassword}
-                    onChange={() => setShowPassword(!showPassword)} 
+                    onChange={() => setShowPassword(!showPassword)}
+                    disabled={isLoading}
                   />
                 }
                 label="Hiện mật khẩu"
@@ -140,6 +196,7 @@ const SigninForm = ({ onSwitchMode, onSignIn }) => {
             type="submit"
             variant='contained'
             size='large'
+            disabled={isLoading}
             sx={{
               bgcolor: colors.grey[800],
               "&:hover": {
@@ -147,18 +204,19 @@ const SigninForm = ({ onSwitchMode, onSignIn }) => {
               }
             }}
           >
-            Đăng nhập
+            {isLoading ? <CircularProgress size={24} color="inherit" /> : 'Đăng nhập'}
           </Button>
         </Stack>
 
         <Stack direction="row" spacing={2}>
           <Typography>Chưa có tài khoản?</Typography>
           <Typography
-            onClick={() => onSwitchMode(ScreenMode.SIGN_UP)}
+            onClick={() => !isLoading && onSwitchMode(ScreenMode.SIGN_UP)}
             fontWeight={600}
             sx={{
-              cursor: "pointer",
-              userSelect: "none"
+              cursor: isLoading ? 'default' : 'pointer',
+              userSelect: "none",
+              opacity: isLoading ? 0.5 : 1
             }}
           >
             Đăng kí ngay

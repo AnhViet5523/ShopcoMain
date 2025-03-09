@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
 import { useState, useEffect } from "react";
 import SigninPage from "./pages/SigninPage";
 import MainScreen from "./pages/MainScreen";
@@ -23,6 +23,9 @@ import Return from "./pages/PagesOfFooter/Return";
 import Cart from "./pages/Cart/Cart";
 import ProductScreen from "./pages/Product/ProductScreen";
 import ProtectedRoute from "./components/ProtectedRoute";
+import userService from "./apis/userService";
+import axiosClient from "./apis/axiosClient";
+import ErrorBoundary from "./components/ErrorBoundary";
 import BrandProducts from "./components/BrandProducts";
 import BlogPage from "./pages/Blog/BlogPage";
 import Blog1 from "./pages/Blog/blog1";
@@ -31,29 +34,58 @@ import Blog3 from "./pages/Blog/blog3";
 import Blog4 from "./pages/Blog/blog4";
 import Blog5 from "./pages/Blog/blog5";
 import Blog6 from "./pages/Blog/blog6";
+import QuizTest from "./pages/Quiz/QuizTest";
+
+// Component để hủy request khi chuyển trang
+function NavigationHandler() {
+  const location = useLocation();
+  
+  useEffect(() => {
+    // Hủy tất cả request khi chuyển trang
+    return () => {
+      axiosClient.cancelAllRequests();
+    };
+  }, [location.pathname]);
+  
+  return null;
+}
+
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  // Kiểm tra trạng thái đăng nhập khi component mount
   useEffect(() => {
-    const user = localStorage.getItem("user");  
-    setIsAuthenticated(!!user);
+    const checkAuth = () => {
+      try {
+        const isAuth = userService.isAuthenticated();
+        setIsAuthenticated(isAuth);
+      } catch (error) {
+        console.error("Error checking authentication in App:", error);
+        setIsAuthenticated(false);
+      }
+    };
+
+    checkAuth();
+    window.addEventListener("storage", checkAuth);
+    
+    // Hủy tất cả request khi component unmount
+    return () => {
+      window.removeEventListener("storage", checkAuth);
+      axiosClient.cancelAllRequests();
+    };
   }, []);
 
-  // Hàm xử lý đăng nhập
-  const handleSignIn = () => {
+  const handleSignIn = (userData) => {
     setIsAuthenticated(true);
-    localStorage.setItem("user", "logged-in");
   };
 
-  // Hàm xử lý đăng xuất
   const handleSignOut = () => {
+    userService.logout();
     setIsAuthenticated(false);
-    localStorage.removeItem("user");
   };
 
   return (
+
     <BrowserRouter>
       <Routes>
         {/* Public Routes - Ai cũng truy cập được */}
@@ -87,46 +119,83 @@ export default function App() {
         <Route path="/policy" element={<PrivacyPolicy />} />
         <Route path="/complaint" element={<Complaint />} />
         <Route path="/return" element={<Return />} />
+    <ErrorBoundary>
+      <BrowserRouter>
+        {/* Component để hủy request khi chuyển trang */}
+        <NavigationHandler />
+
         
-        {/* Auth Routes */}
-        <Route path="/login" element={
-          isAuthenticated ? <Navigate to="/" /> : <SigninPage onSignIn={handleSignIn} />
-        } />
-        
-        {/* Protected Routes - Chỉ truy cập được khi đã đăng nhập */}
-        <Route
-          path="/cart"
-          element={
-            <ProtectedRoute>
-              <Cart />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/customer-support"
-          element={
-            <ProtectedRoute>
-              <CustomerSp />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/account"
-          element={
-            <ProtectedRoute>
-              <Info onSignOut={handleSignOut} />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/orders"
-          element={
-            <ProtectedRoute>
-              <Order onSignOut={handleSignOut} />
-            </ProtectedRoute>
-          }
-        />
-      </Routes>
-    </BrowserRouter>
+        <Routes>
+          {/* Public Routes */}
+          <Route path="/" element={<MainScreen onSignOut={handleSignOut} />} />
+          <Route path="/product/:id" element={<ProductScreen />} />
+          <Route path="/search" element={<SearchResults />} />
+          <Route path="/category" element={<CategoryScreen />} />
+          <Route path="/categories" element={<CategoryContent />} />
+          <Route path="/categories/:id" element={<CategoryContent />} />
+          <Route path="/brand/:brandName" element={<BrandProducts />} />
+          <Route path="/quiz" element={<QuizTest />} />
+
+          {/* Static Pages */}
+          <Route path="/da-dau" element={<DaDau />} />
+          <Route path="/da-kho" element={<DaKho />} />
+          <Route path="/da-thuong" element={<DaThuong />} />
+          <Route path="/da-hon-hop" element={<DaHonHop />} />
+          <Route path="/da-nhay-cam" element={<DaNhayCam />} />
+          <Route path="/intro" element={<Intro />} />
+          <Route path="/buy" element={<Buy />} />
+          <Route path="/term" element={<Term />} />
+          <Route path="/policy" element={<PrivacyPolicy />} />
+          <Route path="/complaint" element={<Complaint />} />
+          <Route path="/return" element={<Return />} />
+
+          {/* Auth Routes */}
+          <Route
+            path="/login"
+            element={
+              isAuthenticated ? (
+                <Navigate to="/" />
+              ) : (
+                <SigninPage onSignIn={handleSignIn} />
+              )
+            }
+          />
+
+          {/* Protected Routes */}
+          <Route
+            path="/cart"
+            element={
+              <ProtectedRoute>
+                <Cart />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/customer-support"
+            element={
+              <ProtectedRoute>
+                <CustomerSp />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/account"
+            element={
+              <ProtectedRoute>
+                <Info onSignOut={handleSignOut} />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/orders"
+            element={
+              <ProtectedRoute>
+                <Order onSignOut={handleSignOut} />
+              </ProtectedRoute>
+            }
+          />
+        </Routes>
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 }

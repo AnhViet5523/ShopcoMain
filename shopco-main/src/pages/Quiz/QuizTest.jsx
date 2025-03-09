@@ -29,16 +29,6 @@ const QuizTest = () => {
         }));
     };
 
-    const handleQuizCompletion = async (userId, skinType) => {
-        try {
-            // Lưu SkinType vào database
-            await userService.saveSkinType(userId, skinType);
-            console.log('SkinType saved successfully');
-        } catch (error) {
-            console.error('Failed to save SkinType:', error);
-        }
-    };
-
     const handleSubmit = async () => {
         if (Object.keys(selectedAnswers).length !== questions.length) {
             alert("Vui lòng chọn câu trả lời cho tất cả các câu hỏi trước khi xem kết quả.");
@@ -46,38 +36,30 @@ const QuizTest = () => {
         }
 
         try {
+            // Lấy userId từ người dùng đăng nhập
+            const currentUser = userService.getCurrentUser();
+            const userId = currentUser ? currentUser.userId : null;
+            
+            if (!userId) {
+                alert("Bạn cần đăng nhập để sử dụng tính năng này");
+                return;
+            }
+
             // Format responses theo đúng cấu trúc API yêu cầu
             const requestData = {
-                userId: 6, // Sử dụng userId cố định
+                userId: userId,
                 responses: Object.entries(selectedAnswers).map(([questionId, selectedAnswerId]) => ({
                     questionId: parseInt(questionId),
                     selectedAnswerId: selectedAnswerId
                 }))
             };
 
-            // Save quiz results
-            await quizService.saveQuizResult(requestData);
+            // Save quiz results and get skin type from backend
+            const response = await quizService.saveQuizResult(requestData);
             console.log('Quiz results saved successfully');
-
-            // Tính toán skin type từ responses
-            const skinTypeCount = {};
-            questions.forEach((question) => {
-                const selectedAnswerId = selectedAnswers[question.id];
-                const selectedAnswer = question.answers.find(answer => answer.answerId === selectedAnswerId);
-                if (selectedAnswer) {
-                    const skinType = selectedAnswer.skinType;
-                    skinTypeCount[skinType] = (skinTypeCount[skinType] || 0) + 1;
-                }
-            });
-
-            const maxCount = Math.max(...Object.values(skinTypeCount));
-            const maxSkinTypes = Object.keys(skinTypeCount).filter(skinType => skinTypeCount[skinType] === maxCount);
-            setResults(maxSkinTypes);
-
-            // Save skin type result với userId cố định
-            if (maxSkinTypes.length > 0) {
-                await handleQuizCompletion(6, maxSkinTypes[0]);
-            }
+            
+            // Set results from backend response
+            setResults([response.skinType]);
         } catch (error) {
             console.error('Error saving quiz results:', error);
             alert('Có lỗi xảy ra khi lưu kết quả. Vui lòng thử lại.');

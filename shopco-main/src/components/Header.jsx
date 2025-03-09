@@ -72,7 +72,7 @@ const Header = () => {
       window.removeEventListener('cartUpdated', updateCartCount);
     };
   }, []);
-
+  
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   
   // Add this line to fix the error
