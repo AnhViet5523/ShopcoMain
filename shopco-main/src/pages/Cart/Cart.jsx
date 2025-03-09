@@ -1,29 +1,162 @@
 import { useState, useEffect } from 'react';
-import { Box, Typography, Container, Button, TextField, Paper } from '@mui/material';
+import { Box, Typography, Container, Button, TextField, Paper, CircularProgress } from '@mui/material';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer/Footer';
 import { useNavigate } from 'react-router-dom';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import orderService from '../../apis/orderService';
 
 const Cart = () => {
   const navigate = useNavigate();
-  // Initialize cart items from localStorage
+  // Initialize cart items state
   const [cartItems, setCartItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Load cart items from localStorage on component mount
+  // Load cart items from orderService or localStorage on component mount
   useEffect(() => {
-    const savedCart = JSON.parse(localStorage.getItem('cart') || '[]');
-    if (savedCart.length > 0) {
-      setCartItems(savedCart);
-    }
+    const fetchCartItems = async () => {
+      try {
+        setLoading(true);
+        // Get user ID from localStorage
+        const user = JSON.parse(localStorage.getItem('user'));
+        
+        if (user && user.userId) {
+          // Fetch cart items from orderService
+          const orders = await orderService.getOrders(user.userId);
+          
+          // Find the pending order (cart)
+          const pendingOrder = orders.find(order => order.orderStatus === "Pending");
+          
+          if (pendingOrder && pendingOrder.orderItems && pendingOrder.orderItems.$values) {
+            // Transform order items to match the expected format
+            const items = pendingOrder.orderItems.$values.map(item => ({
+              id: item.orderItemId,
+              productId: item.productId,
+              name: item.product ? item.product.name : 'Product Name',
+              price: item.unitPrice,
+              originalPrice: item.unitPrice * 1.2, // Assuming 20% markup, adjust as needed
+              quantity: item.quantity,
+              imgUrl: item.product ? item.product.imageUrl : 'https://via.placeholder.com/150',
+            }));
+            setCartItems(items);
+          } else {
+            setCartItems([]);
+          }
+        } else {
+          // Fallback to localStorage for non-authenticated users
+          const savedCart = JSON.parse(localStorage.getItem('cart') || '[]');
+          if (savedCart.length > 0) {
+            setCartItems(savedCart);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching cart:', error);
+        setError('Failed to load cart items. Please try again later.');
+        // Fallback to localStorage on error
+        const savedCart = JSON.parse(localStorage.getItem('cart') || '[]');
+        if (savedCart.length > 0) {
+          setCartItems(savedCart);
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCartItems();
   }, []);
 
-  // Save cart to localStorage whenever it changes
-  useEffect(() => {
-    localStorage.setItem('cart', JSON.stringify(cartItems));
-    // Dispatch custom event to notify other components (like Header) that cart has been updated
-    window.dispatchEvent(new CustomEvent('cartUpdated'));
-  }, [cartItems]);
+  // Update cart items
+  const updateCartItems = async (newItems) => {
+    try {
+      const user = JSON.parse(localStorage.getItem('user'));
+      
+      if (user && user.userId) {
+        // For authenticated users, update via API
+        // This is a simplified approach - in a real app, you'd need to handle
+        // the specific API calls for each update type (add, update, remove)
+        
+        // For now, we'll just update the local state and localStorage as a fallback
+        setCartItems(newItems);
+        localStorage.setItem('cart', JSON.stringify(newItems));
+      } else {
+        // For non-authenticated users, update localStorage
+        setCartItems(newItems);
+        localStorage.setItem('cart', JSON.stringify(newItems));
+      }
+      
+      // Dispatch custom event to notify other components (like Header) that cart has been updated
+      window.dispatchEvent(new CustomEvent('cartUpdated'));
+    } catch (error) {
+      console.error('Error updating cart:', error);
+      setError('Failed to update cart. Please try again.');
+    }
+  };
+
+  // Hàm tăng số lượng
+  const increaseQuantity = async (id) => {
+    try {
+      const user = JSON.parse(localStorage.getItem('user'));
+      const item = cartItems.find(item => item.id === id);
+      
+      if (user && user.userId) {
+        // For authenticated users, update via API
+        await orderService.updatecartitem(id, item.quantity + 1);
+      }
+      
+      // Update local state
+      const updatedItems = cartItems.map(item => 
+        item.id === id ? { ...item, quantity: item.quantity + 1 } : item
+      );
+      updateCartItems(updatedItems);
+    } catch (error) {
+      console.error('Error increasing quantity:', error);
+      setError('Failed to update quantity. Please try again.');
+    }
+  };
+
+  // Hàm giảm số lượng
+  const decreaseQuantity = async (id) => {
+    try {
+      const user = JSON.parse(localStorage.getItem('user'));
+      const item = cartItems.find(item => item.id === id);
+      
+      if (item.quantity > 1) {
+        if (user && user.userId) {
+          // For authenticated users, update via API
+          await orderService.updatecartitem(id, item.quantity - 1);
+        }
+        
+        // Update local state
+        const updatedItems = cartItems.map(item => 
+          item.id === id && item.quantity > 1 ? { ...item, quantity: item.quantity - 1 } : item
+        );
+        updateCartItems(updatedItems);
+      }
+    } catch (error) {
+      console.error('Error decreasing quantity:', error);
+      setError('Failed to update quantity. Please try again.');
+    }
+  };
+
+  // Hàm xóa sản phẩm
+  const removeItem = async (id) => {
+    try {
+      const user = JSON.parse(localStorage.getItem('user'));
+      
+      if (user && user.userId) {
+        // For authenticated users, remove via API
+        await orderService.removefromcart(id);
+      }
+      
+      // Update local state
+      const updatedItems = cartItems.filter(item => item.id !== id);
+      updateCartItems(updatedItems);
+    } catch (error) {
+      console.error('Error removing item:', error);
+      setError('Failed to remove item. Please try again.');
+    }
+  };
 
   // Tính tổng tiền
   const totalAmount = cartItems.reduce((total, item) => total + item.price * item.quantity, 0);
@@ -34,24 +167,30 @@ const Cart = () => {
   // Tổng cộng sau khi giảm giá
   const finalAmount = totalAmount - discount;
 
-  // Hàm tăng số lượng
-  const increaseQuantity = (id) => {
-    setCartItems(cartItems.map(item => 
-      item.id === id ? { ...item, quantity: item.quantity + 1 } : item
-    ));
-  };
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
 
-  // Hàm giảm số lượng
-  const decreaseQuantity = (id) => {
-    setCartItems(cartItems.map(item => 
-      item.id === id && item.quantity > 1 ? { ...item, quantity: item.quantity - 1 } : item
-    ));
-  };
-
-  // Hàm xóa sản phẩm
-  const removeItem = (id) => {
-    setCartItems(cartItems.filter(item => item.id !== id));
-  };
+  if (error) {
+    return (
+      <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <Typography color="error" variant="h6" gutterBottom>
+          {error}
+        </Typography>
+        <Button 
+          variant="contained" 
+          onClick={() => window.location.reload()}
+          sx={{ mt: 2 }}
+        >
+          Try Again
+        </Button>
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ backgroundColor: '#f5f5f5', minHeight: '100vh',width: "99vw" }}>

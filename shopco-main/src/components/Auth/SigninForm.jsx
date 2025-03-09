@@ -60,15 +60,18 @@ const SigninForm = ({ onSwitchMode, onSignIn }) => {
     if (validateForm()) {
       try {
         // Gọi hàm đăng nhập từ userService
-        await userService.login(formData.username, formData.password); 
-        onSignIn(); 
+        const respones = await userService.login(formData.username, formData.password); 
+        console.log('Login success:', respones);
+        onSignIn(respones.userId); 
       } catch (error) {
         console.error('Login failed:', error);
         if (error.response && error.response.status === 404) {
           setErrors(prev => ({ ...prev, username: 'Tên không tồn tại' })); 
         } else if (error.response && error.response.status === 401) {
           setErrors(prev => ({ ...prev, password: 'Tên đăng nhập hoặc mật khẩu sai' })); 
-        } else {
+        } else if (error.response && error.response.status === 400) {
+          setErrors(prev => ({ ...prev, password: 'CONCAC' })); 
+        }else {
           setErrors(prev => ({ ...prev, password: 'Đã xảy ra lỗi. Vui lòng thử lại.' })); 
         }
       }
@@ -82,8 +85,9 @@ const SigninForm = ({ onSwitchMode, onSignIn }) => {
       justifyContent="center"
       alignItems="center"
       sx={{
-        height: "100%",
-        color: colors.grey[800]
+        minHeight: "100vh",
+        color: colors.grey[800],
+        bgcolor: "white"
       }}
     >
       <Stack spacing={5} sx={{
