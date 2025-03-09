@@ -45,6 +45,9 @@ const QuizTest = () => {
                 return;
             }
 
+            // Hiển thị trạng thái đang xử lý
+            setResults(["Đang xử lý..."]);
+
             // Format responses theo đúng cấu trúc API yêu cầu
             const requestData = {
                 userId: userId,
@@ -56,13 +59,20 @@ const QuizTest = () => {
 
             // Save quiz results and get skin type from backend
             const response = await quizService.saveQuizResult(requestData);
-            console.log('Quiz results saved successfully');
+            console.log('Quiz results saved successfully:', response);
             
-            // Set results from backend response
-            setResults([response.skinType]);
+            if (response && response.skinType) {
+                // Set results from backend response
+                setResults([response.skinType]);
+            } else {
+                console.error('Invalid response format:', response);
+                alert('Định dạng phản hồi không hợp lệ. Vui lòng thử lại.');
+                setResults([]);
+            }
         } catch (error) {
             console.error('Error saving quiz results:', error);
             alert('Có lỗi xảy ra khi lưu kết quả. Vui lòng thử lại.');
+            setResults([]);
         }
     };
 
@@ -106,11 +116,17 @@ const QuizTest = () => {
             </Button>
 
             {results.length > 0 && (
-                <div>
+                <div style={{ marginTop: '20px', padding: '15px', backgroundColor: '#fff', borderRadius: '5px' }}>
                     <Typography sx={{ fontSize: '1.2rem' }}>
-                        <span style={{ color: '#003366' }}>Da của bạn là: </span>
-                        <span style={{ color: '#d32f2f' }}>{results.join(' hoặc ')}</span>
-                        <span style={{ color: '#003366' }}>, hãy xem quy trình chăm sóc da và chọn sản phẩm phù hợp nhé!</span>
+                        {results[0] === "Đang xử lý..." ? (
+                            <span style={{ color: '#003366' }}>Đang xử lý kết quả...</span>
+                        ) : (
+                            <>
+                                <span style={{ color: '#003366' }}>Da của bạn là: </span>
+                                <span style={{ color: '#d32f2f', fontWeight: 'bold' }}>{results.join(' hoặc ')}</span>
+                                <span style={{ color: '#003366' }}>, hãy xem quy trình chăm sóc da và chọn sản phẩm phù hợp nhé!</span>
+                            </>
+                        )}
                     </Typography>
                 </div>
             )}
