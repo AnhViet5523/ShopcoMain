@@ -91,8 +91,13 @@ const userService = {
             const response = await axiosClient.get(`/api/Users/profile/${userId}`);
             return response;
         } catch (error) {
-            console.error('Error fetching user profile:', error);
-            throw error;
+            // Kiểm tra nếu đây là lỗi hủy request
+            if (error.name === 'CanceledError' || error.name === 'AbortError') {
+                console.log('Profile request cancelled:', error.message);
+            } else {
+                console.error('Error fetching user profile:', error);
+            }
+            throw error; // Tiếp tục ném lỗi để component gọi có thể xử lý
         }
     },
     // Cập nhật thông tin người dùng hiện tại
@@ -100,8 +105,11 @@ const userService = {
         try {
             const response = await axiosClient.put('/api/Users/profile', userData);
             
+            // Xử lý phản hồi - với PUT có thể chỉ có status code mà không có data
+            const isSuccess = response && (response.success || response.status === 200 || response.status === 204);
+            
             // Cập nhật thông tin người dùng trong localStorage nếu cập nhật thành công
-            if (response) {
+            if (isSuccess) {
                 const currentUser = userService.getCurrentUser();
                 if (currentUser) {
                     const updatedUser = { ...currentUser, ...userData };
@@ -109,7 +117,7 @@ const userService = {
                 }
             }
             
-            return response;
+            return { success: isSuccess, data: response };
         } catch (error) {
             console.error('Error updating user profile:', error);
             throw error;
@@ -121,8 +129,11 @@ const userService = {
             // Sử dụng PUT /api/Users/{id} thay vì /api/Users/update/{userId}
             const response = await axiosClient.put(`/api/Users/${userId}`, userData);
             
+            // Xử lý phản hồi - với PUT có thể chỉ có status code mà không có data
+            const isSuccess = response && (response.success || response.status === 200 || response.status === 204);
+            
             // Cập nhật thông tin người dùng trong localStorage nếu cập nhật thành công
-            if (response) {
+            if (isSuccess) {
                 const currentUser = userService.getCurrentUser();
                 if (currentUser && currentUser.userId === userId) {
                     const updatedUser = { ...currentUser, ...userData };
@@ -130,7 +141,7 @@ const userService = {
                 }
             }
             
-            return response;
+            return { success: isSuccess, data: response };
         } catch (error) {
             console.error('Error updating user profile:', error);
             throw error;

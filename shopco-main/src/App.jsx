@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
 import { useState, useEffect } from "react";
 import SigninPage from "./pages/SigninPage";
 import MainScreen from "./pages/MainScreen";
@@ -24,8 +24,24 @@ import Cart from "./pages/Cart/Cart";
 import ProductScreen from "./pages/Product/ProductScreen";
 import ProtectedRoute from "./components/ProtectedRoute";
 import userService from "./apis/userService";
+import axiosClient from "./apis/axiosClient";
 import ErrorBoundary from "./components/ErrorBoundary";
 import BrandProducts from "./components/BrandProducts";
+import QuizTest from "./pages/Quiz/QuizTest";
+
+// Component để hủy request khi chuyển trang
+function NavigationHandler() {
+  const location = useLocation();
+  
+  useEffect(() => {
+    // Hủy tất cả request khi chuyển trang
+    return () => {
+      axiosClient.cancelAllRequests();
+    };
+  }, [location.pathname]);
+  
+  return null;
+}
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -44,8 +60,10 @@ export default function App() {
     checkAuth();
     window.addEventListener("storage", checkAuth);
     
+    // Hủy tất cả request khi component unmount
     return () => {
       window.removeEventListener("storage", checkAuth);
+      axiosClient.cancelAllRequests();
     };
   }, []);
 
@@ -61,6 +79,9 @@ export default function App() {
   return (
     <ErrorBoundary>
       <BrowserRouter>
+        {/* Component để hủy request khi chuyển trang */}
+        <NavigationHandler />
+        
         <Routes>
           {/* Public Routes */}
           <Route path="/" element={<MainScreen onSignOut={handleSignOut} />} />
@@ -70,6 +91,7 @@ export default function App() {
           <Route path="/categories" element={<CategoryContent />} />
           <Route path="/categories/:id" element={<CategoryContent />} />
           <Route path="/brand/:brandName" element={<BrandProducts />} />
+          <Route path="/quiz" element={<QuizTest />} />
 
           {/* Static Pages */}
           <Route path="/da-dau" element={<DaDau />} />
