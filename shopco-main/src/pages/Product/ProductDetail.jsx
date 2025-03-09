@@ -21,6 +21,8 @@ import Header from '../../components/Header';
 import Footer from '../../components/Footer/Footer';
 import productService from '../../apis/productService';
 
+
+
 // Create a separate memoized component for the timer
 const FlashDealTimer = memo(({ initialHours = 0, initialMinutes = 0, initialSeconds = 45 }) => {
   const [time, setTime] = useState({
@@ -75,7 +77,6 @@ FlashDealTimer.propTypes = {
 
 export default function ProductDetail() {
   const { id } = useParams();
-  console.log("Product ID: ", id);
   const [quantity, setQuantity] = useState(1);
   const [tabValue, setTabValue] = useState(0);
   const [product, setProduct] = useState(null);
@@ -155,6 +156,49 @@ export default function ProductDetail() {
     if (newQuantity >= 1) {
       setQuantity(newQuantity);
     }
+  };
+
+  const addToCart = () => {
+    // Create the cart item from the current product
+    const cartItem = {
+      id: product.id,
+      name: product.productName,
+      price: product.discountedPrice || product.price,
+      originalPrice: product.price,
+      quantity: quantity,
+      imgUrl: product.imgUrl,
+    };
+
+    // Get current cart from localStorage
+    const existingCart = JSON.parse(localStorage.getItem('cart') || '[]');
+    
+    // Check if product already exists in cart
+    const existingItemIndex = existingCart.findIndex(item => item.id === cartItem.id);
+    
+    let updatedCart;
+    if (existingItemIndex >= 0) {
+      // Update quantity if product already in cart
+      updatedCart = existingCart.map((item, index) => 
+        index === existingItemIndex 
+          ? { ...item, quantity: item.quantity + quantity }
+          : item
+      );
+    } else {
+      // Add new item to cart
+      updatedCart = [...existingCart, cartItem];
+    }
+    
+    // Save updated cart to localStorage
+    localStorage.setItem('cart', JSON.stringify(updatedCart));
+    
+    // Dispatch custom event to notify other components (like Header) that cart has been updated
+    window.dispatchEvent(new CustomEvent('cartUpdated'));
+    
+    // Show success message or notification
+    alert(`Đã thêm ${quantity} sản phẩm vào giỏ hàng`);
+    
+    // Reset quantity
+    setQuantity(1);
   };
 
   // Helper function to check if image exists
@@ -426,6 +470,7 @@ export default function ProductDetail() {
                       textTransform: 'none',
                       fontWeight: 'bold'
                     }}
+                    onClick={addToCart}
                   >
                     Mua Ngay
                   </Button>

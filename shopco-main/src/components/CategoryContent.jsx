@@ -85,6 +85,8 @@ const CategoryContent = () => {
     const [brands, setBrands] = useState([]);
     const [selectedBrands, setSelectedBrands] = useState([]);
     const [skinTypes, setSkinTypes] = useState([]);
+    const [selectedSkinType, setSelectedSkinType] = useState('');
+    const [categoryProducts, setCategoryProducts] = useState([]);
 
     // Cập nhật useEffect để xử lý dữ liệu tốt hơn
     useEffect(() => {
@@ -159,9 +161,7 @@ const CategoryContent = () => {
             const response = await productService.getProducts();
             const _response = response['$values'];
             
-            
             const data = _response.filter(x => x.categoryId == categoryId);
-            
             
             const mappedProducts = data.map(product => ({
                 id: product.productId,
@@ -171,12 +171,19 @@ const CategoryContent = () => {
                 capacity: product.capacity,
                 image: product.imgURL || '/placeholder.jpg',
                 quantity: product.quantity,
-                status: product.status
+                status: product.status,
+                skinType: product.skinType
             }));
 
             console.log('Mapped products:', mappedProducts);
             setProducts(mappedProducts);
             setAllProducts(mappedProducts); 
+            setCategoryProducts(mappedProducts);
+            
+            // Reset các bộ lọc khi chuyển danh mục
+            setSelectedBrands([]);
+            setSelectedSkinType('');
+            setSelectedPriceRange(null);
         } catch (error) {
             console.error('Error fetching products:', error);
             setProducts([]);
@@ -219,45 +226,62 @@ const CategoryContent = () => {
         );
     };
 
-    // Hàm xử lý khi người dùng chọn khoảng giá
-    const handlePriceRangeSelect = (priceRange) => {
-        setSelectedPriceRange(priceRange);
-        const filtered = allProducts.filter(product => 
-            product.price >= priceRange.min && product.price < priceRange.max
-        );
-        setFilteredProducts(filtered);
-    };
-
-    // Hàm xử lý khi người dùng chọn thương hiệu
-    const handleBrandChange = (brand) => {
-        setSelectedBrands((prev) => {
-            if (prev.includes(brand)) {
-                return prev.filter((b) => b !== brand);
-            } else {
-                return [...prev, brand];
-            }
-        });
-    };
-
-    // Hàm lọc sản phẩm dựa trên thương hiệu đã chọn
+    // Hàm lọc sản phẩm dựa trên thương hiệu đã chọn - thêm lại hàm này
     const getFilteredProducts = () => {
-        if (selectedBrands.length === 0) return allProducts;
-        return allProducts.filter(product => selectedBrands.includes(product.brand));
+        // Nếu không có thương hiệu được chọn, trả về tất cả sản phẩm
+        if (selectedBrands.length === 0) return products;
+        return products.filter(product => selectedBrands.includes(product.brand));
     };
 
-    // Hàm xử lý khi người dùng chọn loại da
-    const handleSkinTypeChange = async (skinType) => {
-        setSelectedSubItem(skinType);
-        await fetchProductsBySkinType(skinType);
+    // Cập nhật hàm xử lý khi người dùng chọn thương hiệu
+    const handleBrandChange = async (brand) => {
+        // Cập nhật danh sách thương hiệu đã chọn
+        const newSelectedBrands = selectedBrands.includes(brand)
+            ? selectedBrands.filter(b => b !== brand)
+            : [...selectedBrands, brand];
+        
+        console.log('Các thương hiệu đã chọn:', newSelectedBrands);
+        
+        // Cập nhật state
+        setSelectedBrands(newSelectedBrands);
+        
+        // Áp dụng tất cả các bộ lọc
+        await applyAllFilters(newSelectedBrands, selectedSkinType, selectedPriceRange);
     };
-
-    const fetchProductsBySkinType = async (skinType) => {
+    
+    // Cập nhật hàm xử lý khi người dùng chọn khoảng giá
+    const handlePriceRangeSelect = async (priceRange) => {
+        // Nếu người dùng chọn lại khoảng giá đã chọn, hủy lọc
+        const newPriceRange = selectedPriceRange && selectedPriceRange.label === priceRange.label 
+            ? null 
+            : priceRange;
+        
+        // Cập nhật state
+        setSelectedPriceRange(newPriceRange);
+        
+        // Áp dụng tất cả các bộ lọc
+        await applyAllFilters(selectedBrands, selectedSkinType, newPriceRange);
+    };
+    
+    // Cập nhật hàm lấy sản phẩm theo khoảng giá
+    const fetchProductsByPrice = async (priceParam) => {
         try {
             setLoading(true);
-            const response = await productService.getProductsBySkinType(skinType);
+            // Thay vì gọi API riêng, lọc từ danh sách sản phẩm đã có
+            const response = await productService.getProducts();
             const _response = response['$values'];
-
-            const mappedProducts = _response.map(product => ({
+            
+            // Phân tích tham số giá
+            const [minStr, maxStr] = priceParam.split('-');
+            const min = parseInt(minStr);
+            const max = maxStr === 'max' ? Infinity : parseInt(maxStr);
+            
+            // Lọc sản phẩm theo khoảng giá
+            const filteredProducts = _response.filter(product => 
+                product.price >= min && (max === Infinity || product.price <= max)
+            );
+            
+            const mappedProducts = filteredProducts.map(product => ({
                 id: product.productId,
                 name: product.productName,
                 price: product.price,
@@ -268,26 +292,159 @@ const CategoryContent = () => {
                 status: product.status
             }));
 
-            console.log('Mapped products by skin type:', mappedProducts);
-            // Cập nhật sản phẩm hiển thị theo loại da
+            console.log('Sản phẩm theo khoảng giá:', mappedProducts);
             setProducts(mappedProducts);
             setAllProducts(mappedProducts);
+            setFilteredProducts(mappedProducts);
+            setSelectedSubItem(`Giá: ${priceParam.replace('max', 'trở lên')}`); // Cập nhật tiêu đề phụ
         } catch (error) {
-            console.error('Error fetching products by skin type:', error);
+            console.error('Lỗi khi lấy sản phẩm theo giá:', error);
             setProducts([]);
+            setFilteredProducts([]);
         } finally {
             setLoading(false);
         }
     };
 
-    // Cập nhật phần render loại da
+    // Cải thiện hàm lọc theo tất cả các điều kiện
+    const applyAllFilters = async (brands = selectedBrands, skinType = selectedSkinType, priceRange = selectedPriceRange) => {
+        try {
+            setLoading(true);
+            
+            // Kiểm tra xem có bộ lọc nào được áp dụng không
+            const hasFilters = brands.length > 0 || skinType || priceRange;
+            
+            // Nếu không có bộ lọc nào, hiển thị lại danh sách sản phẩm của danh mục
+            if (!hasFilters) {
+                setProducts(categoryProducts);
+                setAllProducts(categoryProducts);
+                updateFilterTitle(brands, skinType, priceRange);
+                return;
+            }
+            
+            // Lấy tất cả sản phẩm từ API để có dữ liệu đầy đủ
+            const response = await productService.getProducts();
+            if (!response || !response['$values']) {
+                console.error('Không thể lấy dữ liệu sản phẩm');
+                return;
+            }
+            
+            const allProductsData = response['$values'];
+            let filteredData = [...allProductsData];
+            
+            console.log('Bắt đầu lọc với', filteredData.length, 'sản phẩm');
+            
+            // Lọc theo thương hiệu
+            if (brands.length > 0) {
+                console.log('Lọc theo', brands.length, 'thương hiệu:', brands.join(', '));
+                filteredData = filteredData.filter(product => brands.includes(product.brand));
+                console.log('Sau khi lọc theo thương hiệu:', filteredData.length, 'sản phẩm');
+            }
+            
+            // Lọc theo loại da
+            if (skinType) {
+                console.log('Lọc theo loại da:', skinType);
+                filteredData = filteredData.filter(product => product.skinType === skinType);
+                console.log('Sau khi lọc theo loại da:', filteredData.length, 'sản phẩm');
+            }
+            
+            // Lọc theo khoảng giá
+            if (priceRange) {
+                console.log('Lọc theo khoảng giá:', priceRange.min, 'đến', 
+                          priceRange.max === Infinity ? 'không giới hạn' : priceRange.max);
+                
+                filteredData = filteredData.filter(product => {
+                    const price = Number(product.price);
+                    return price >= priceRange.min && 
+                          (priceRange.max === Infinity || price <= priceRange.max);
+                });
+                console.log('Sau khi lọc theo giá:', filteredData.length, 'sản phẩm');
+            }
+            
+            // Map dữ liệu
+            const mappedProducts = filteredData.map(product => ({
+                id: product.productId,
+                name: product.productName,
+                price: product.price,
+                brand: product.brand,
+                capacity: product.capacity,
+                image: product.imgURL || '/placeholder.jpg',
+                quantity: product.quantity,
+                status: product.status,
+                skinType: product.skinType
+            }));
+            
+            // Cập nhật danh sách sản phẩm
+            setProducts(mappedProducts);
+            setAllProducts(mappedProducts);
+            
+            // Cập nhật tiêu đề hiển thị
+            updateFilterTitle(brands, skinType, priceRange);
+            
+            console.log('Kết quả lọc cuối cùng:', mappedProducts.length, 'sản phẩm');
+        } catch (error) {
+            console.error('Lỗi khi áp dụng bộ lọc:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+    
+    // Cập nhật hàm updateFilterTitle để hiển thị tất cả các bộ lọc đã chọn
+    const updateFilterTitle = (brands = selectedBrands, skinType = selectedSkinType, priceRange = selectedPriceRange) => {
+        const filters = [];
+        
+        if (skinType) {
+            filters.push(skinType);
+        }
+        
+        if (brands.length > 0) {
+            if (brands.length === 1) {
+                filters.push(brands[0]);
+            } else {
+                filters.push(`${brands.length} thương hiệu`);
+            }
+        }
+        
+        if (priceRange) {
+            filters.push(priceRange.label);
+        }
+        
+        if (filters.length > 0) {
+            setSelectedSubItem(filters.join(' - '));
+        } else {
+            // Quay lại tên danh mục nếu không có bộ lọc nào
+            if (selectedCategory && categories[selectedCategory]?.[0]) {
+                setSelectedSubItem(categories[selectedCategory][0].categoryName);
+            } else {
+                setSelectedSubItem('');
+            }
+        }
+    };
+
+    // Cập nhật hàm xử lý khi người dùng chọn loại da
+    const handleSkinTypeChange = async (skinType) => {
+        try {
+            // Nếu đang chọn lại loại da đã chọn, hủy lọc loại da
+            const newSkinType = selectedSkinType === skinType ? '' : skinType;
+            
+            // Cập nhật state
+            setSelectedSkinType(newSkinType);
+            
+            // Áp dụng tất cả các bộ lọc
+            await applyAllFilters(selectedBrands, newSkinType, selectedPriceRange);
+        } catch (error) {
+            console.error('Lỗi khi xử lý loại da:', error);
+        }
+    };
+
+    // Cập nhật phần render loại da - cần thay đổi để sử dụng selectedSkinType trực tiếp
     const renderSkinTypes = () => {
         return skinTypes.map((type) => (
             <FormControlLabel
                 key={type}
                 control={
                     <Checkbox 
-                        checked={selectedSubItem === type}
+                        checked={selectedSkinType === type}
                         onChange={() => handleSkinTypeChange(type)}
                         sx={{ 
                             '&.Mui-checked': {
@@ -300,8 +457,14 @@ const CategoryContent = () => {
                 sx={{ 
                     display: 'block',
                     mb: 1,
+                    borderRadius: 1,
+                    transition: 'all 0.2s ease',
                     '& .MuiTypography-root': {
                         fontSize: '0.9rem'
+                    },
+                    '&:hover': {
+                        backgroundColor: 'rgba(25, 118, 210, 0.04)',
+                        transform: 'translateX(4px)'
                     }
                 }}
             />
@@ -310,16 +473,35 @@ const CategoryContent = () => {
 
     // Trong phần render products 
     const renderProducts = () => {
-        const productsToDisplay = selectedPriceRange ? filteredProducts : getFilteredProducts();
-        
         if (loading) return <Typography>Đang tải...</Typography>;
         if (error) return <Typography color="error">{error}</Typography>;
-        if (!productsToDisplay || productsToDisplay.length === 0) {
+        if (!products || products.length === 0) {
             return (
-                <Box sx={{ textAlign: 'center', py: 4 }}>
-                    <Typography variant="h6">Không tìm thấy sản phẩm</Typography>
-                    <Typography color="text.secondary">
-                        Vui lòng chọn danh mục khác hoặc thử lại sau
+                <Box sx={{ 
+                    textAlign: 'center', 
+                    py: 4,
+                    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                    borderRadius: 2,
+                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+                    p: 3
+                }}>
+                    <Typography 
+                        variant="h6" 
+                        sx={{ 
+                            color: 'primary.main',
+                            fontWeight: 'bold',
+                            mb: 1 
+                        }}
+                    >
+                        Không tìm thấy sản phẩm
+                    </Typography>
+                    <Typography 
+                        sx={{ 
+                            color: 'text.primary',
+                            fontSize: '1rem'
+                        }}
+                    >
+                        Vui lòng chọn lại các danh mục khác
                     </Typography>
                 </Box>
             );
@@ -327,13 +509,69 @@ const CategoryContent = () => {
 
         return (
             <Grid container spacing={2}>
-                {productsToDisplay.map((product) => (
+                {products.map((product) => (
                     <Grid item xs={12} sm={6} md={4} key={product.id}>
                         <ProductCard product={product} />
                     </Grid>
                 ))}
             </Grid>
         );
+    };
+
+    // Cập nhật hàm lấy sản phẩm theo loại da
+    const fetchProductsBySkinType = async (skinType) => {
+        try {
+            setLoading(true);
+            // Thay vì gọi API riêng, lọc từ danh sách sản phẩm đã có
+            const response = await productService.getProducts();
+            const _response = response['$values'];
+
+            // Lọc sản phẩm theo loại da
+            const filteredProducts = _response.filter(product => product.skinType === skinType);
+
+            const mappedProducts = filteredProducts.map(product => ({
+                id: product.productId,
+                name: product.productName,
+                price: product.price,
+                brand: product.brand,
+                capacity: product.capacity,
+                image: product.imgURL || '/placeholder.jpg',
+                quantity: product.quantity,
+                status: product.status
+            }));
+
+            console.log('Sản phẩm theo loại da:', mappedProducts);
+            setProducts(mappedProducts);
+            setAllProducts(mappedProducts);
+        } catch (error) {
+            console.error('Lỗi khi lấy sản phẩm theo loại da:', error);
+            setProducts([]);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Thêm hàm để tạo tiêu đề dựa trên các bộ lọc đã chọn
+    const renderFilterTitle = () => {
+        const filters = [];
+        
+        if (selectedSkinType) {
+            filters.push(selectedSkinType);
+        }
+        
+        if (selectedBrands.length > 0) {
+            if (selectedBrands.length === 1) {
+                filters.push(selectedBrands[0]);
+            } else {
+                filters.push(`${selectedBrands.length} thương hiệu`);
+            }
+        }
+        
+        if (selectedPriceRange) {
+            filters.push(selectedPriceRange.label);
+        }
+        
+        return filters.join(' - ') || 'Tất cả sản phẩm';
     };
 
     return (
@@ -356,29 +594,45 @@ const CategoryContent = () => {
                                 gap: 1
                             }}
                         >
-                            {/* Chỉ hiển thị selectedSubItem nếu nó thuộc danh sách con của selectedCategory */}
-                            {selectedCategory}
-                            {selectedCategory && selectedSubItem && (
+                            {/* Kiểm tra xem có bộ lọc nào đang được áp dụng không */}
+                            {(selectedBrands.length === 0 && !selectedSkinType && !selectedPriceRange) ? (
+                                // Nếu không có bộ lọc, hiển thị danh mục và tên danh mục con
                                 <>
-                                    <Typography 
-                                        component="span" 
-                                        sx={{ 
-                                            fontSize: '1em',
-                                            fontWeight: 'normal',
-                                        }}
-                                    >
-                                        {'=>'}
-                                    </Typography>
-                                    <Typography 
-                                        component="span" 
-                                        sx={{ 
-                                            fontSize: '1em',
-                                            fontWeight: 'normal',
-                                        }}
-                                    >
-                                        {selectedSubItem}
-                                    </Typography>
+                                    {selectedCategory}
+                                    {selectedCategory && selectedSubItem && (
+                                        <>
+                                            <Typography 
+                                                component="span" 
+                                                sx={{ 
+                                                    fontSize: '1em',
+                                                    fontWeight: 'normal',
+                                                }}
+                                            >
+                                                {'=>'}
+                                            </Typography>
+                                            <Typography 
+                                                component="span" 
+                                                sx={{ 
+                                                    fontSize: '1em',
+                                                    fontWeight: 'normal',
+                                                }}
+                                            >
+                                                {selectedSubItem}
+                                            </Typography>
+                                        </>
+                                    )}
                                 </>
+                            ) : (
+                                // Nếu có bộ lọc, chỉ hiển thị các bộ lọc đã chọn
+                                <Typography 
+                                    component="span" 
+                                    sx={{ 
+                                        fontSize: '1em',
+                                        fontWeight: 'normal',
+                                    }}
+                                >
+                                    {renderFilterTitle()}
+                                </Typography>
                             )}
                         </Typography>
 
@@ -446,7 +700,10 @@ const CategoryContent = () => {
                                                 margin: '8px 0',
                                             },
                                             color: selectedCategory === categoryType ? 'primary.main' : 'inherit',
-                                            '&:hover': { color: 'primary.main' }
+                                            '&:hover': { 
+                                                color: 'primary.main',
+                                                backgroundColor: 'rgba(25, 118, 210, 0.04)'
+                                            }
                                         }}
                                     >
                                         <Typography>{categoryType}</Typography>
@@ -460,7 +717,14 @@ const CategoryContent = () => {
                                                     py: 1,
                                                     cursor: 'pointer',
                                                     color: selectedSubItem === category.categoryName ? 'primary.main' : 'inherit',
-                                                    '&:hover': { color: 'primary.main' }
+                                                    borderRadius: 1,
+                                                    px: 1,
+                                                    transition: 'all 0.2s ease',
+                                                    '&:hover': { 
+                                                        color: 'primary.main',
+                                                        backgroundColor: 'rgba(25, 118, 210, 0.04)',
+                                                        transform: 'translateX(4px)'
+                                                    }
                                                 }}
                                                 onClick={() => handleCategory(categoryType, category)}
                                             >
@@ -485,7 +749,14 @@ const CategoryContent = () => {
                         >
                             <AccordionSummary
                                 expandIcon={<ExpandMoreIcon />}
-                                sx={{ px: 0 }}
+                                sx={{ 
+                                    px: 0,
+                                    borderRadius: 1,
+                                    '&:hover': {
+                                        backgroundColor: 'rgba(25, 118, 210, 0.04)',
+                                        color: 'primary.main'
+                                    }
+                                }}
                             >
                                 <Typography variant="h6" sx={{ fontWeight: 600 }}>Loại Da</Typography>
                             </AccordionSummary>
@@ -518,14 +789,34 @@ const CategoryContent = () => {
                                             mb: 1,
                                             p: 1,
                                             borderRadius: 1,
-                                            backgroundColor: '#f0f0f0',
+                                            backgroundColor: selectedPriceRange && selectedPriceRange.label === priceRange.label 
+                                                ? 'primary.lighter' 
+                                                : '#f0f0f0',
                                             cursor: 'pointer',
+                                            border: selectedPriceRange && selectedPriceRange.label === priceRange.label 
+                                                ? '1px solid' 
+                                                : 'none',
+                                            borderColor: 'primary.main',
                                             '&:hover': {
-                                                backgroundColor: '#e0e0e0'
+                                                backgroundColor: selectedPriceRange && selectedPriceRange.label === priceRange.label 
+                                                    ? 'primary.lighter' 
+                                                    : '#e0e0e0'
                                             }
                                         }}
                                     >
-                                        <Typography variant="body2">{priceRange.label}</Typography>
+                                        <Typography 
+                                            variant="body2" 
+                                            sx={{ 
+                                                color: selectedPriceRange && selectedPriceRange.label === priceRange.label 
+                                                    ? 'primary.main' 
+                                                    : 'inherit',
+                                                fontWeight: selectedPriceRange && selectedPriceRange.label === priceRange.label 
+                                                    ? 600 
+                                                    : 400
+                                            }}
+                                        >
+                                            {priceRange.label}
+                                        </Typography>
                                     </Box>
                                 ))}
                             </AccordionDetails>
@@ -598,8 +889,14 @@ const CategoryContent = () => {
                                                     }
                                                     sx={{ 
                                                         margin: 0,
+                                                        padding: '2px 4px',
+                                                        borderRadius: 1,
+                                                        transition: 'all 0.2s ease',
                                                         '& .MuiFormControlLabel-label': {
                                                             width: '100%'
+                                                        },
+                                                        '&:hover': {
+                                                            backgroundColor: 'rgba(25, 118, 210, 0.04)'
                                                         }
                                                     }}
                                                 />

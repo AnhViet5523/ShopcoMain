@@ -30,7 +30,6 @@ import BrandProducts from "./components/BrandProducts";
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  // Kiểm tra trạng thái đăng nhập khi component mount
   useEffect(() => {
     const checkAuth = () => {
       try {
@@ -41,24 +40,19 @@ export default function App() {
         setIsAuthenticated(false);
       }
     };
-    
+
     checkAuth();
-    
-    // Thêm event listener để cập nhật trạng thái khi localStorage thay đổi
-    window.addEventListener('storage', checkAuth);
+    window.addEventListener("storage", checkAuth);
     
     return () => {
-      window.removeEventListener('storage', checkAuth);
+      window.removeEventListener("storage", checkAuth);
     };
   }, []);
 
-  // Hàm xử lý đăng nhập
   const handleSignIn = (userData) => {
-    // userService.login đã xử lý việc lưu thông tin vào localStorage
     setIsAuthenticated(true);
   };
 
-  // Hàm xử lý đăng xuất
   const handleSignOut = () => {
     userService.logout();
     setIsAuthenticated(false);
@@ -68,19 +62,16 @@ export default function App() {
     <ErrorBoundary>
       <BrowserRouter>
         <Routes>
-          {/* Public Routes - Ai cũng truy cập được */}
-          <Route
-            path="/"
-            element={<MainScreen onSignOut={handleSignOut} />}
-          />
+          {/* Public Routes */}
+          <Route path="/" element={<MainScreen onSignOut={handleSignOut} />} />
           <Route path="/product/:id" element={<ProductScreen />} />
           <Route path="/search" element={<SearchResults />} />
           <Route path="/category" element={<CategoryScreen />} />
           <Route path="/categories" element={<CategoryContent />} />
           <Route path="/categories/:id" element={<CategoryContent />} />
           <Route path="/brand/:brandName" element={<BrandProducts />} />
-          
-          {/* Static Pages - Ai cũng truy cập được */}
+
+          {/* Static Pages */}
           <Route path="/da-dau" element={<DaDau />} />
           <Route path="/da-kho" element={<DaKho />} />
           <Route path="/da-thuong" element={<DaThuong />} />
@@ -92,13 +83,20 @@ export default function App() {
           <Route path="/policy" element={<PrivacyPolicy />} />
           <Route path="/complaint" element={<Complaint />} />
           <Route path="/return" element={<Return />} />
-          
+
           {/* Auth Routes */}
-          <Route path="/login" element={
-            isAuthenticated ? <Navigate to="/" /> : <SigninPage onSignIn={handleSignIn} />
-          } />
-          
-          {/* Protected Routes - Chỉ truy cập được khi đã đăng nhập */}
+          <Route
+            path="/login"
+            element={
+              isAuthenticated ? (
+                <Navigate to="/" />
+              ) : (
+                <SigninPage onSignIn={handleSignIn} />
+              )
+            }
+          />
+
+          {/* Protected Routes */}
           <Route
             path="/cart"
             element={

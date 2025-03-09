@@ -16,8 +16,35 @@ const Header = () => {
   const navigate = useNavigate();
   const [searchValue, setSearchValue] = useState("");
   const [accountMenuAnchor, setAccountMenuAnchor] = useState(null);
-  const [open, setOpen] = useState(false);
+  const [cartItemCount, setCartItemCount] = useState(0);
+
+  // Update cart count from localStorage
+  useEffect(() => {
+    const updateCartCount = () => {
+      const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+      const count = cart.reduce((total, item) => total + item.quantity, 0);
+      setCartItemCount(count);
+    };
+
+    // Initial count
+    updateCartCount();
+
+    // Listen for storage events to update count when cart changes
+    window.addEventListener('storage', updateCartCount);
+    
+    // Custom event for when cart is updated within the same window
+    window.addEventListener('cartUpdated', updateCartCount);
+
+    return () => {
+      window.removeEventListener('storage', updateCartCount);
+      window.removeEventListener('cartUpdated', updateCartCount);
+    };
+  }, []);
+  
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  
+  // Add this line to fix the error
+  const [open, setOpen] = useState(false);
   
   // Thêm state mới cho dialog yêu cầu đăng nhập
   const [openAuthDialog, setOpenAuthDialog] = useState(false);
@@ -27,6 +54,7 @@ const Header = () => {
   useEffect(() => {
     const user = localStorage.getItem("user");
     setIsAuthenticated(!!user);
+
   }, []);
 
   const handleSearchSubmit = async (event) => {
@@ -199,7 +227,7 @@ const Header = () => {
               </Box>
 
               <IconButton color="inherit" onClick={handleCartClick}>
-                <Badge badgeContent={3} color="error">
+                <Badge badgeContent={cartItemCount} color="error">
                   <ShoppingCart />
                 </Badge>
               </IconButton>
