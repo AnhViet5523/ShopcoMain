@@ -52,16 +52,12 @@ const Navigation = () => {
   };
 
   const handleCategoryClick = (category) => {
-    if (!isAuthenticated) {
-      navigate("/login");
-    } else {
-      handleMenuClose();
-      navigate("/category", { 
-        state: { 
-          selectedCategory: category.name
-        }
-      });
-    }
+    handleMenuClose();
+    navigate("/category", { 
+      state: { 
+        selectedCategory: category.name
+      }
+    });
   };
 
 const handleSkinTypesOpen = (event) => {
