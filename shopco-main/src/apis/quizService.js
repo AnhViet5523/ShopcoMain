@@ -36,14 +36,6 @@ const quizService = {
         try {
             // Gọi API /api/Quiz/submit với toàn bộ requestData
             const response = await axiosClient.post('/api/Quiz/submit', requestData);
-            
-            // Kiểm tra dữ liệu phản hồi
-            if (!response || typeof response !== 'object') {
-                console.error('Invalid response format from API:', response);
-                throw new Error('Invalid response format');
-            }
-
-            // Trả về phản hồi từ API
             return response;
         } catch (error) {
             console.error('Error saving quiz result:', error);
