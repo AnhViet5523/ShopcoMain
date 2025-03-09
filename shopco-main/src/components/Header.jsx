@@ -19,6 +19,7 @@ const Header = () => {
   const [searchValue, setSearchValue] = useState("");
   const [accountMenuAnchor, setAccountMenuAnchor] = useState(null);
   const [cartItemCount, setCartItemCount] = useState(0);
+  const [open, setOpen] = useState(false);
 
   // Update cart count from orderService
   useEffect(() => {
@@ -74,9 +75,6 @@ const Header = () => {
   }, []);
   
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  
-  // Add this line to fix the error
-  const [open, setOpen] = useState(false);
   
   // Thêm state mới cho dialog yêu cầu đăng nhập
   const [openAuthDialog, setOpenAuthDialog] = useState(false);
