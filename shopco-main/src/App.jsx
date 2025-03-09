@@ -24,6 +24,13 @@ import Cart from "./pages/Cart/Cart";
 import ProductScreen from "./pages/Product/ProductScreen";
 import ProtectedRoute from "./components/ProtectedRoute";
 import BrandProducts from "./components/BrandProducts";
+import BlogPage from "./pages/Blog/BlogPage";
+import Blog1 from "./pages/Blog/blog1";
+import Blog2 from "./pages/Blog/blog2";
+import Blog3 from "./pages/Blog/blog3";
+import Blog4 from "./pages/Blog/blog4";
+import Blog5 from "./pages/Blog/blog5";
+import Blog6 from "./pages/Blog/blog6";
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -61,7 +68,14 @@ export default function App() {
         <Route path="/categories/:id" element={<CategoryContent />} />
         <Route path="/brand/:brandName" element={<BrandProducts />} />
         
-        {/* Static Pages - Ai cũng truy cập được */}
+        <Route path="/blog" element={<BlogPage />} />
+        <Route path="/blog1" element={<Blog1 />} />
+        <Route path="/blog2" element={<Blog2 />} />
+        <Route path="/blog3" element={<Blog3 />} />
+        <Route path="/blog4" element={<Blog4 />} />
+        <Route path="/blog5" element={<Blog5 />} />
+        <Route path="/blog6" element={<Blog6 />} />
+
         <Route path="/da-dau" element={<DaDau />} />
         <Route path="/da-kho" element={<DaKho />} />
         <Route path="/da-thuong" element={<DaThuong />} />

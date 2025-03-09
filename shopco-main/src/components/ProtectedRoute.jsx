@@ -1,26 +1,46 @@
-import { Navigate } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import { Navigate, useLocation } from 'react-router-dom';
+import userService from '../apis/userService';
 
 const ProtectedRoute = ({ children }) => {
+  const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [loading, setLoading] = useState(true);
-  
+  const location = useLocation();
+
   useEffect(() => {
-    const user = localStorage.getItem("user");
-    setIsAuthenticated(!!user);
-    setLoading(false);
+    const checkAuth = async () => {
+      try {
+        // Kiểm tra xem người dùng đã đăng nhập hay chưa
+        const isAuth = userService.isAuthenticated();
+        
+        if (isAuth) {
+          // Đơn giản hóa logic xác thực để tránh lỗi
+          setIsAuthenticated(true);
+        } else {
+          setIsAuthenticated(false);
+        }
+      } catch (error) {
+        console.error('Authentication check failed:', error);
+        setIsAuthenticated(false);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    checkAuth();
   }, []);
-  
-  if (loading) {
-    // Có thể hiển thị loading spinner ở đây
+
+  if (isLoading) {
+    // Hiển thị loading spinner hoặc thông báo đang tải
     return <div>Đang tải...</div>;
   }
-  
+
   if (!isAuthenticated) {
-    // Chuyển hướng đến trang đăng nhập nếu chưa đăng nhập
-    return <Navigate to="/login" />;
+    // Chuyển hướng về trang đăng nhập và lưu lại đường dẫn hiện tại
+    return <Navigate to="/login" state={{ from: location }} replace />;
   }
-  
+
+  // Nếu đã xác thực, hiển thị nội dung của route
   return children;
 };
 

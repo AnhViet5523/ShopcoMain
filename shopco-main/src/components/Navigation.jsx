@@ -52,16 +52,12 @@ const Navigation = () => {
   };
 
   const handleCategoryClick = (category) => {
-    if (!isAuthenticated) {
-      navigate("/login");
-    } else {
-      handleMenuClose();
-      navigate("/category", { 
-        state: { 
-          selectedCategory: category.name
-        }
-      });
-    }
+    handleMenuClose();
+    navigate("/category", { 
+      state: { 
+        selectedCategory: category.name
+      }
+    });
   };
 
 const handleSkinTypesOpen = (event) => {
@@ -193,7 +189,13 @@ const handleClickAway = () => {
           {extraMenuItems.map((item) => (
             <Button 
               key={item} 
-              onClick={item === "Quy trình chăm sóc da" ? handleSkinTypesOpen : undefined} 
+              onClick={
+                item === "Quy trình chăm sóc da" 
+                  ? handleSkinTypesOpen 
+                  : item === "Blog"
+                    ? () => navigate("/blog")
+                    : undefined
+              } 
               sx={{ 
                 color: 'text.primary', 
                 position: 'relative', 
