@@ -19,6 +19,7 @@ const Header = () => {
   const [searchValue, setSearchValue] = useState("");
   const [accountMenuAnchor, setAccountMenuAnchor] = useState(null);
   const [cartItemCount, setCartItemCount] = useState(0);
+  const [open, setOpen] = useState(false);
 
   // Update cart count from orderService
   useEffect(() => {
