@@ -32,18 +32,11 @@ const quizService = {
         }
     },
 
-    saveQuizResult: async (userId, responses) => {
+    saveQuizResult: async (requestData) => {
         try {
-            const promises = responses.map(({ questionId, selectedAnswerId }) => 
-                axiosClient.post('/api/Quiz/submit', {
-                    userId,
-                    QuestionId: questionId,
-                    selectedAnswerId
-                })
-            );
-            
-            const results = await Promise.all(promises);
-            return results;
+            // Gọi API /api/Quiz/submit với toàn bộ requestData
+            const response = await axiosClient.post('/api/Quiz/submit', requestData);
+            return response;
         } catch (error) {
             console.error('Error saving quiz result:', error);
             throw error;
