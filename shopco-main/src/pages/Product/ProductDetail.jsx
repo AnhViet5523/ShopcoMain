@@ -1,5 +1,5 @@
 import { useState, useEffect, memo } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import PropTypes from 'prop-types';
 import { 
   Box, 
@@ -80,6 +80,7 @@ export default function ProductDetail() {
   const [tabValue, setTabValue] = useState(0);
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -155,6 +156,14 @@ export default function ProductDetail() {
       console.error('Error adding to cart:', error);
       alert('Có lỗi xảy ra khi thêm vào giỏ hàng. Vui lòng thử lại sau.');
     }
+  };
+
+  const handleBuyNow = () => {
+    // Logic để thêm sản phẩm vào giỏ hàng nếu cần
+    // ...
+
+    // Chuyển hướng đến trang checkout
+    navigate('/checkout');
   };
 
   // Helper function to check if image exists
@@ -426,6 +435,7 @@ export default function ProductDetail() {
                       textTransform: 'none',
                       fontWeight: 'bold'
                     }}
+                    onClick={handleBuyNow}
                   >
                     Mua Ngay
                   </Button>
