@@ -35,6 +35,7 @@ import Blog4 from "./pages/Blog/blog4";
 import Blog5 from "./pages/Blog/blog5";
 import Blog6 from "./pages/Blog/blog6";
 import QuizTest from "./pages/Quiz/QuizTest";
+import Checkout from "./pages/checkout/checkout";
 
 // Component để hủy request khi chuyển trang
 function NavigationHandler() {
@@ -166,6 +167,7 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+          <Route path="/checkout" element={<Checkout />} />
         </Routes>
       </BrowserRouter>
     </ErrorBoundary>
