@@ -3,28 +3,28 @@ import { Box, Typography, Grid } from "@mui/material";
 import { useNavigate } from 'react-router-dom';
 import './TopBrand.css';
 
-// Danh sách các thương hiệu
-const brands = [
-  { id: 1, name: "L'Oreal Paris", image: "/images/L'OrealParis.png" },
-  { id: 2, name: "La Roche-Posay", image: "/images/LaRoche.png" },
-  { id: 3, name: "CeraVe", image: "/images/CeraVe.png" },
-  { id: 4, name: "Bioderma", image: "/images/Bioderma.jpg" },
-  { id: 5, name: "Paula's Choice", image: "/images/Paula's.png" },
-  { id: 6, name: "Vichy", image: "/images/Vichy.jpg" },
-  { id: 7, name: "Neutrogena", image: "/images/Neutrogena.jpg" },
-  { id: 8, name: "Garnier", image: "/images/Garnier.jpg" },
-  { id: 9, name: "Avène", image: "/images/Avène.jpg" },
-  { id: 10, name: "Olay", image: "/images/Olay.jpg" },
-  { id: 11, name: "Laneige", image: "/images/Laneige.png" },
-  { id: 12, name: "Obagi Medical", image: "/images/Obagi.jpg" }
-];
-
-export default function TopBrand() {
+const TopBrand = () => {
   const navigate = useNavigate();
-  
+
   const handleBrandClick = (brandName) => {
-    navigate(`/brand/${encodeURIComponent(brandName)}`);
+    navigate(`/brand/${brandName}`);
   };
+
+  // Danh sách 12 thương hiệu
+  const brands = [
+    { id: 1, name: "L'Oreal Paris", image: "/images/L'OrealParis.png" },
+    { id: 2, name: "La Roche-Posay", image: "/images/LaRoche.png" },
+    { id: 3, name: "CeraVe", image: "/images/CeraVe.png" },
+    { id: 4, name: "Bioderma", image: "/images/Bioderma.jpg" },
+    { id: 5, name: "Paula's Choice", image: "/images/Paula's.png" },
+    { id: 6, name: "Vichy", image: "/images/Vichy.jpg" },
+    { id: 7, name: "Neutrogena", image: "/images/Neutrogena.jpg" },
+    { id: 8, name: "Garnier", image: "/images/Garnier.jpg" },
+    { id: 9, name: "Avène", image: "/images/Avène.jpg" },
+    { id: 10, name: "Olay", image: "/images/Olay.jpg" },
+    { id: 11, name: "Laneige", image: "/images/Laneige.png" },
+    { id: 12, name: "Obagi Medical", image: "/images/Obagi.jpg" }
+  ];
 
   return (
     <Box 
@@ -119,4 +119,6 @@ export default function TopBrand() {
       </Box>
     </Box>
   );
-}
+};
+
+export default TopBrand;

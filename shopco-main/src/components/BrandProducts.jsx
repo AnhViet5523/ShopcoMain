@@ -5,14 +5,7 @@ import ProductCard from './ProductCard';
 import productService from '../apis/productService';
 import Header from './Header';
 import Footer from './Footer/Footer';
-import { styled } from '@mui/material/styles';
-
-const BrandTitle = styled(Typography)(({ theme }) => ({
-  backgroundColor: '#f0f0f0',
-  padding: '10px',
-  borderRadius: '5px',
-  marginBottom: '20px'
-}));
+import Banner from './Banner';
 
 const BrandProducts = () => {
   const { brandName } = useParams();
@@ -21,65 +14,58 @@ const BrandProducts = () => {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    const fetchProductsByBrand = async () => {
-      try {
-        setLoading(true);
-        console.log('Fetching products for brand:', brandName);
-        
-        // Gọi API để lấy sản phẩm theo thương hiệu
-        const response = await productService.getProductsByBrand(brandName);
-        console.log('API response:', response);
-        
-        // Xử lý dữ liệu trả về với nhiều trường hợp khác nhau
-        let productData = [];
-        if (response && Array.isArray(response)) {
-          productData = response;
-        } else if (response && response.$values && Array.isArray(response.$values)) {
-          productData = response.$values;
-        } else if (response && typeof response === 'object') {
-          productData = [response];
-        }
-        
-        console.log('Processed products data:', productData);
-        setProducts(productData);
-        
-        if (productData.length === 0) {
-          setError('Không tìm thấy sản phẩm');
-        } else {
-          setError(null);
-        }
-      } catch (err) {
-        console.error('Lỗi khi tải sản phẩm:', err);
-        setError('Đã xảy ra lỗi khi tải dữ liệu. Vui lòng thử lại sau.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (brandName) {
-      fetchProductsByBrand();
-    }
+    fetchProductsByBrand();
   }, [brandName]);
 
-  return (
-    <>
-      <Header />
-      <Box sx={{ width: "99vw", overflowX: "hidden" }}>
-        <BrandTitle 
-          variant="h4" 
-          align="center" 
-          gutterBottom
-        >
-          {error ? error : `Kết quả tìm kiếm cho: ${brandName}`}
-        </BrandTitle>
+  const fetchProductsByBrand = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      if (!brandName) {
+        setError('Không tìm thấy thương hiệu');
+        setLoading(false);
+        return;
+      }
+      
+      console.log('Fetching products for brand:', brandName);
+      const data = await productService.getProductsByBrand(brandName);
+      
+      console.log('Products data:', data);
+      setProducts(data);
+      setLoading(false);
+    } catch (err) {
+      console.error('Error fetching products:', err);
+      setError('Đã xảy ra lỗi khi tải sản phẩm. Vui lòng thử lại sau.');
+      setLoading(false);
+    }
+  };
 
-        <Grid container spacing={2}>
+  return (
+    <Box sx={{ bgcolor: "#c2d3a0", minHeight: "100vh", width:'99vw' }}>
+      <Header />
+      <Banner />
+      <Box sx={{ p: 4, maxWidth: 1200, mx: 'auto' }}>
+        <Typography 
+          variant="h4" 
+          component="h1" 
+          gutterBottom 
+          sx={{ 
+            textAlign: 'center', 
+            fontWeight: 'bold',
+            mb: 4
+          }}
+        >
+          Sản phẩm từ {brandName}
+        </Typography>
+        
+        <Grid container spacing={3}>
           {loading ? (
             <Box sx={{ display: 'flex', justifyContent: 'center', width: '100%', my: 4 }}>
               <CircularProgress />
             </Box>
           ) : error ? (
-            <Box sx={{ width: '100%', textAlign: 'center' }}>
+            <Box sx={{ width: '100%', textAlign: 'center', my: 4 }}>
               <Typography color="error">{error}</Typography>
             </Box>
           ) : products && products.length > 0 ? (
@@ -96,7 +82,7 @@ const BrandProducts = () => {
         </Grid>
       </Box>
       <Footer />
-    </>
+    </Box>
   );
 };
 
