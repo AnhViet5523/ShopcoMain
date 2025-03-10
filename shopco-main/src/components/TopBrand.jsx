@@ -12,7 +12,7 @@ const TopBrand = () => {
 
   // Danh sách 12 thương hiệu
   const brands = [
-    { id: 1, name: "L'Oreal Paris", image: "/images/L'OrealParis.png" },
+    { id: 1, name: "L'Oreal", image: "/images/L'OrealParis.png" },
     { id: 2, name: "La Roche-Posay", image: "/images/LaRoche.png" },
     { id: 3, name: "CeraVe", image: "/images/CeraVe.png" },
     { id: 4, name: "Bioderma", image: "/images/Bioderma.jpg" },
