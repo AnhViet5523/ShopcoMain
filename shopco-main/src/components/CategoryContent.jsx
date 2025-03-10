@@ -83,6 +83,7 @@ const CategoryContent = () => {
     const [categories, setCategories] = useState([]);
     const [filteredProducts, setFilteredProducts] = useState([]);
     const [brands, setBrands] = useState([]);
+    const [allBrands, setAllBrands] = useState([]);
     const [selectedBrands, setSelectedBrands] = useState([]);
     const [skinTypes, setSkinTypes] = useState([]);
     const [selectedSkinType, setSelectedSkinType] = useState('');
@@ -133,89 +134,158 @@ const CategoryContent = () => {
     useEffect(() => {
         const loadProducts = async () => {
             try {
-                const response = await productService.getProducts();
-                const products = response['$values'];
-
-                // Lấy các thương hiệu duy nhất
-                if (Array.isArray(products)) {
-                    const uniqueBrands = [...new Set(products.map(product => product.brand))];
-                    setBrands(uniqueBrands);
-
-                    // Lấy các loại da duy nhất
-                    const uniqueSkinTypes = [...new Set(products.map(product => product.skinType))];
-                    setSkinTypes(uniqueSkinTypes);
-                } else {
-                    console.error('API response is not an array:', response);
+                setLoading(true);
+                const response = await productService.getAllProducts();
+                
+                // Xử lý dữ liệu trả về
+                let _products = [];
+                if (response && response.$values) {
+                    _products = response.$values;
+                } else if (Array.isArray(response)) {
+                    _products = response;
+                } else if (response && response.data) {
+                    _products = Array.isArray(response.data) ? response.data : [response.data];
                 }
+                
+                // Lấy các thương hiệu duy nhất từ tất cả sản phẩm
+                if (_products && _products.length > 0) {
+                    const uniqueBrands = [...new Set(_products.filter(p => p.brand).map(p => p.brand))];
+                    setBrands(uniqueBrands);
+                    console.log('Tất cả thương hiệu từ API:', uniqueBrands.length, 'thương hiệu');
+
+                    // Lấy các loại da duy nhất từ API
+                    const uniqueSkinTypes = [...new Set(_products.filter(p => p.skinType).map(p => p.skinType))];
+                    
+                    // Nếu không có loại da từ API, sử dụng danh sách chuẩn
+                    if (uniqueSkinTypes.length === 0) {
+                        const standardSkinTypes = ["Da Dầu", "Da Khô", "Da Thường", "Da Hỗn Hợp", "Da Nhạy Cảm"];
+                        setSkinTypes(standardSkinTypes);
+                        console.log('Sử dụng danh sách loại da chuẩn:', standardSkinTypes);
+                    } else {
+                        setSkinTypes(uniqueSkinTypes);
+                        console.log('Danh sách loại da từ API:', uniqueSkinTypes);
+                    }
+                }
+                
+                setLoading(false);
             } catch (error) {
                 console.error('Error loading products:', error);
+                setLoading(false);
+                
+                // Nếu có lỗi, vẫn sử dụng danh sách loại da chuẩn
+                const standardSkinTypes = ["Da Dầu", "Da Khô", "Da Thường", "Da Hỗn Hợp", "Da Nhạy Cảm"];
+                setSkinTypes(standardSkinTypes);
+                console.log('Sử dụng danh sách loại da chuẩn do lỗi:', standardSkinTypes);
             }
         };
 
         loadProducts();
     }, []);
 
+    // Khởi tạo 5 loại da chuẩn
+    useEffect(() => {
+        // Danh sách 5 loại da chuẩn
+        const standardSkinTypes = ["Da Dầu", "Da Khô", "Da Thường", "Da Hỗn Hợp", "Da Nhạy Cảm"];
+        setSkinTypes(standardSkinTypes);
+        console.log('Sử dụng 5 loại da chuẩn:', standardSkinTypes);
+    }, []);
+
+    // Sửa lại hàm fetchProductsByCategory để cập nhật brands nếu rỗng
     const fetchProductsByCategory = async (categoryId) => {
         try {
             setLoading(true);
-            const response = await productService.getProducts();
-            const _response = response['$values'];           
+            const response = await productService.getAllProducts();
             
-            const data = _response.filter(x => x.categoryId == categoryId);            
+            // Xử lý dữ liệu trả về
+            let _products = [];
+            if (response && response.$values) {
+                _products = response.$values;
+            } else if (Array.isArray(response)) {
+                _products = response;
+            } else if (response && response.data) {
+                _products = Array.isArray(response.data) ? response.data : [response.data];
+            }
+            
+            // Lấy tất cả thương hiệu từ API nếu brands đang rỗng
+            if (brands.length === 0 && _products && _products.length > 0) {
+                const allUniqueBrands = [...new Set(_products.filter(p => p.brand).map(p => p.brand))];
+                setBrands(allUniqueBrands);
+                console.log('Cập nhật tất cả thương hiệu từ API:', allUniqueBrands.length, 'thương hiệu');
+            }
+            
+            // Lọc sản phẩm theo categoryId
+            const data = _products.filter(x => x.categoryId == categoryId);            
             
             const mappedProducts = data.map(product => ({
                 id: product.productId,
                 name: product.productName,
                 price: product.price,
                 brand: product.brand,
+                skinType: product.skinType,
+                categoryId: product.categoryId,
+                description: product.description,
                 capacity: product.capacity,
                 image: product.imgURL || '/placeholder.jpg',
                 quantity: product.quantity,
-                status: product.status,
-                skinType: product.skinType
+                status: product.status
             }));
-
-            console.log('Mapped products:', mappedProducts);
+            
+            console.log('Sản phẩm trong category:', mappedProducts.length);
+            
+            // Lưu danh sách sản phẩm của category
             setProducts(mappedProducts);
-            setAllProducts(mappedProducts); 
             setCategoryProducts(mappedProducts);
+            
+            // KHÔNG ghi đè danh sách thương hiệu, chỉ log để debug
+            const categoryBrands = [...new Set(mappedProducts.filter(p => p.brand).map(p => p.brand))];
+            console.log('Thương hiệu trong category hiện tại:', categoryBrands.length, 'thương hiệu');
+            console.log('Tổng số thương hiệu hiển thị:', brands.length, 'thương hiệu');
             
             // Reset các bộ lọc khi chuyển danh mục
             setSelectedBrands([]);
             setSelectedSkinType('');
             setSelectedPriceRange(null);
+            
+            setLoading(false);
         } catch (error) {
-            console.error('Error fetching products:', error);
-            setProducts([]);
-        } finally {
+            console.error('Error fetching products by category:', error);
             setLoading(false);
         }
     };
 
     const handleCategory = async (categoryType, category) => {
         try {
-            setSelectedCategory(categoryType);
-            if (category) {
-                setSelectedSubItem(category.categoryName);
-                await fetchProductsByCategory(category.categoryId);
-            } else {
-                // Nếu không có category cụ thể, lấy category đầu tiên trong nhóm
-                const firstCategory = categories[categoryType][0];
-                if (firstCategory) {
-                    setSelectedSubItem(firstCategory.categoryName);
-                    await fetchProductsByCategory(firstCategory.categoryId);
-                }
+            // Nếu không có category, chỉ mở/đóng accordion
+            if (!category) {
+                setExpandedCategory(expandedCategory === categoryType ? null : categoryType);
+                return;
             }
+            
+            // Cập nhật state
+            setSelectedCategory(categoryType);
+            setSelectedSubItem(category.categoryName);
             setExpandedCategory(categoryType);
+            
+            // Lấy sản phẩm theo category
+            await fetchProductsByCategory(category.categoryId);
+            
+            // Reset các bộ lọc khi chuyển danh mục
+            setSelectedBrands([]);
+            setSelectedSkinType('');
+            setSelectedPriceRange(null);
         } catch (error) {
-            console.error('Error handling category:', error);
-            setError('Failed to load products');
+            console.error('Lỗi khi xử lý danh mục:', error);
         }
     };
 
     const handleSubItemSelection = async (subItem, categoryId) => {
         setSelectedSubItem(subItem);
         await fetchProductsByCategory(categoryId);
+        
+        // Reset các bộ lọc khi chuyển danh mục con
+        setSelectedBrands([]);
+        setSelectedSkinType('');
+        setSelectedPriceRange(null);
     };
 
     // Hàm lọc sản phẩm theo khoảng giá
@@ -233,20 +303,24 @@ const CategoryContent = () => {
         return products.filter(product => selectedBrands.includes(product.brand));
     };
 
-    // Cập nhật hàm xử lý khi người dùng chọn thương hiệu
+    // Sửa lại hàm handleBrandChange để xử lý khi người dùng chọn thương hiệu
     const handleBrandChange = async (brand) => {
-        // Cập nhật danh sách thương hiệu đã chọn
-        const newSelectedBrands = selectedBrands.includes(brand)
-            ? selectedBrands.filter(b => b !== brand)
-            : [...selectedBrands, brand];
-        
-        console.log('Các thương hiệu đã chọn:', newSelectedBrands);
-        
-        // Cập nhật state
-        setSelectedBrands(newSelectedBrands);
-        
-        // Áp dụng tất cả các bộ lọc
-        await applyAllFilters(newSelectedBrands, selectedSkinType, selectedPriceRange);
+        try {
+            // Cập nhật danh sách thương hiệu đã chọn
+            const newSelectedBrands = selectedBrands.includes(brand)
+                ? selectedBrands.filter(b => b !== brand)
+                : [...selectedBrands, brand];
+            
+            console.log('Các thương hiệu đã chọn:', newSelectedBrands);
+            
+            // Cập nhật state
+            setSelectedBrands(newSelectedBrands);
+            
+            // Áp dụng tất cả các bộ lọc
+            await applyAllFilters(newSelectedBrands, selectedSkinType, selectedPriceRange);
+        } catch (error) {
+            console.error('Lỗi khi xử lý thương hiệu:', error);
+        }
     };
     
     // Cập nhật hàm xử lý khi người dùng chọn khoảng giá
@@ -268,7 +342,7 @@ const CategoryContent = () => {
         try {
             setLoading(true);
             // Thay vì gọi API riêng, lọc từ danh sách sản phẩm đã có
-            const response = await productService.getProducts();
+            const response = await productService.getAllProducts();
             const _response = response['$values'];
             
             // Phân tích tham số giá
@@ -306,7 +380,7 @@ const CategoryContent = () => {
         }
     };
 
-    // Cải thiện hàm lọc theo tất cả các điều kiện
+    // Sửa lại hàm applyAllFilters để lọc trên tất cả sản phẩm từ API
     const applyAllFilters = async (brands = selectedBrands, skinType = selectedSkinType, priceRange = selectedPriceRange) => {
         try {
             setLoading(true);
@@ -319,36 +393,95 @@ const CategoryContent = () => {
                 setProducts(categoryProducts);
                 setAllProducts(categoryProducts);
                 updateFilterTitle(brands, skinType, priceRange);
+                setLoading(false);
                 return;
             }
             
             // Lấy tất cả sản phẩm từ API để có dữ liệu đầy đủ
-            const response = await productService.getProducts();
-            if (!response || !response['$values']) {
+            let allProductsData = [];
+            const response = await productService.getAllProducts();
+            
+            // Xử lý dữ liệu trả về
+            if (response && response.$values) {
+                allProductsData = response.$values;
+            } else if (Array.isArray(response)) {
+                allProductsData = response;
+            } else if (response && response.data) {
+                allProductsData = Array.isArray(response.data) ? response.data : [response.data];
+            }
+            
+            // Cập nhật danh sách thương hiệu nếu đang rỗng
+            if (brands.length === 0 && allProductsData && allProductsData.length > 0) {
+                const allUniqueBrands = [...new Set(allProductsData.filter(p => p.brand).map(p => p.brand))];
+                setBrands(allUniqueBrands);
+                console.log('Cập nhật tất cả thương hiệu từ API trong applyAllFilters:', allUniqueBrands.length, 'thương hiệu');
+            }
+            
+            if (!allProductsData || allProductsData.length === 0) {
                 console.error('Không thể lấy dữ liệu sản phẩm');
+                setLoading(false);
                 return;
             }
             
-            const allProductsData = response['$values'];
+            // Bắt đầu với tất cả sản phẩm từ API
             let filteredData = [...allProductsData];
-            
             console.log('Bắt đầu lọc với', filteredData.length, 'sản phẩm');
             
-            // Lọc theo thương hiệu
+            // Lọc theo thương hiệu nếu có
             if (brands.length > 0) {
                 console.log('Lọc theo', brands.length, 'thương hiệu:', brands.join(', '));
-                filteredData = filteredData.filter(product => brands.includes(product.brand));
+                
+                // Lọc sản phẩm theo thương hiệu
+                filteredData = filteredData.filter(product => {
+                    if (!product.brand) return false;
+                    return brands.includes(product.brand);
+                });
+                
                 console.log('Sau khi lọc theo thương hiệu:', filteredData.length, 'sản phẩm');
+                
+                if (filteredData.length === 0) {
+                    console.warn(`Không có sản phẩm nào thuộc các thương hiệu đã chọn`);
+                }
+            } 
+            // Nếu không có thương hiệu được chọn, lọc theo danh mục hiện tại
+            else {
+                const selectedCategoryId = categoryProducts.length > 0 ? categoryProducts[0].categoryId : null;
+                if (selectedCategoryId) {
+                    filteredData = filteredData.filter(product => product.categoryId == selectedCategoryId);
+                    console.log('Sau khi lọc theo danh mục:', filteredData.length, 'sản phẩm');
+                }
             }
             
-            // Lọc theo loại da
+            // Tiếp theo lọc theo loại da nếu có
             if (skinType) {
                 console.log('Lọc theo loại da:', skinType);
-                filteredData = filteredData.filter(product => product.skinType === skinType);
+                
+                if (skinType === "Da Thường") {
+                    const allSkinTypes = [...new Set(filteredData.filter(p => p.skinType).map(p => p.skinType))];
+                    console.log('Các loại da hiện có:', allSkinTypes);
+                    
+                    filteredData = filteredData.filter(product => {
+                        if (!product.skinType) return false;
+                        
+                        const normalizedSkinType = product.skinType.toLowerCase().trim();
+                        return normalizedSkinType === "da thường" || 
+                               normalizedSkinType === "da thuong" || 
+                               normalizedSkinType === "normal skin" || 
+                               normalizedSkinType === "normal" || 
+                               normalizedSkinType.includes("thường") || 
+                               normalizedSkinType.includes("thuong");
+                    });
+                } else {
+                    filteredData = filteredData.filter(product => {
+                        if (!product.skinType) return false;
+                        return product.skinType.toLowerCase().trim() === skinType.toLowerCase().trim();
+                    });
+                }
+                
                 console.log('Sau khi lọc theo loại da:', filteredData.length, 'sản phẩm');
             }
             
-            // Lọc theo khoảng giá
+            // Cuối cùng lọc theo khoảng giá nếu có
             if (priceRange) {
                 console.log('Lọc theo khoảng giá:', priceRange.min, 'đến', 
                           priceRange.max === Infinity ? 'không giới hạn' : priceRange.max);
@@ -358,20 +491,23 @@ const CategoryContent = () => {
                     return price >= priceRange.min && 
                           (priceRange.max === Infinity || price <= priceRange.max);
                 });
+                
                 console.log('Sau khi lọc theo giá:', filteredData.length, 'sản phẩm');
             }
             
-            // Map dữ liệu
+            // Map dữ liệu kết quả
             const mappedProducts = filteredData.map(product => ({
                 id: product.productId,
                 name: product.productName,
                 price: product.price,
                 brand: product.brand,
+                skinType: product.skinType,
+                categoryId: product.categoryId,
+                description: product.description,
                 capacity: product.capacity,
                 image: product.imgURL || '/placeholder.jpg',
                 quantity: product.quantity,
-                status: product.status,
-                skinType: product.skinType
+                status: product.status
             }));
             
             // Cập nhật danh sách sản phẩm
@@ -382,9 +518,9 @@ const CategoryContent = () => {
             updateFilterTitle(brands, skinType, priceRange);
             
             console.log('Kết quả lọc cuối cùng:', mappedProducts.length, 'sản phẩm');
+            setLoading(false);
         } catch (error) {
             console.error('Lỗi khi áp dụng bộ lọc:', error);
-        } finally {
             setLoading(false);
         }
     };
@@ -429,6 +565,7 @@ const CategoryContent = () => {
             
             // Cập nhật state
             setSelectedSkinType(newSkinType);
+            console.log('Đã chọn loại da:', newSkinType || 'Không chọn');
             
             // Áp dụng tất cả các bộ lọc
             await applyAllFilters(selectedBrands, newSkinType, selectedPriceRange);
@@ -437,7 +574,7 @@ const CategoryContent = () => {
         }
     };
 
-    // Cập nhật phần render loại da - cần thay đổi để sử dụng selectedSkinType trực tiếp
+    // Cập nhật phần render loại da để giống code tham khảo
     const renderSkinTypes = () => {
         return skinTypes.map((type) => (
             <FormControlLabel
@@ -501,7 +638,7 @@ const CategoryContent = () => {
                             fontSize: '1rem'
                         }}
                     >
-                        Vui lòng thay đổi bộ lọc hoặc chọn danh mục khác
+                         Vui lòng chọn lại các danh mục khác
                     </Typography>
                 </Box>
             );
@@ -522,12 +659,22 @@ const CategoryContent = () => {
     const fetchProductsBySkinType = async (skinType) => {
         try {
             setLoading(true);
-            // Thay vì gọi API riêng, lọc từ danh sách sản phẩm đã có
-            const response = await productService.getProducts();
-            const _response = response['$values'];
-
-            // Lọc sản phẩm theo loại da
-            const filteredProducts = _response.filter(product => product.skinType === skinType);
+            const response = await productService.getAllProducts();
+            
+            // Xử lý dữ liệu trả về
+            let _products = [];
+            if (response && response.$values) {
+                _products = response.$values;
+            } else if (Array.isArray(response)) {
+                _products = response;
+            } else if (response && response.data) {
+                _products = Array.isArray(response.data) ? response.data : [response.data];
+            }
+            
+            // Lọc sản phẩm theo skinType
+            const filteredProducts = _products.filter(product => 
+                product.skinType && product.skinType.toLowerCase() === skinType.toLowerCase()
+            );
 
             const mappedProducts = filteredProducts.map(product => ({
                 id: product.productId,

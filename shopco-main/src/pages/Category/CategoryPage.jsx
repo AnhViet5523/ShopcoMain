@@ -16,10 +16,21 @@ const CategoryPage = () => {
             try {
                 if (selectedCategory) {
                     const response = await productService.getProductsByCategory(selectedCategory); // Gọi API theo danh mục
-                    setProducts(response);
+                    setProducts(response.data || []);
                 } else {
-                    const response = await productService.getProducts(); // Gọi API lấy tất cả sản phẩm
-                    setProducts(response);
+                    const response = await productService.getAllProducts(); // Gọi API lấy tất cả sản phẩm
+                    
+                    // Xử lý dữ liệu trả về
+                    let _products = [];
+                    if (response && response.$values) {
+                        _products = response.$values;
+                    } else if (Array.isArray(response)) {
+                        _products = response;
+                    } else if (response && response.data) {
+                        _products = Array.isArray(response.data) ? response.data : [response.data];
+                    }
+                    
+                    setProducts(_products);
                 }
             } catch (err) {
                 setError('Không tìm thấy sản phẩm');
