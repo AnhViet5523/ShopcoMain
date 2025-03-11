@@ -21,9 +21,9 @@ const Cart = () => {
         // Get user ID from localStorage
         const user = JSON.parse(localStorage.getItem('user'));
         
-        if (user && user.id) {
+        if (user && user.userId) {
           // Fetch current cart from orderService
-          const response = await orderService.getCurrentCart(user.id);
+          const response = await orderService.getCurrentCart(user.userId);
           const items = response.items.$values.map(item => ({
             id: item.orderItemId,
             productId: item.productId,
