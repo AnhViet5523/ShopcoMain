@@ -22,27 +22,18 @@ const Cart = () => {
         const user = JSON.parse(localStorage.getItem('user'));
         
         if (user && user.userId) {
-          // Fetch cart items from orderService
-          const orders = await orderService.getOrders(user.userId);
-          
-          // Find the pending order (cart)
-          const pendingOrder = orders.find(order => order.orderStatus === "Pending");
-          
-          if (pendingOrder && pendingOrder.orderItems && pendingOrder.orderItems.$values) {
-            // Transform order items to match the expected format
-            const items = pendingOrder.orderItems.$values.map(item => ({
-              id: item.orderItemId,
-              productId: item.productId,
-              name: item.product ? item.product.name : 'Product Name',
-              price: item.unitPrice,
-              originalPrice: item.unitPrice * 1.2, // Assuming 20% markup, adjust as needed
-              quantity: item.quantity,
-              imgUrl: item.product ? item.product.imageUrl : 'https://via.placeholder.com/150',
-            }));
-            setCartItems(items);
-          } else {
-            setCartItems([]);
-          }
+          // Fetch current cart from orderService
+          const response = await orderService.getCurrentCart(user.userId);
+          const items = response.items.$values.map(item => ({
+            id: item.orderItemId,
+            productId: item.productId,
+            name: item.product ? item.product.productName : 'Product Name',
+            price: item.price,
+            originalPrice: item.price * 1.2, // Assuming 20% markup, adjust as needed
+            quantity: item.quantity,
+            imgUrl: item.product ? item.product.imgUrl : 'https://via.placeholder.com/150',
+          }));
+          setCartItems(items);
         } else {
           // Fallback to localStorage for non-authenticated users
           const savedCart = JSON.parse(localStorage.getItem('cart') || '[]');
