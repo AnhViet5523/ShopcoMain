@@ -97,7 +97,6 @@ const Staff = () => {
           <table>
             <thead>
               <tr>
-                <th><input type="checkbox" /></th>
                 <th>Đã Làm</th>
                 <th>GIÁ</th>
                 <th>LOẠI HÀNG</th>

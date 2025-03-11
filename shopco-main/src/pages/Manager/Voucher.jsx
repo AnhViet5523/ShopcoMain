@@ -82,7 +82,6 @@ const Voucher = () => {
             <table>
               <thead>
                 <tr>
-                  <th><input type="checkbox" className="custom-checkbox" /></th>
                   <th>MÃ VOUCHER</th>
                   <th>LOẠI</th>
                   <th>GIÁ TRỊ</th>

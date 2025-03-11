@@ -97,7 +97,6 @@ const ViewOrder = () => {
           <table>
             <thead>
               <tr>
-                <th><input type="checkbox" /></th>
                 <th>GIÁ</th>
                 <th>LOẠI HÀNG</th>
                 <th>TÊN SẢN PHẨM/ MÃ SP</th>
