@@ -184,12 +184,12 @@ export default function ProductDetail() {
     }
   };
 
-  const handleBuyNow = () => {
+  const handleBuyNow = async () => {
     // Logic để thêm sản phẩm vào giỏ hàng nếu cần
     // ...
-
+    await addToCart();
     // Chuyển hướng đến trang checkout
-    navigate('/checkout');
+    navigate('/cart');
   };
 
   const handleOpenModal = () => setIsModalOpen(true);
