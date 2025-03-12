@@ -52,6 +52,8 @@ const Checkout = () => {
   const orderId = searchParams.get('orderId');
 
   useEffect(() => {
+
+
     // Mark component as mounted
     isMounted.current = true;
     
@@ -70,6 +72,12 @@ const Checkout = () => {
   }, [orderId]);
 
   const fetchOrderById = async (id) => {
+    // lấy dữ liệu từ orderID,
+    // dựa vào dữ liệu, mình xem nó phù hợp với các voucher nào
+    // gọi api để lấy cái vourchers
+    // khi mà chọn voucher, mình call api apply-voucher
+    // bấm vào nút thanh tóan, mình call api confirm-payment
+
     // If a request is already in progress, don't send a new one
     if (requestInProgress.current) return;
     
