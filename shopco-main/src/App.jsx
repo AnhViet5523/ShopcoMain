@@ -28,14 +28,22 @@ import axiosClient from "./apis/axiosClient";
 import ErrorBoundary from "./components/ErrorBoundary";
 import BrandProducts from "./components/BrandProducts";
 import BlogPage from "./pages/Blog/BlogPage";
-import Blog1 from "./pages/Blog/blog1";
-import Blog2 from "./pages/Blog/blog2";
-import Blog3 from "./pages/Blog/blog3";
-import Blog4 from "./pages/Blog/blog4";
-import Blog5 from "./pages/Blog/blog5";
-import Blog6 from "./pages/Blog/blog6";
+import Blog1 from "./pages/Blog/Blog1";
+import Blog2 from "./pages/Blog/Blog2";
+import Blog3 from "./pages/Blog/Blog3";
+import Blog4 from "./pages/Blog/Blog4";
+import Blog5 from "./pages/Blog/Blog5";
+import Blog6 from "./pages/Blog/Blog6";
 import QuizTest from "./pages/Quiz/QuizTest";
 import Checkout from "./pages/checkout/checkout";
+import ViewOrder from "./pages/Manager/ViewOrder";
+import Product from "./pages/Manager/Product";
+import Revenue from "./pages/Manager/revenue";
+import Staff from "./pages/Manager/staff";
+import ViewQuiz from "./pages/Manager/ViewQuiz";
+import ViewSupport from "./pages/Manager/ViewSupport";
+import Voucher from "./pages/Manager/Voucher";
+import Feedback from "./pages/Manager/Feedback";
 
 // Component để hủy request khi chuyển trang
 function NavigationHandler() {
@@ -170,6 +178,14 @@ export default function App() {
           />
           <Route path="/checkout/:orderId" element={<Checkout />} />
           <Route path="/checkout" element={<Checkout />} />
+          <Route path="/viewOrder" element={<ViewOrder />} />
+          <Route path="/product" element={<Product />} />
+          <Route path="/revenue" element={<Revenue />} />
+          <Route path="/staff" element={<Staff />} />
+          <Route path="/viewQuiz" element={<ViewQuiz />} />
+          <Route path="/viewSupport" element={<ViewSupport />} />
+          <Route path="/voucher" element={<Voucher />} />
+          <Route path="/feedback" element={<Feedback />} />
         </Routes>
       </BrowserRouter>
     </ErrorBoundary>
