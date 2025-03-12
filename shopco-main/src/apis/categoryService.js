@@ -4,11 +4,19 @@ const categoryService = {
     // Lấy tất cả categories
     getCategories: async () => {
         try {
+            console.log('Calling category API...');
             const response = await axiosClient.get('/api/Category');
-            console.log('Categories fetched:', response);
+            console.log('Category API response:', response);
+            
+            // Kiểm tra cấu trúc response
+            if (!response || (Array.isArray(response) && response.length === 0)) {
+                console.error('API trả về dữ liệu rỗng');
+                return [];
+            }
+            
             return response;
         } catch (error) {
-            console.error('Error:', error);
+            console.error('Error fetching categories:', error);
             return [];
         }
     },

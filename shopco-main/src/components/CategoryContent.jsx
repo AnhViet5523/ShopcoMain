@@ -40,29 +40,51 @@ const accordionStyles = {
 const processCategoriesData = (rawCategories) => {
     const groupedCategories = {};
     
-    // Khởi tạo object theo thứ tự định sẵn
+    // Khởi tạo các danh mục
     CATEGORY_ORDER.forEach(type => {
         groupedCategories[type] = [];
     });
 
-    // Xử lý và nhóm categories
+    // Xử lý danh mục
     rawCategories.forEach(category => {
         if (category.categoryType && groupedCategories.hasOwnProperty(category.categoryType)) {
-            // Kiểm tra trùng lặp trước khi thêm
-            const existingCategory = groupedCategories[category.categoryType].find(
-                existing => existing.categoryName === category.categoryName
-            );
-            
-            if (!existingCategory) {
+            // Nếu có categoryName, thêm vào danh mục con
+            if (category.categoryName) {
                 groupedCategories[category.categoryType].push(category);
             }
         }
     });
 
-    // Lọc bỏ các category type không có dữ liệu
-    return Object.fromEntries(
-        Object.entries(groupedCategories).filter(([_, categories]) => categories.length > 0)
-    );
+    // Đánh dấu các danh mục không có danh mục con
+    const categoriesWithoutSubcategories = [
+        "Bộ Chăm Sóc Da Mặt", 
+        "Chống Nắng Da Mặt", 
+        "Dưỡng Mắt", 
+        "Dưỡng Môi", 
+        "Mặt Nạ"
+    ];
+
+    categoriesWithoutSubcategories.forEach(categoryType => {
+        // Đánh dấu danh mục không có danh mục con
+        if (groupedCategories.hasOwnProperty(categoryType)) {
+            groupedCategories[categoryType].isDirectCategory = true;
+            groupedCategories[categoryType].categoryId = getCategoryIdByType(categoryType);
+        }
+    });
+
+    return groupedCategories;
+};
+
+// Hàm lấy categoryId từ categoryType
+const getCategoryIdByType = (categoryType) => {
+    const mapping = {
+        "Bộ Chăm Sóc Da Mặt": 10,
+        "Chống Nắng Da Mặt": 11,
+        "Dưỡng Mắt": 12,
+        "Dưỡng Môi": 21,
+        "Mặt Nạ": 22
+    };
+    return mapping[categoryType] || 0;
 };
 
 const PRICE_RANGES = [
@@ -103,6 +125,23 @@ const CategoryContent = () => {
                 if (Array.isArray(_response) && _response.length > 0) {
                     const processedCategories = processCategoriesData(_response);
                     setCategories(processedCategories);
+                    
+                    // Tìm danh mục "Bộ Chăm Sóc Da Mặt" và tự động mở rộng
+                    const faceCareCategoryKey = Object.keys(processedCategories).find(
+                        key => key.toLowerCase().includes("bộ chăm sóc da mặt") || 
+                              key.toLowerCase().includes("bo cham soc da mat")
+                    );
+                    
+                    if (faceCareCategoryKey) {
+                        console.log("Tìm thấy danh mục: Bộ Chăm Sóc Da Mặt");
+                        console.log("Các danh mục con:", processedCategories[faceCareCategoryKey]);
+                        setExpandedCategory(faceCareCategoryKey);
+                    } else {
+                        console.warn("Không tìm thấy danh mục: Bộ Chăm Sóc Da Mặt");
+                    }
+                    
+                    // Kiểm tra tất cả các danh mục từ API
+                    console.log("Tất cả các danh mục từ API:", processedCategories);
                     
                     // Tự động chọn category đầu tiên nếu chưa có selection
                     if (!selectedCategory) {
@@ -255,6 +294,37 @@ const CategoryContent = () => {
 
     const handleCategory = async (categoryType, category) => {
         try {
+            // Kiểm tra nếu là danh mục trực tiếp (không có danh mục con)
+            const categoriesWithoutSubcategories = [
+                "Bộ Chăm Sóc Da Mặt", 
+                "Chống Nắng Da Mặt", 
+                "Dưỡng Mắt", 
+                "Dưỡng Môi", 
+                "Mặt Nạ"
+            ];
+            
+            const isDirectCategory = categoriesWithoutSubcategories.includes(categoryType);
+            
+            // Nếu không có category và là danh mục trực tiếp
+            if (!category && isDirectCategory) {
+                // Lấy categoryId từ mapping
+                const categoryId = getCategoryIdByType(categoryType);
+                
+                // Cập nhật state
+                setSelectedCategory(categoryType);
+                setSelectedSubItem(categoryType); // Sử dụng tên danh mục làm tiêu đề
+                
+                // Lấy sản phẩm trực tiếp
+                await fetchProductsByCategory(categoryId);
+                
+                // Reset các bộ lọc
+                setSelectedBrands([]);
+                setSelectedSkinType('');
+                setSelectedPriceRange(null);
+                
+                return;
+            }
+            
             // Nếu không có category, chỉ mở/đóng accordion
             if (!category) {
                 setExpandedCategory(expandedCategory === categoryType ? null : categoryType);
@@ -266,7 +336,7 @@ const CategoryContent = () => {
             setSelectedSubItem(category.categoryName);
             setExpandedCategory(categoryType);
             
-            // Lấy sản phẩm theo category
+            // Lấy sản phẩm theo danh mục con
             await fetchProductsByCategory(category.categoryId);
             
             // Reset các bộ lọc khi chuyển danh mục
@@ -380,7 +450,7 @@ const CategoryContent = () => {
         }
     };
 
-    // Sửa lại hàm applyAllFilters để lọc trên tất cả sản phẩm từ API
+    // Sửa lại hàm applyAllFilters để lọc theo thương hiệu từ tất cả sản phẩm trong hệ thống, tương tự như đã làm với loại da và khoảng giá
     const applyAllFilters = async (brands = selectedBrands, skinType = selectedSkinType, priceRange = selectedPriceRange) => {
         try {
             setLoading(true);
@@ -391,14 +461,24 @@ const CategoryContent = () => {
             // Nếu không có bộ lọc nào, hiển thị lại danh sách sản phẩm của danh mục
             if (!hasFilters) {
                 setProducts(categoryProducts);
-                setAllProducts(categoryProducts);
                 updateFilterTitle(brands, skinType, priceRange);
                 setLoading(false);
                 return;
             }
             
-            // Lấy tất cả sản phẩm từ API để có dữ liệu đầy đủ
+            // Lấy tất cả sản phẩm từ API cho bất kỳ bộ lọc nào (thương hiệu, loại da, khoảng giá)
             let allProductsData = [];
+            
+            // Tạo thông báo log về các bộ lọc đang áp dụng
+            const filterMessages = [];
+            if (brands.length > 0) filterMessages.push(`Thương hiệu: ${brands.join(', ')}`);
+            if (skinType) filterMessages.push(`Loại da: ${skinType}`);
+            if (priceRange) filterMessages.push(`Khoảng giá: ${priceRange.label}`);
+            
+            console.log('Lọc từ tất cả sản phẩm:', filterMessages.join(' - '));
+            
+            // Lấy tất cả sản phẩm từ API
+            console.log('Requesting: /api/Products');
             const response = await productService.getAllProducts();
             
             // Xử lý dữ liệu trả về
@@ -410,93 +490,16 @@ const CategoryContent = () => {
                 allProductsData = Array.isArray(response.data) ? response.data : [response.data];
             }
             
-            // Cập nhật danh sách thương hiệu nếu đang rỗng
-            if (brands.length === 0 && allProductsData && allProductsData.length > 0) {
-                const allUniqueBrands = [...new Set(allProductsData.filter(p => p.brand).map(p => p.brand))];
-                setBrands(allUniqueBrands);
-                console.log('Cập nhật tất cả thương hiệu từ API trong applyAllFilters:', allUniqueBrands.length, 'thương hiệu');
-            }
-            
             if (!allProductsData || allProductsData.length === 0) {
                 console.error('Không thể lấy dữ liệu sản phẩm');
                 setLoading(false);
                 return;
             }
             
-            // Bắt đầu với tất cả sản phẩm từ API
-            let filteredData = [...allProductsData];
-            console.log('Bắt đầu lọc với', filteredData.length, 'sản phẩm');
+            console.log('Đã lấy', allProductsData.length, 'sản phẩm từ API');
             
-            // Lọc theo thương hiệu nếu có
-            if (brands.length > 0) {
-                console.log('Lọc theo', brands.length, 'thương hiệu:', brands.join(', '));
-                
-                // Lọc sản phẩm theo thương hiệu
-                filteredData = filteredData.filter(product => {
-                    if (!product.brand) return false;
-                    return brands.includes(product.brand);
-                });
-                
-                console.log('Sau khi lọc theo thương hiệu:', filteredData.length, 'sản phẩm');
-                
-                if (filteredData.length === 0) {
-                    console.warn(`Không có sản phẩm nào thuộc các thương hiệu đã chọn`);
-                }
-            } 
-            // Nếu không có thương hiệu được chọn, lọc theo danh mục hiện tại
-            else {
-                const selectedCategoryId = categoryProducts.length > 0 ? categoryProducts[0].categoryId : null;
-                if (selectedCategoryId) {
-                    filteredData = filteredData.filter(product => product.categoryId == selectedCategoryId);
-                    console.log('Sau khi lọc theo danh mục:', filteredData.length, 'sản phẩm');
-                }
-            }
-            
-            // Tiếp theo lọc theo loại da nếu có
-            if (skinType) {
-                console.log('Lọc theo loại da:', skinType);
-                
-                if (skinType === "Da Thường") {
-                    const allSkinTypes = [...new Set(filteredData.filter(p => p.skinType).map(p => p.skinType))];
-                    console.log('Các loại da hiện có:', allSkinTypes);
-                    
-                    filteredData = filteredData.filter(product => {
-                        if (!product.skinType) return false;
-                        
-                        const normalizedSkinType = product.skinType.toLowerCase().trim();
-                        return normalizedSkinType === "da thường" || 
-                               normalizedSkinType === "da thuong" || 
-                               normalizedSkinType === "normal skin" || 
-                               normalizedSkinType === "normal" || 
-                               normalizedSkinType.includes("thường") || 
-                               normalizedSkinType.includes("thuong");
-                    });
-                } else {
-                    filteredData = filteredData.filter(product => {
-                        if (!product.skinType) return false;
-                        return product.skinType.toLowerCase().trim() === skinType.toLowerCase().trim();
-                    });
-                }
-                
-                console.log('Sau khi lọc theo loại da:', filteredData.length, 'sản phẩm');
-            }
-            
-            // Cuối cùng lọc theo khoảng giá nếu có
-            if (priceRange) {
-                console.log('Lọc theo khoảng giá:', priceRange.min, 'đến', 
-                          priceRange.max === Infinity ? 'không giới hạn' : priceRange.max);
-                
-                filteredData = filteredData.filter(product => {
-                    const price = Number(product.price);
-                    return price >= priceRange.min && 
-                          (priceRange.max === Infinity || price <= priceRange.max);
-                });
-                
-                console.log('Sau khi lọc theo giá:', filteredData.length, 'sản phẩm');
-            }
-            
-            // Map dữ liệu kết quả
-            const mappedProducts = filteredData.map(product => ({
+            // Map dữ liệu để có cùng cấu trúc với categoryProducts
+            allProductsData = allProductsData.map(product => ({
                 id: product.productId,
                 name: product.productName,
                 price: product.price,
@@ -510,14 +513,218 @@ const CategoryContent = () => {
                 status: product.status
             }));
             
-            // Cập nhật danh sách sản phẩm
-            setProducts(mappedProducts);
-            setAllProducts(mappedProducts);
+            // Bắt đầu lọc từ danh sách sản phẩm
+            let filteredData = [...allProductsData];
+            console.log('Bắt đầu lọc với', filteredData.length, 'sản phẩm');
             
-            // Cập nhật tiêu đề hiển thị
+            // Hàm loại bỏ dấu tiếng Việt
+            const removeDiacritics = (str) => {
+                if (!str) return '';
+                return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+            };
+            
+            // Lọc theo loại da nếu có
+            if (skinType) {
+                console.log('Lọc theo loại da:', skinType);
+                
+                // Log tất cả các loại da có trong dữ liệu để debug
+                const allSkinTypes = [...new Set(filteredData.filter(p => p.skinType).map(p => p.skinType))];
+                console.log('Tất cả các loại da trong dữ liệu:', allSkinTypes);
+                
+                // Chuẩn hóa loại da đã chọn
+                const normalizedSelectedSkinType = skinType.toLowerCase().trim();
+                const normalizedSelectedSkinTypeNoDiacritics = removeDiacritics(normalizedSelectedSkinType);
+                console.log('Loại da đã chọn (chuẩn hóa):', normalizedSelectedSkinType);
+                
+                // Lọc sản phẩm theo loại da với điều kiện nới lỏng hơn
+                filteredData = filteredData.filter(product => {
+                    if (!product.skinType) {
+                        return false;
+                    }
+                    
+                    // Chuẩn hóa loại da của sản phẩm
+                    const normalizedProductSkinType = product.skinType.toLowerCase().trim();
+                    const normalizedProductSkinTypeNoDiacritics = removeDiacritics(normalizedProductSkinType);
+                    
+                    console.log(`Kiểm tra sản phẩm ID ${product.id}, loại da: ${product.skinType} -> ${normalizedProductSkinType}`);
+                    
+                    // Kiểm tra theo nhiều cách khác nhau
+                    const exactMatch = normalizedProductSkinType === normalizedSelectedSkinType;
+                    const exactMatchNoDiacritics = normalizedProductSkinTypeNoDiacritics === normalizedSelectedSkinTypeNoDiacritics;
+                    
+                    const containsMatch = normalizedProductSkinType.includes(normalizedSelectedSkinType) || 
+                                         normalizedSelectedSkinType.includes(normalizedProductSkinType);
+                    const containsMatchNoDiacritics = normalizedProductSkinTypeNoDiacritics.includes(normalizedSelectedSkinTypeNoDiacritics) || 
+                                                     normalizedSelectedSkinTypeNoDiacritics.includes(normalizedProductSkinTypeNoDiacritics);
+                    
+                    // Xử lý đặc biệt cho từng loại da
+                    let specialMatch = false;
+                    
+                    // Da Dầu
+                    if (normalizedSelectedSkinType.includes("dầu") || normalizedSelectedSkinTypeNoDiacritics.includes("dau") || normalizedSelectedSkinType.includes("oily")) {
+                        specialMatch = normalizedProductSkinType.includes("dầu") || 
+                                      normalizedProductSkinTypeNoDiacritics.includes("dau") || 
+                                      normalizedProductSkinType.includes("oily") ||
+                                      normalizedProductSkinType.includes("oil");
+                    }
+                    
+                    // Da Khô
+                    if (normalizedSelectedSkinType.includes("khô") || normalizedSelectedSkinTypeNoDiacritics.includes("kho") || normalizedSelectedSkinType.includes("dry")) {
+                        specialMatch = normalizedProductSkinType.includes("khô") || 
+                                      normalizedProductSkinTypeNoDiacritics.includes("kho") || 
+                                      normalizedProductSkinType.includes("dry") ||
+                                      normalizedProductSkinType.includes("khô ráp");
+                    }
+                    
+                    // Da Thường
+                    if (normalizedSelectedSkinType.includes("thường") || normalizedSelectedSkinTypeNoDiacritics.includes("thuong") || normalizedSelectedSkinType.includes("normal")) {
+                        specialMatch = normalizedProductSkinType.includes("thường") || 
+                                      normalizedProductSkinTypeNoDiacritics.includes("thuong") || 
+                                      normalizedProductSkinType.includes("normal") ||
+                                      normalizedProductSkinType.includes("thong thuong");
+                    }
+                    
+                    // Da Hỗn Hợp
+                    if (normalizedSelectedSkinType.includes("hỗn hợp") || normalizedSelectedSkinTypeNoDiacritics.includes("hon hop") || normalizedSelectedSkinType.includes("combination")) {
+                        specialMatch = normalizedProductSkinType.includes("hỗn hợp") || 
+                                      normalizedProductSkinTypeNoDiacritics.includes("hon hop") || 
+                                      normalizedProductSkinType.includes("combination") ||
+                                      normalizedProductSkinType.includes("mix") ||
+                                      normalizedProductSkinType.includes("mixed");
+                    }
+                    
+                    // Da Nhạy Cảm
+                    if (normalizedSelectedSkinType.includes("nhạy cảm") || normalizedSelectedSkinTypeNoDiacritics.includes("nhay cam") || normalizedSelectedSkinType.includes("sensitive")) {
+                        specialMatch = normalizedProductSkinType.includes("nhạy cảm") || 
+                                      normalizedProductSkinTypeNoDiacritics.includes("nhay cam") || 
+                                      normalizedProductSkinType.includes("sensitive") ||
+                                      normalizedProductSkinType.includes("nhay") ||
+                                      normalizedProductSkinType.includes("cam");
+                    }
+                    
+                    // Mọi loại da
+                    if (normalizedSelectedSkinType.includes("mọi loại") || normalizedSelectedSkinTypeNoDiacritics.includes("moi loai") || normalizedSelectedSkinType.includes("all skin")) {
+                        specialMatch = normalizedProductSkinType.includes("mọi") || 
+                                      normalizedProductSkinType.includes("tất cả") || 
+                                      normalizedProductSkinTypeNoDiacritics.includes("moi") || 
+                                      normalizedProductSkinTypeNoDiacritics.includes("tat ca") || 
+                                      normalizedProductSkinType.includes("all") ||
+                                      normalizedProductSkinType.includes("every");
+                    }
+                    
+                    // Kiểm tra xem sản phẩm có phù hợp với bất kỳ điều kiện nào
+                    const isMatch = exactMatch || exactMatchNoDiacritics || containsMatch || containsMatchNoDiacritics || specialMatch;
+                    
+                    if (isMatch) {
+                        console.log(`Sản phẩm ID ${product.id} phù hợp với loại da ${skinType}`);
+                    }
+                    
+                    return isMatch;
+                });
+                
+                console.log('Sau khi lọc theo loại da:', filteredData.length, 'sản phẩm');
+                
+                // Nếu không tìm thấy sản phẩm nào, thử lọc lại với điều kiện nới lỏng hơn nữa
+                if (filteredData.length === 0) {
+                    console.warn(`Không tìm thấy sản phẩm nào cho loại da ${skinType}, thử lọc lại với điều kiện nới lỏng`);
+                    
+                    // Lọc lại với điều kiện nới lỏng hơn từ danh sách sản phẩm
+                    filteredData = allProductsData.filter(product => {
+                        if (!product.skinType) return false;
+                        
+                        const normalizedProductSkinType = product.skinType.toLowerCase().trim();
+                        const normalizedProductSkinTypeNoDiacritics = removeDiacritics(normalizedProductSkinType);
+                        
+                        // Kiểm tra xem có bất kỳ từ khóa nào của loại da được chọn xuất hiện trong loại da của sản phẩm
+                        const keywords = normalizedSelectedSkinType.split(/\s+/);
+                        const keywordsNoDiacritics = normalizedSelectedSkinTypeNoDiacritics.split(/\s+/);
+                        
+                        const keywordMatch = keywords.some(keyword => normalizedProductSkinType.includes(keyword));
+                        const keywordMatchNoDiacritics = keywordsNoDiacritics.some(keyword => normalizedProductSkinTypeNoDiacritics.includes(keyword));
+                        
+                        return keywordMatch || keywordMatchNoDiacritics;
+                    });
+                    
+                    console.log('Sau khi lọc lại với điều kiện nới lỏng:', filteredData.length, 'sản phẩm');
+                    
+                    // Nếu vẫn không tìm thấy sản phẩm nào, thử lọc lại với điều kiện nới lỏng nhất
+                    if (filteredData.length === 0) {
+                        console.warn(`Vẫn không tìm thấy sản phẩm nào, thử lọc với điều kiện nới lỏng nhất`);
+                        
+                        // Lọc lại với điều kiện nới lỏng nhất - chỉ cần chứa một phần của từ khóa
+                        filteredData = allProductsData.filter(product => {
+                            if (!product.skinType) return false;
+                            
+                            const normalizedProductSkinType = product.skinType.toLowerCase().trim();
+                            const normalizedProductSkinTypeNoDiacritics = removeDiacritics(normalizedProductSkinType);
+                            
+                            // Tách từng từ và kiểm tra từng phần
+                            const keywords = normalizedSelectedSkinType.split(/\s+/);
+                            const keywordsNoDiacritics = normalizedSelectedSkinTypeNoDiacritics.split(/\s+/);
+                            
+                            // Kiểm tra xem có bất kỳ từ nào trong loại da của sản phẩm chứa một phần của từ khóa
+                            const productWords = normalizedProductSkinType.split(/\s+/);
+                            const productWordsNoDiacritics = normalizedProductSkinTypeNoDiacritics.split(/\s+/);
+                            
+                            for (const keyword of keywords) {
+                                if (keyword.length < 2) continue; // Bỏ qua các từ quá ngắn
+                                
+                                for (const word of productWords) {
+                                    if (word.includes(keyword) || keyword.includes(word)) {
+                                        return true;
+                                    }
+                                }
+                            }
+                            
+                            for (const keyword of keywordsNoDiacritics) {
+                                if (keyword.length < 2) continue; // Bỏ qua các từ quá ngắn
+                                
+                                for (const word of productWordsNoDiacritics) {
+                                    if (word.includes(keyword) || keyword.includes(word)) {
+                                        return true;
+                                    }
+                                }
+                            }
+                            
+                            return false;
+                        });
+                        
+                        console.log('Sau khi lọc với điều kiện nới lỏng nhất:', filteredData.length, 'sản phẩm');
+                    }
+                }
+            }
+            
+            // Lọc theo thương hiệu nếu có
+            if (brands.length > 0) {
+                console.log('Lọc theo', brands.length, 'thương hiệu:', brands.join(', '));
+                
+                // Lọc sản phẩm theo thương hiệu
+                filteredData = filteredData.filter(product => {
+                    if (!product.brand) return false;
+                    return brands.includes(product.brand);
+                });
+                
+                console.log('Sau khi lọc theo thương hiệu:', filteredData.length, 'sản phẩm');
+            }
+            
+            // Lọc theo khoảng giá nếu có
+            if (priceRange) {
+                console.log('Lọc theo khoảng giá:', priceRange.label);
+                
+                filteredData = filteredData.filter(product => 
+                    product.price >= priceRange.min && (priceRange.max === Infinity || product.price <= priceRange.max)
+                );
+                
+                console.log('Sau khi lọc theo khoảng giá:', filteredData.length, 'sản phẩm');
+            }
+            
+            // Cập nhật danh sách sản phẩm
+            setProducts(filteredData);
+            
+            // Cập nhật tiêu đề
             updateFilterTitle(brands, skinType, priceRange);
             
-            console.log('Kết quả lọc cuối cùng:', mappedProducts.length, 'sản phẩm');
+            console.log('Kết quả lọc cuối cùng:', filteredData.length, 'sản phẩm');
             setLoading(false);
         } catch (error) {
             console.error('Lỗi khi áp dụng bộ lọc:', error);
@@ -567,10 +774,31 @@ const CategoryContent = () => {
             setSelectedSkinType(newSkinType);
             console.log('Đã chọn loại da:', newSkinType || 'Không chọn');
             
+            // Hiển thị thông báo đang lọc
+            setLoading(true);
+            
             // Áp dụng tất cả các bộ lọc
             await applyAllFilters(selectedBrands, newSkinType, selectedPriceRange);
+            
+            // Nếu đã chọn loại da, hiển thị thông báo
+            if (newSkinType) {
+                // Lưu lại số lượng sản phẩm trước khi lọc
+                const previousCount = products.length;
+                
+                // Sau khi lọc, kiểm tra số lượng sản phẩm
+                setTimeout(() => {
+                    const currentCount = products.length;
+                    console.log(`Đã lọc theo loại da ${newSkinType}: ${currentCount} sản phẩm (trước đó: ${previousCount})`);
+                    
+                    // Nếu không tìm thấy sản phẩm nào, hiển thị thông báo
+                    if (currentCount === 0) {
+                        console.warn(`Không tìm thấy sản phẩm nào cho loại da ${newSkinType}`);
+                    }
+                }, 100);
+            }
         } catch (error) {
             console.error('Lỗi khi xử lý loại da:', error);
+            setLoading(false);
         }
     };
 
@@ -825,62 +1053,75 @@ const CategoryContent = () => {
 
                         {/* Danh mục chính */}
                         <Box sx={{ mb: 2 }}>
-                            {Object.entries(categories).map(([categoryType, categoryList]) => (
-                                <Accordion
-                                    key={categoryType}
-                                    expanded={expandedCategory === categoryType}
-                                    onChange={() => handleCategory(categoryType)}
-                                    elevation={0}
-                                    sx={{
-                                        '&:before': { display: 'none' },
-                                        backgroundColor: 'transparent',
-                                        boxShadow: 'none',
-                                        borderBottom: '1px solid #eee'
-                                    }}
-                                >
-                                    <AccordionSummary
-                                        expandIcon={<ExpandMoreIcon />}
+                            {Object.entries(categories).map(([categoryType, categoryList]) => {
+                                // Kiểm tra nếu là danh mục trực tiếp
+                                const isDirectCategory = [
+                                    "Bộ Chăm Sóc Da Mặt", 
+                                    "Chống Nắng Da Mặt", 
+                                    "Dưỡng Mắt", 
+                                    "Dưỡng Môi", 
+                                    "Mặt Nạ"
+                                ].includes(categoryType);
+                                
+                                return (
+                                    <Accordion
+                                        key={categoryType}
+                                        expanded={isDirectCategory ? false : expandedCategory === categoryType}
+                                        onChange={() => handleCategory(categoryType)}
+                                        elevation={0}
                                         sx={{
-                                            p: 0,
-                                            minHeight: '48px',
-                                            '& .MuiAccordionSummary-content': {
-                                                margin: '8px 0',
-                                            },
-                                            color: selectedCategory === categoryType ? 'primary.main' : 'inherit',
-                                            '&:hover': { 
-                                                color: 'primary.main',
-                                                backgroundColor: 'rgba(25, 118, 210, 0.04)'
-                                            }
+                                            '&:before': { display: 'none' },
+                                            backgroundColor: 'transparent',
+                                            boxShadow: 'none',
+                                            borderBottom: '1px solid #eee'
                                         }}
                                     >
-                                        <Typography>{categoryType}</Typography>
-                                    </AccordionSummary>
+                                        <AccordionSummary
+                                            expandIcon={isDirectCategory ? null : <ExpandMoreIcon />}
+                                            sx={{
+                                                p: 0,
+                                                minHeight: '48px',
+                                                '& .MuiAccordionSummary-content': {
+                                                    margin: '8px 0',
+                                                },
+                                                color: selectedCategory === categoryType ? 'primary.main' : 'inherit',
+                                                '&:hover': { 
+                                                    color: 'primary.main',
+                                                    backgroundColor: 'rgba(25, 118, 210, 0.04)'
+                                                }
+                                            }}
+                                        >
+                                            <Typography>{categoryType}</Typography>
+                                        </AccordionSummary>
 
-                                    <AccordionDetails sx={{ p: 0, pl: 2 }}>
-                                        {categoryList.map((category) => (
-                                            <Typography
-                                                key={category.categoryId}
-                                                sx={{
-                                                    py: 1,
-                                                    cursor: 'pointer',
-                                                    color: selectedSubItem === category.categoryName ? 'primary.main' : 'inherit',                               
-                                                    borderRadius: 1,
-                                                    px: 1,
-                                                    transition: 'all 0.2s ease',
-                                                    '&:hover': { 
-                                                        color: 'primary.main',
-                                                        backgroundColor: 'rgba(25, 118, 210, 0.04)',
-                                                        transform: 'translateX(4px)'
-                                                    }
-                                                }}
-                                                onClick={() => handleCategory(categoryType, category)}
-                                            >
-                                                {category.categoryName}
-                                            </Typography>
-                                        ))}
-                                    </AccordionDetails>
-                                </Accordion>
-                            ))}
+                                        {!isDirectCategory && (
+                                            <AccordionDetails sx={{ p: 0, pl: 2 }}>
+                                                {categoryList.map((category) => (
+                                                    <Typography
+                                                        key={category.categoryId}
+                                                        sx={{
+                                                            py: 1,
+                                                            cursor: 'pointer',
+                                                            color: selectedSubItem === category.categoryName ? 'primary.main' : 'inherit',                               
+                                                            borderRadius: 1,
+                                                            px: 1,
+                                                            transition: 'all 0.2s ease',
+                                                            '&:hover': { 
+                                                                color: 'primary.main',
+                                                                backgroundColor: 'rgba(25, 118, 210, 0.04)',
+                                                                transform: 'translateX(4px)'
+                                                            }
+                                                        }}
+                                                        onClick={() => handleCategory(categoryType, category)}
+                                                    >
+                                                        {category.categoryName}
+                                                    </Typography>
+                                                ))}
+                                            </AccordionDetails>
+                                        )}
+                                    </Accordion>
+                                );
+                            })}
                         </Box>
 
                         <Divider sx={{ my: 2 }} />
