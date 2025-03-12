@@ -143,6 +143,7 @@ const orderService = {
             console.error('Error:', error);
             throw error;
         }
+    
 
 // {
 //   "$id": "1",
@@ -186,6 +187,14 @@ const orderService = {
 
 
         
+    },
+    countBoughtProducts: async (productId) => {
+        try {
+            const response = await axiosClient.get(`/api/Orders/sold-count/${productId}`);
+            return response;
+        } catch (error) {
+            console.error('Error:', error);
+        }
     },
     addtocard: async (userId, productId, quantity) => {
         // {
