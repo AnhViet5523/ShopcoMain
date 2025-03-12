@@ -14,7 +14,9 @@ const axiosClient = axios.create({
 // Danh sách các endpoint không nên bị hủy khi trùng lặp (các API nào có thể được gọi nhiều lần)
 const excludeFromCancellation = [
     '/api/Users/profile',
-    '/api/Users/'
+    '/api/Users/',
+    '/api/Orders/current/',
+    '/api/Voucher'
 ];
 
 // Hàm kiểm tra xem một endpoint có nên được loại trừ khỏi cơ chế hủy không

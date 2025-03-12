@@ -7,7 +7,7 @@ import {
   Box, Badge, Avatar, Button, Container, Paper, Divider, 
   Menu, MenuItem, Dialog, DialogTitle, DialogContent, DialogActions
 } from "@mui/material";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import Navigation from "./Navigation";
 import QuizTest from '../pages/Quiz/QuizTest';
@@ -20,42 +20,51 @@ const Header = () => {
   const [accountMenuAnchor, setAccountMenuAnchor] = useState(null);
   const [cartItemCount, setCartItemCount] = useState(0);
   const [open, setOpen] = useState(false);
+  const isMounted = useRef(true);
 
   // Update cart count from orderService
   useEffect(() => {
+    // Mark component as mounted
+    isMounted.current = true;
+    
     const updateCartCount = async () => {
       try {
         // Get user ID from localStorage
         const user = JSON.parse(localStorage.getItem('user'));
         
         if (user && user.userId) {
-          // Fetch cart items from orderService
-          const orders = await orderService.getOrders(user.userId);
+          // Fetch current cart directly using getCurrentCart
+          const response = await orderService.getCurrentCart(user.userId);
           
-          // Find the pending order (cart)
-          const pendingOrder = orders.find(order => order.orderStatus === "Pending");
-          
-          if (pendingOrder && pendingOrder.orderItems && pendingOrder.orderItems.$values) {
+          if (response && response.items && response.items.$values) {
             // Calculate total quantity from order items
-            const count = pendingOrder.orderItems.$values.reduce(
+            const count = response.items.$values.reduce(
               (total, item) => total + item.quantity, 0
             );
-            setCartItemCount(count);
+            if (isMounted.current) {
+              setCartItemCount(count);
+            }
           } else {
-            setCartItemCount(0);
+            if (isMounted.current) {
+              setCartItemCount(0);
+            }
           }
         } else {
           // Fallback to localStorage for non-authenticated users
           const cart = JSON.parse(localStorage.getItem('cart') || '[]');
           const count = cart.reduce((total, item) => total + item.quantity, 0);
-          setCartItemCount(count);
+          if (isMounted.current) {
+            setCartItemCount(count);
+          }
         }
       } catch (error) {
         console.error('Error fetching cart:', error);
         // Fallback to localStorage on error
         const cart = JSON.parse(localStorage.getItem('cart') || '[]');
         const count = cart.reduce((total, item) => total + item.quantity, 0);
-        setCartItemCount(count);
+        if (isMounted.current) {
+          setCartItemCount(count);
+        }
       }
     };
 
@@ -69,6 +78,7 @@ const Header = () => {
     window.addEventListener('cartUpdated', updateCartCount);
 
     return () => {
+      isMounted.current = false;
       window.removeEventListener('storage', updateCartCount);
       window.removeEventListener('cartUpdated', updateCartCount);
     };
