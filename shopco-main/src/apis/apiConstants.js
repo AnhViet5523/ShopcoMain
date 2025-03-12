@@ -1,4 +1,11 @@
 export const API_ENDPOINTS = {
+    USERS: {
+        LIST: '/api/Users',
+        DETAIL: (id) => `/api/Users/${id}`,
+        PROFILE: '/api/Users/profile',
+        REGISTER: '/api/Users/register',
+        LOGIN: '/api/Users/login'
+    },
     PRODUCTS: {
         LIST: '/Products',
         DETAIL: (id) => `/Products/${id}`,

@@ -40,7 +40,7 @@ import ViewOrder from "./pages/Manager/ViewOrder";
 import Product from "./pages/Manager/Product";
 import Revenue from "./pages/Manager/revenue";
 import Staff from "./pages/Manager/staff";
-import ViewQuiz from "./pages/Manager/ViewQuiz";
+import ViewCustomer from "./pages/Manager/ViewCustomer";
 import ViewSupport from "./pages/Manager/ViewSupport";
 import Voucher from "./pages/Manager/Voucher";
 import Feedback from "./pages/Manager/Feedback";
@@ -182,7 +182,7 @@ export default function App() {
           <Route path="/product" element={<Product />} />
           <Route path="/revenue" element={<Revenue />} />
           <Route path="/staff" element={<Staff />} />
-          <Route path="/viewQuiz" element={<ViewQuiz />} />
+          <Route path="/viewCustomer" element={<ViewCustomer />} />
           <Route path="/viewSupport" element={<ViewSupport />} />
           <Route path="/voucher" element={<Voucher />} />
           <Route path="/feedback" element={<Feedback />} />

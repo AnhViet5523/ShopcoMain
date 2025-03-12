@@ -14,7 +14,7 @@ const Revenue = () => {
     { id: 'staff', name: 'Nhân viên', icon: '👤' },
     { id: 'viewOrder', name: 'Đơn hàng', icon: '📋' },
     { id: 'product', name: 'Sản phẩm', icon: '📦' },
-    { id: 'viewQuiz', name: 'Xem quiz', icon: '📝' },
+    { id: 'viewCustomer', name: 'Hồ sơ khách hàng', icon: '📝' },
     { id: 'viewSupport', name: 'Đơn hỗ trợ', icon: '📫' },
     { id: 'voucher', name: 'Vouchers', icon: '🎫' },
     { id: 'feedback', name: 'Feedback', icon: '📢' },
@@ -48,9 +48,9 @@ const Revenue = () => {
           ))}
         </div>
         
-        <div className="logout-button">
+        <div className="logout-button" onClick={() => navigate('/')}>
           <span className="logout-icon">🚪</span>
-          <span>Log out</span>
+          <span>Đăng Xuất</span>
         </div>
       </div>
 
