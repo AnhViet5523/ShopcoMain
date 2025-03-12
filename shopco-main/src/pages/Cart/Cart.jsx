@@ -17,6 +17,8 @@ const Cart = () => {
   const [currentOrderId, setCurrentOrderId] = useState(null);
 
 
+
+
   useEffect(() => {
     // Đánh dấu component đã mount
     isMounted.current = true;
@@ -33,6 +35,15 @@ const Cart = () => {
   }, []);
 
   const fetchCarts = async () => {
+
+    // lấy thông tin giỏ hàng từ api order.getCurrentCart
+    // xử lí hiện thi thông tin
+    // thêm bớt số lượng sản phẩm, update giỏ hàng, tăng giảm số lượng sản phẩm
+    // bấm vào nút thanh toán ngay -> đi đến trang checkout, truyền orderID vào trang checkout
+
+
+
+
     // Nếu đã có yêu cầu đang xử lý, không gửi yêu cầu mới
     if (requestInProgress.current) return;
     

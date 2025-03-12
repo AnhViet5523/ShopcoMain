@@ -447,6 +447,13 @@ export default function ProductDetail() {
                   </Typography>
                 </Box>
                 
+                {/* Product Specifications */}
+                <Box sx={{ mb: 3 }}>
+                  <Typography variant="body1">
+                    Dung tích: {product?.capacity}g
+                  </Typography>
+                </Box>
+                
                 {/* Quantity Selector */}
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
                   <Typography variant="body1" sx={{ mr: 2 }}>
