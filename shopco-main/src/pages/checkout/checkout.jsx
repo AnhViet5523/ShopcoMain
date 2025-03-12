@@ -471,7 +471,7 @@ const Checkout = () => {
           </Typography>
           <Typography sx={{ mb: 2 }}>Giao trong 48 giờ</Typography>
           
-          {order.items && order.items.$values && order.items.$values.map((item) => (
+          {order?.items?.$values && order.items.$values && order.items.$values.map((item) => (
             <Box key={item.orderItemId} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
               {/* Product Image */}
               <Box sx={{ width: '70px', height: '70px', mr: 2 }}>
@@ -504,7 +504,7 @@ const Checkout = () => {
                   {item.product?.brand || "Klairs"}
                 </Typography>
                 <Typography variant="body2">
-                  {item.product?.productName || "Nước Hoa Hồng Klairs Không Mùi Cho Da Nhạy Cảm 180ml"}
+                  {item?.productName || "Nước Hoa Hồng Klairs Không Mùi Cho Da Nhạy Cảm 180ml"}
                 </Typography>
                 <Typography variant="body2" sx={{ color: 'grey', fontSize: '0.8rem' }}>
                   {item.product?.capacity?.split(',')[0] || "180ml"}
@@ -513,10 +513,10 @@ const Checkout = () => {
               
               {/* Price & Quantity */}
               <Box sx={{ display: 'flex', flexDirection: 'row', alignItems: 'center', ml: 2 }}>
-                <Typography sx={{ mr: 1 }}>{item.quantity}</Typography>
+                <Typography sx={{ mr: 1 }}>{item?.quantity}</Typography>
                 <Typography sx={{ fontWeight: 'bold', mr: 1 }}>×</Typography>
                 <Typography sx={{ fontWeight: 'bold', color: '#ff6b6b' }}>
-                  {item.price?.toLocaleString()} ₫
+                  {item?.price?.toLocaleString()} ₫
                 </Typography>
               </Box>
             </Box>
