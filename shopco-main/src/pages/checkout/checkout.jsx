@@ -50,6 +50,10 @@ const Checkout = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const orderId = searchParams.get('orderId');
+  const userName = searchParams.get('name');
+  const userEmail = searchParams.get('email');
+  const userPhone = searchParams.get('phone');
+  const userAddress = searchParams.get('address');
 
   useEffect(() => {
 
@@ -97,7 +101,7 @@ const Checkout = () => {
         if (response.deliveryAddress) {
           setDeliveryAddress(response.deliveryAddress);
         } else {
-          setDeliveryAddress('6 Vĩnh Khánh Phường 9 Quận 4 Hồ Chí Minh 700000, Việt Nam');
+          setDeliveryAddress(userAddress || '6 Vĩnh Khánh Phường 9 Quận 4 Hồ Chí Minh 700000, Việt Nam');
         }
         
         // Set recipient name and phone number from user info
@@ -105,8 +109,8 @@ const Checkout = () => {
           setRecipientName(`${response.user.firstName} ${response.user.lastName}`);
           setPhoneNumber(response.user.phoneNumber);
         } else {
-          setRecipientName('Nguyễn');
-          setPhoneNumber('0386874065');
+          setRecipientName(userName || 'Nguyễn');
+          setPhoneNumber(userPhone || '0386874065');
         }
         
         // Set payment method if available in the order
@@ -358,6 +362,7 @@ const Checkout = () => {
               </Box>
               <p>{recipientName} - {phoneNumber}</p>
               <p>{deliveryAddress}</p>
+              <p>{userEmail}</p>
             </div>
             
             <div className="payment-method">
@@ -471,7 +476,7 @@ const Checkout = () => {
           </Typography>
           <Typography sx={{ mb: 2 }}>Giao trong 48 giờ</Typography>
           
-          {order.items && order.items.$values && order.items.$values.map((item) => (
+          {order?.items?.$values && order.items.$values && order.items.$values.map((item) => (
             <Box key={item.orderItemId} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
               {/* Product Image */}
               <Box sx={{ width: '70px', height: '70px', mr: 2 }}>
@@ -504,7 +509,7 @@ const Checkout = () => {
                   {item.product?.brand || "Klairs"}
                 </Typography>
                 <Typography variant="body2">
-                  {item.product?.productName || "Nước Hoa Hồng Klairs Không Mùi Cho Da Nhạy Cảm 180ml"}
+                  {item?.productName || "Nước Hoa Hồng Klairs Không Mùi Cho Da Nhạy Cảm 180ml"}
                 </Typography>
                 <Typography variant="body2" sx={{ color: 'grey', fontSize: '0.8rem' }}>
                   {item.product?.capacity?.split(',')[0] || "180ml"}
@@ -513,10 +518,10 @@ const Checkout = () => {
               
               {/* Price & Quantity */}
               <Box sx={{ display: 'flex', flexDirection: 'row', alignItems: 'center', ml: 2 }}>
-                <Typography sx={{ mr: 1 }}>{item.quantity}</Typography>
+                <Typography sx={{ mr: 1 }}>{item?.quantity}</Typography>
                 <Typography sx={{ fontWeight: 'bold', mr: 1 }}>×</Typography>
                 <Typography sx={{ fontWeight: 'bold', color: '#ff6b6b' }}>
-                  {item.price?.toLocaleString()} ₫
+                  {item?.price?.toLocaleString()} ₫
                 </Typography>
               </Box>
             </Box>

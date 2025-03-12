@@ -431,7 +431,15 @@ const Cart = () => {
                 }}
                 onClick={() => {
                   if (currentOrderId) {
-                    navigate(`/checkout?orderId=${currentOrderId}`);
+                    const user = JSON.parse(localStorage.getItem('user'));
+                    const queryParams = new URLSearchParams({
+                      orderId: currentOrderId,
+                      name: user?.name || '',
+                      email: user?.email || '',
+                      phone: user?.phone || '',
+                      address: user?.address || ''
+                    }).toString();
+                    navigate(`/checkout?${queryParams}`);
                   } else {
                     navigate('/checkout');
                   }
