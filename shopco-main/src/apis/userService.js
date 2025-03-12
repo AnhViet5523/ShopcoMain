@@ -1,24 +1,55 @@
 import axiosClient from './axiosClient';
+import { API_ENDPOINTS } from './apiConstants';
 
 const userService = {
+    // Lấy danh sách tất cả users
+    getAllUsers: async () => {
+        try {
+            const response = await axiosClient.get(API_ENDPOINTS.USERS.LIST);
+            console.log('Raw response:', response);
+            
+            // Kiểm tra cấu trúc response
+            if (response && response.data && response.data.$values) {
+                return response.data.$values;
+            } else if (response && response.data) {
+                return response.data;
+            } else if (Array.isArray(response)) {
+                return response;
+            } else if (response && response.$values) {
+                return response.$values;
+            }
+            
+            console.error('Cấu trúc response không đúng:', response);
+            return [];
+        } catch (error) {
+            if (error.name === 'CanceledError' || error.name === 'AbortError') {
+                console.log('Request bị hủy do trùng lặp:', error.message);
+                return [];
+            } else {
+                console.error('Lỗi khi lấy danh sách người dùng:', error);
+                throw error;
+            }
+        }
+    },
+
     // Đăng ký người dùng
     register: async (username, email, password) => {
         try {
-            const response = await axiosClient.post('/api/Users/register', {
+            const response = await axiosClient.post(API_ENDPOINTS.USERS.REGISTER, {
                 username,
                 email,
                 password
             });
-            return response; 
+            return response;
         } catch (error) {
             console.error('Error registering user:', error);
-            throw error; 
+            throw error;
         }
     },
     // Đăng nhập người dùng
     login: async (username, password) => {
         try {
-            const response = await axiosClient.post('/api/Users/login', {
+            const response = await axiosClient.post(API_ENDPOINTS.USERS.LOGIN, {
                 username,
                 password
             });
@@ -26,11 +57,6 @@ const userService = {
             // Lưu thông tin người dùng vào localStorage
             if (response) {
                 localStorage.setItem('user', JSON.stringify(response));
-                
-                // Nếu API trả về token riêng biệt, lưu token vào localStorage
-                // Trong trường hợp hiện tại, API không trả về token riêng
-                // Nếu sau này API được cập nhật để trả về token, bạn có thể bỏ comment dòng dưới
-                // localStorage.setItem('token', response.token);
             }
             
             return response; 
