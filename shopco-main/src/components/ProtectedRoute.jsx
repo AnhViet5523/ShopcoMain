@@ -8,26 +8,38 @@ const ProtectedRoute = ({ children }) => {
   const location = useLocation();
 
   useEffect(() => {
+    // Use a flag to prevent state updates if the component unmounts
+    let isMounted = true;
+    
     const checkAuth = async () => {
       try {
         // Kiểm tra xem người dùng đã đăng nhập hay chưa
         const isAuth = userService.isAuthenticated();
         
-        if (isAuth) {
-          // Đơn giản hóa logic xác thực để tránh lỗi
-          setIsAuthenticated(true);
-        } else {
-          setIsAuthenticated(false);
+        if (isMounted) {
+          if (isAuth) {
+            // Đơn giản hóa logic xác thực để tránh lỗi
+            setIsAuthenticated(true);
+          } else {
+            setIsAuthenticated(false);
+          }
+          setIsLoading(false);
         }
       } catch (error) {
-        console.error('Authentication check failed:', error);
-        setIsAuthenticated(false);
-      } finally {
-        setIsLoading(false);
+        if (isMounted) {
+          console.error('Authentication check failed:', error);
+          setIsAuthenticated(false);
+          setIsLoading(false);
+        }
       }
     };
 
     checkAuth();
+    
+    // Cleanup function to prevent state updates after unmount
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   if (isLoading) {

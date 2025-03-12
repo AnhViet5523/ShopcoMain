@@ -126,6 +126,15 @@ const orderService = {
             throw error; 
         }
     },
+    getOrderById: async (orderId) => {
+        try {
+            const response = await axiosClient.get(`/api/Orders/${orderId}`);
+            return response;
+        } catch (error) {
+            console.error('Error:', error);
+            throw error;
+        }
+    },
     getCurrentCart: async (userId) => {
         try {
             const response = await axiosClient.get(`/api/Orders/current/${userId}`);
@@ -219,7 +228,7 @@ const orderService = {
     },
     applyvoucher: async (orderId,voucherId) => {
         try {
-            const response = await axiosClient.get(`/api/Orders/applyvoucher`,{
+            const response = await axiosClient.post(`/api/Orders/applyvoucher`,{
                 orderId,
                 voucherId
             });
@@ -229,10 +238,11 @@ const orderService = {
             throw error; 
         }
     },
-    confirmpayment: async (orderId) => {
+    confirmpayment: async (orderId,deliveryAddress) => {
         try {
-            const response = await axiosClient.get(`/api/Orders/confirmpayment`,{
+            const response = await axiosClient.post(`/api/Orders/confirm-payment`,{
                 orderId,
+                deliveryAddress
             });
             return response; 
         } catch (error) {

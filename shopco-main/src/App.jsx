@@ -1,10 +1,10 @@
-import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { useState, useEffect } from "react";
 import SigninPage from "./pages/SigninPage";
 import MainScreen from "./pages/MainScreen";
 import CategoryScreen from "./pages/Category/CategoryScreen";
 import SearchResults from "./pages/Product/SearchResults";
-import { Box, CssBaseline } from "@mui/material";
+import { CssBaseline } from "@mui/material";
 import CustomerSp from "./pages/CustomerSp/CustomerSp";
 import Info from "./pages/Account/Info";
 import Order from "./pages/Account/Order";
@@ -75,7 +75,7 @@ export default function App() {
     };
   }, []);
 
-  const handleSignIn = (userData) => {
+  const handleSignIn = () => {
     setIsAuthenticated(true);
   };
 
@@ -89,6 +89,7 @@ export default function App() {
       <BrowserRouter>
         {/* Component để hủy request khi chuyển trang */}
         <NavigationHandler />
+        <CssBaseline />
         
         <Routes>
           {/* Public Routes */}
@@ -167,6 +168,7 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+          <Route path="/checkout/:orderId" element={<Checkout />} />
           <Route path="/checkout" element={<Checkout />} />
         </Routes>
       </BrowserRouter>
