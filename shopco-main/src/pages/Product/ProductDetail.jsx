@@ -1,4 +1,4 @@
-import { useState, useEffect, memo } from 'react';
+import { useState, useEffect, memo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import PropTypes from 'prop-types';
 import { 
@@ -14,11 +14,14 @@ import {
   Paper,
   Tabs,
   Tab,
-  Badge
+  Badge,
+  Modal,
+  TextField
 } from '@mui/material';
 import { Home as HomeIcon, Add as AddIcon, Remove as RemoveIcon } from '@mui/icons-material';
 import productService from '../../apis/productService';
 import orderService from '../../apis/orderService';
+import reviewService from "../../apis/reviewService";
 
 
 
@@ -80,15 +83,35 @@ export default function ProductDetail() {
   const [tabValue, setTabValue] = useState(0);
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [reviews, setReviews] = useState([]);
   const navigate = useNavigate();
+  const isMounted = useRef(true);
+  const requestInProgress = useRef(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [reviewContent, setReviewContent] = useState('');
+  const [reviewRating, setReviewRating] = useState(0);
+  const [totalSold, setTotalSold] = useState(0);
 
   useEffect(() => {
-    const fetchProduct = async () => {
+    isMounted.current = true;
+    if (!requestInProgress.current) {
+      fetchProduct();
+    }
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
+
+  const fetchProduct = async () => {
+    if (requestInProgress.current) return;
+    requestInProgress.current = true;
+    try {
       setLoading(true);
-      
-      try {
-        const fetchedProduct = await productService.getProductById(id);
-        const _fetchedProduct = {
+      const fetchedProduct = await productService.getProductById(id);
+      const fetchedReviews = await reviewService.getReviewsProductId(id);
+      const totalSold = await orderService.countBoughtProducts(id);
+      if (isMounted.current) {
+        setProduct({
           ...fetchedProduct,
           discountedPrice: fetchedProduct.price - (fetchedProduct.price * 15 / 100),
           relatedProducts: [
@@ -104,19 +127,22 @@ export default function ProductDetail() {
               image: "/path/to/image.jpg"
             }
           ]
-          
+        });
+        setReviews(fetchedReviews);
+        if (totalSold) {
+          setTotalSold(totalSold.totalSold);
         }
-        setProduct(_fetchedProduct);
-      } catch (error) {
-        console.error("Error fetching product:", error);
-      } finally {
+      }
+    } catch (error) {
+      console.error("Error fetching product or reviews:", error);
+    } finally {
+      if (isMounted.current) {
         setLoading(false);
       }
-    };
-
-    fetchProduct();
-
-  }, []);
+      requestInProgress.current = false;
+    }
+  };
+  console.log("review",reviews);
 
   if (loading) {
     return <Typography>Đang tải sản phẩm...</Typography>;
@@ -164,6 +190,33 @@ export default function ProductDetail() {
 
     // Chuyển hướng đến trang checkout
     navigate('/checkout');
+  };
+
+  const handleOpenModal = () => setIsModalOpen(true);
+  const handleCloseModal = () => setIsModalOpen(false);
+
+  const handleReviewSubmit = async () => {
+    if (!reviewContent || reviewRating <= 0) {
+      alert('Please provide a review and rating.');
+      return;
+    }
+    try {
+      const user = JSON.parse(localStorage.getItem('user'));
+      const userId = user?.userId || 1;
+      await reviewService.postReview({
+        userId,
+        productId: id,
+        rating: reviewRating,
+        reviewComment: reviewContent
+      });
+      const updatedReviews = await reviewService.getReviewsProductId(id);
+      setReviews(updatedReviews);
+      alert('Review added successfully!');
+      handleCloseModal();
+    } catch (error) {
+      console.error('Error adding review:', error);
+      alert('Bạn chỉ có thể đánh giá sản phẩm sau khi đã mua hàng.');
+    }
   };
 
   // Helper function to check if image exists
@@ -336,10 +389,10 @@ export default function ProductDetail() {
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                   <Rating value={4.5} precision={0.5} readOnly size="small" />
                   <Typography variant="body2" sx={{ ml: 1 }}>
-                    157 đánh giá
+                    {reviews?.length} đánh giá
                   </Typography>
                   <Typography variant="body2" sx={{ ml: 2, color: 'text.secondary' }}>
-                    Đã bán 200
+                    Đã bán {totalSold} sản phẩm
                   </Typography>
                 </Box>
                 
@@ -508,9 +561,20 @@ export default function ProductDetail() {
                 </Box>
               )}
               
+              {/* {
+    "$id": "2",
+    "reviewId": 16,
+    "userId": 4,
+    "productId": 7,
+    "rating": 5,
+    "reviewDate": "2025-03-12T12:45:04.397",
+    "reviewComment": "viet anh review",
+    "product": null,
+    "user": null
+} */}
               {tabValue === 1 && (
                 <Box sx={{ p: 2 }}>
-                  {product?.reviews?.map((review, index) => (
+                  {reviews?.map((review, index) => (
                     <Paper key={index} sx={{ p: 2, mb: 2 }}>
                       <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                         <Box 
@@ -521,6 +585,7 @@ export default function ProductDetail() {
                             width: 40, 
                             height: 40, 
                             borderRadius: '50%',
+                            backgroundColor: 'gray',
                             mr: 2
                           }}
                           onError={(e) => {
@@ -530,22 +595,49 @@ export default function ProductDetail() {
                         />
                         <Box>
                           <Typography variant="body1" fontWeight="bold">
-                            {review.userName}
+                            {review.userName || "Người dùng"}
                           </Typography>
                           <Typography variant="body2" color="text.secondary">
-                            {review.date}
+                            {new Date(review.reviewDate).toLocaleDateString()}
                           </Typography>
                         </Box>
                       </Box>
                       <Rating value={review.rating} readOnly size="small" />
                       <Typography variant="body1" sx={{ mt: 1 }}>
-                        {review.content}
+                        {review?.reviewComment}
                       </Typography>
                     </Paper>
                   ))}
-                  {product?.reviews?.length === 0 && (
+                  {reviews?.length === 0 && (
                     <Typography>Chưa có đánh giá nào</Typography>
                   )}
+                  <Button onClick={handleOpenModal}>Add Review</Button>
+                  <Modal open={isModalOpen} onClose={handleCloseModal}>
+                    <Box sx={{ p: 4, bgcolor: 'background.paper', borderRadius: 1, boxShadow: 24, maxWidth: 400, mx: 'auto', mt: 4 }}>
+                     <Box>
+                     <Typography variant="h6" gutterBottom>Write a Review</Typography>
+                      <TextField
+                        fullWidth
+                        multiline
+                        rows={4}
+                        variant="outlined"
+                        label="Review"
+                        value={reviewContent}
+                        onChange={(e) => setReviewContent(e.target.value)}
+                        sx={{ mb: 2 }}
+                      />
+                      <Rating
+                        value={reviewRating}
+                        onChange={(e, newValue) => setReviewRating(newValue)}
+                        sx={{ mb: 2 }}
+                      />
+                     </Box>
+                      <Button variant="contained" color="primary" onClick={handleReviewSubmit}>Xác nhận</Button>
+
+
+                    </Box>
+
+                  </Modal>
                 </Box>
               )}
               
