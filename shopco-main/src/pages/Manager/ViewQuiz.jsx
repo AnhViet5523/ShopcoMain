@@ -81,7 +81,6 @@ const ViewQuiz = () => {
           <table>
             <thead>
               <tr>
-                <th><input type="checkbox" /></th>
                 <th>TÊN NGƯỜI DÙNG</th>
                 <th>SỐ ĐIỆN THOẠI</th>
                 <th>EMAIL</th>

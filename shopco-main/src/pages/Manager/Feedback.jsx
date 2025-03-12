@@ -81,7 +81,6 @@ const Feedback = () => {
           <table>
             <thead>
               <tr>
-                <th><input type="checkbox" /></th>                
                 <th>TÊN SẢN PHẨM/ MÃ SP</th>
                 <th>LOẠI HÀNG</th>
                 <th>TÊN NGƯỜI DÙNG</th>

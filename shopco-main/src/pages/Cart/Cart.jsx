@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Box, Typography, Container, Button, TextField, Paper, CircularProgress } from '@mui/material';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer/Footer';
@@ -12,18 +12,47 @@ const Cart = () => {
   const [cartItems, setCartItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const isMounted = useRef(true);
+  const requestInProgress = useRef(false);
+  const [currentOrderId, setCurrentOrderId] = useState(null);
 
-  // Load cart items from orderService or localStorage on component mount
+
   useEffect(() => {
-    const fetchCartItems = async () => {
-      try {
-        setLoading(true);
+    // Đánh dấu component đã mount
+    isMounted.current = true;
+    
+    // Chỉ fetch dữ liệu nếu chưa có yêu cầu đang xử lý
+    if (!requestInProgress.current) {
+      fetchCarts();
+    }
+    
+    // Cleanup function
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
+
+  const fetchCarts = async () => {
+    // Nếu đã có yêu cầu đang xử lý, không gửi yêu cầu mới
+    if (requestInProgress.current) return;
+    
+    // Đánh dấu đang có yêu cầu đang xử lý
+    requestInProgress.current = true;
+    
+    try {
+      setLoading(true);
         // Get user ID from localStorage
         const user = JSON.parse(localStorage.getItem('user'));
         
         if (user && user.userId) {
           // Fetch current cart from orderService
+          
           const response = await orderService.getCurrentCart(user.userId);
+          console.log(response);
+          // Store the order ID for checkout
+          if (response && response.orderId) {
+            setCurrentOrderId(response.orderId);
+          }
           const items = response.items.$values.map(item => ({
             id: item.orderItemId,
             productId: item.productId,
@@ -34,28 +63,24 @@ const Cart = () => {
             imgUrl: item.product ? item.product.imgUrl : 'https://via.placeholder.com/150',
           }));
           setCartItems(items);
+          localStorage.setItem('cart', JSON.stringify(items));
         } else {
-          // Fallback to localStorage for non-authenticated users
-          const savedCart = JSON.parse(localStorage.getItem('cart') || '[]');
-          if (savedCart.length > 0) {
-            setCartItems(savedCart);
-          }
+          setCartItems([]);
+          localStorage.setItem('cart', '[]');
         }
-      } catch (error) {
-        console.error('Error fetching cart:', error);
-        setError('Failed to load cart items. Please try again later.');
+    } catch (error) {
+          console.error('Error fetching cart:', error);
         // Fallback to localStorage on error
-        const savedCart = JSON.parse(localStorage.getItem('cart') || '[]');
-        if (savedCart.length > 0) {
-          setCartItems(savedCart);
-        }
-      } finally {
+        setCartItems([]);
+          localStorage.setItem('cart', '[]');
+    } finally {
+      if (isMounted.current) {
         setLoading(false);
       }
-    };
-
-    fetchCartItems();
-  }, []);
+      // Đánh dấu không còn yêu cầu đang xử lý
+      requestInProgress.current = false;
+    }
+  };
 
   // Update cart items
   const updateCartItems = async (newItems) => {
@@ -68,19 +93,25 @@ const Cart = () => {
         // the specific API calls for each update type (add, update, remove)
         
         // For now, we'll just update the local state and localStorage as a fallback
-        setCartItems(newItems);
+        if (isMounted.current) {
+          setCartItems(newItems);
+        }
         localStorage.setItem('cart', JSON.stringify(newItems));
       } else {
         // For non-authenticated users, update localStorage
-        setCartItems(newItems);
+        if (isMounted.current) {
+          setCartItems(newItems);
+        }
         localStorage.setItem('cart', JSON.stringify(newItems));
       }
       
       // Dispatch custom event to notify other components (like Header) that cart has been updated
       window.dispatchEvent(new CustomEvent('cartUpdated'));
     } catch (error) {
-      console.error('Error updating cart:', error);
-      setError('Failed to update cart. Please try again.');
+      if (isMounted.current) {
+        console.error('Error updating cart:', error);
+        setError('Failed to update cart. Please try again.');
+      }
     }
   };
 
@@ -95,16 +126,21 @@ const Cart = () => {
         await orderService.updatecartitem(id, item.quantity + 1);
       }
       
-      // Update local state
-      const updatedItems = cartItems.map(item => 
-        item.id === id ? { ...item, quantity: item.quantity + 1 } : item
-      );
-      updateCartItems(updatedItems);
+      // Update local state only if component is still mounted
+      if (isMounted.current) {
+        const updatedItems = cartItems.map(item => 
+          item.id === id ? { ...item, quantity: item.quantity + 1 } : item
+        );
+        updateCartItems(updatedItems);
+      }
     } catch (error) {
-      console.error('Error increasing quantity:', error);
-      setError('Failed to update quantity. Please try again.');
+      if (isMounted.current) {
+        console.error('Error increasing quantity:', error);
+        setError('Failed to update quantity. Please try again.');
+      }
     }
   };
+
 
   // Hàm giảm số lượng
   const decreaseQuantity = async (id) => {
@@ -118,15 +154,19 @@ const Cart = () => {
           await orderService.updatecartitem(id, item.quantity - 1);
         }
         
-        // Update local state
-        const updatedItems = cartItems.map(item => 
-          item.id === id && item.quantity > 1 ? { ...item, quantity: item.quantity - 1 } : item
-        );
-        updateCartItems(updatedItems);
+        // Update local state only if component is still mounted
+        if (isMounted.current) {
+          const updatedItems = cartItems.map(item => 
+            item.id === id && item.quantity > 1 ? { ...item, quantity: item.quantity - 1 } : item
+          );
+          updateCartItems(updatedItems);
+        }
       }
     } catch (error) {
-      console.error('Error decreasing quantity:', error);
-      setError('Failed to update quantity. Please try again.');
+      if (isMounted.current) {
+        console.error('Error decreasing quantity:', error);
+        setError('Failed to update quantity. Please try again.');
+      }
     }
   };
 
@@ -140,12 +180,16 @@ const Cart = () => {
         await orderService.removefromcart(id);
       }
       
-      // Update local state
-      const updatedItems = cartItems.filter(item => item.id !== id);
-      updateCartItems(updatedItems);
+      // Update local state only if component is still mounted
+      if (isMounted.current) {
+        const updatedItems = cartItems.filter(item => item.id !== id);
+        updateCartItems(updatedItems);
+      }
     } catch (error) {
-      console.error('Error removing item:', error);
-      setError('Failed to remove item. Please try again.');
+      if (isMounted.current) {
+        console.error('Error removing item:', error);
+        setError('Failed to remove item. Please try again.');
+      }
     }
   };
 
@@ -153,7 +197,7 @@ const Cart = () => {
   const totalAmount = cartItems.reduce((total, item) => total + item.price * item.quantity, 0);
   
   // Giảm giá (hardcoded for now, could be calculated based on business logic)
-  const discount = 45000;
+  const discount = 0;
   
   // Tổng cộng sau khi giảm giá
   const finalAmount = totalAmount - discount;
@@ -374,6 +418,13 @@ const Cart = () => {
                   fontWeight: 'bold',
                   '&:hover': { bgcolor: '#ff5252' }
                 }}
+                onClick={() => {
+                  if (currentOrderId) {
+                    navigate(`/checkout?orderId=${currentOrderId}`);
+                  } else {
+                    navigate('/checkout');
+                  }
+                }}
               >
                 THANH TOÁN NGAY
               </Button>
@@ -387,3 +438,4 @@ const Cart = () => {
 };
 
 export default Cart;
+

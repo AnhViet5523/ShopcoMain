@@ -86,7 +86,6 @@ const ViewSupport = () => {
           <table>
             <thead>
               <tr>
-                <th><input type="checkbox" /></th>
                 <th>TÊN NGƯỜI DÙNG</th>
                 <th>EMAIL</th>
                 <th>SỐ ĐIỆN THOẠI</th>

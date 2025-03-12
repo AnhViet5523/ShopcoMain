@@ -139,7 +139,7 @@ export default function ProductDetail() {
     try {
       // Get user ID from localStorage
       const user = JSON.parse(localStorage.getItem('user'));
-      const userId = user?.id || 1; // Fallback to 1 if no user ID found
+      const userId = user?.userId || 1; // Fallback to 1 if no user ID found
       
       // Call the API to add item to cart
       await orderService.addtocard(userId, product.productId, quantity);
@@ -426,21 +426,8 @@ export default function ProductDetail() {
                 
                 {/* Action Buttons */}
                 <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
-                  <Button 
+                <Button 
                     variant="contained" 
-                    color="success" 
-                    sx={{ 
-                      flex: 1,
-                      py: 1.5,
-                      textTransform: 'none',
-                      fontWeight: 'bold'
-                    }}
-                    onClick={handleBuyNow}
-                  >
-                    Mua Ngay
-                  </Button>
-                  <Button 
-                    variant="outlined" 
                     color="success" 
                     sx={{ 
                       flex: 1,
@@ -452,6 +439,20 @@ export default function ProductDetail() {
                   >
                     Thêm vào giỏ
                   </Button>
+                  <Button 
+                    variant="outlined" 
+                    color="success" 
+                    sx={{ 
+                      flex: 1,
+                      py: 1.5,
+                      textTransform: 'none',
+                      fontWeight: 'bold'
+                    }}
+                    onClick={handleBuyNow}
+                  >
+                    Mua Ngay
+                  </Button>
+                  
                 </Box>
               </>
             )}
