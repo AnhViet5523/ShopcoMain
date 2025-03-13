@@ -258,6 +258,15 @@ const orderService = {
             console.error('Error fetching user:', error);
             throw error; 
         }
+    },
+    getOrderItems: async (orderId) => {
+        try {
+            const response = await axiosClient.get(`/api/OrderItems/${orderId}`);
+            return response;
+        } catch (error) {
+            console.error('Error fetching order items:', error);
+            throw error;
+        }
     }
 };
 
