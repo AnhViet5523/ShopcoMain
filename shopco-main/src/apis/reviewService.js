@@ -1,6 +1,23 @@
 import axiosClient from './axiosClient';
 
 const reviewService = {
+    // Lấy tất cả đánh giá
+    getAllReviews: async () => {
+        try {
+            const response = await axiosClient.get('/api/Reviews');
+            // Kiểm tra cấu trúc response
+            if (response && response.$values) {
+                return response.$values;
+            } else if (Array.isArray(response)) {
+                return response;
+            }
+            return [];
+        } catch (error) {
+            console.error('Error fetching all reviews:', error);
+            return [];
+        }
+    },
+
     getReviewsProductId: async (productId) => {
         try {
             const response = await axiosClient.get(`/api/Reviews/product/${productId}`);
