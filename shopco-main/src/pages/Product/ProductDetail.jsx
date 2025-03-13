@@ -80,6 +80,7 @@ export default function ProductDetail() {
   const [tabValue, setTabValue] = useState(0);
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -160,7 +161,7 @@ export default function ProductDetail() {
   // Helper function to check if image exists
   const getImageUrl = (imgUrl) => {
     if (!imgUrl) return null;
-    return `/images/products/${imgUrl}.jpg`;
+    return imgUrl;
   };
 
   return (
@@ -187,13 +188,13 @@ export default function ProductDetail() {
               <Box sx={{ width: '20%', mr: 2 }}>
                 {loading ? (
                   // Gray background placeholders for thumbnails while loading
-                  Array(4).fill().map((_, index) => (
+                  Array(5).fill().map((_, index) => (
                     <Box 
                       key={index} 
                       sx={{ 
                         mb: 1,
                         border: '1px solid #eee',
-                        background:'gray',  
+                        background: '#f5f5f5',  
                         p: 1
                       }}
                     >
@@ -208,29 +209,29 @@ export default function ProductDetail() {
                         }}
                       >
                         <Typography variant="caption" color="#bdbdbd">
-                          Loading...22
+                          Loading...
                         </Typography>
                       </Box>
                     </Box>
                   ))
                 ) : (
-                  // Actual thumbnails or placeholders
-                  Array(4).fill().map((_, index) => (
+                  // Actual thumbnails
+                  product?.images?.map((image, index) => (
                     <Box 
                       key={index} 
                       sx={{ 
                         mb: 1, 
-                        border: '1px solid #eee',
-                        background:'gray',
+                        border: selectedImageIndex === index ? '2px solid #f57224' : '1px solid #eee',
+                        cursor: 'pointer',
                         p: 1
                       }}
+                      onClick={() => setSelectedImageIndex(index)}
                     >
-                      {getImageUrl(product.imgUrl) ? (
+                      {getImageUrl(image.imgUrl) ? (
                         <img
-                          src={getImageUrl(product.imgUrl)}
+                          src={getImageUrl(image.imgUrl)}
                           alt={`Thumbnail ${index + 1}`}
-                          style={{ width: '100%', cursor: 'pointer' }}
-                
+                          style={{ width: '100%', height: '80px', objectFit: 'cover' }}
                         />
                       ) : (
                         <Box 
@@ -253,11 +254,11 @@ export default function ProductDetail() {
               </Box>
               
               {/* Main image */}
-              <Box sx={{ width: '80%',background:'gray' }}>
+              <Box sx={{ width: '80%' }}>
                 {loading ? (
                   <Box 
                     sx={{ 
-                      bgcolor: 'red', 
+                      bgcolor: '#f5f5f5', 
                       height: 400, 
                       width: '100%',
                       display: 'flex',
@@ -271,12 +272,16 @@ export default function ProductDetail() {
                     </Typography>
                   </Box>
                 ) : (
-                  getImageUrl(product.imgUrl) ? (
+                  product?.images && product.images.length > 0 ? (
                     <img
-                      src={getImageUrl(product.imgUrl)}
+                      src={getImageUrl(product.images[selectedImageIndex]?.imgUrl)}
                       alt={product.productName}
-                      style={{ width: '100%', cursor: 'pointer' }}
-      
+                      style={{ 
+                        width: '100%', 
+                        height: '400px', 
+                        objectFit: 'contain',
+                        border: '1px solid #eee'
+                      }}
                     />
                   ) : (
                     <Box 
