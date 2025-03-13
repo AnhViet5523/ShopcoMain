@@ -34,10 +34,10 @@ const Product = () => {
     try {
       const category = await categoryService.getCategoryById(categoryId);
       console.log('Category details:', category);
-      return `${category.categoryType || 'Unknown'} - ${category.categoryName || 'Unknown'}`;
+      return category.categoryType || 'Unknown';
     } catch (error) {
       console.error('Error fetching category details:', error);
-      return 'Unknown Category';
+      return 'Unknown';
     }
   };
 
@@ -46,33 +46,46 @@ const Product = () => {
       try {
         const response = await productService.getAllProducts();
         console.log('API Response:', response);
-        const data = await Promise.all(response.$values.map(async product => {
-          const categoryDetails = await fetchCategoryDetails(product.categoryId);
-          const [categoryType] = categoryDetails.split(' - ');
-          return {
-            ProductID: product.productId,
-            ProductCode: product.productCode,
-            CategoryID: categoryDetails,
-            categoryType: categoryType,
-            ProductName: product.productName,
-            Quantity: product.quantity,
-            Capacity: product.capacity,
-            Price: product.price,
-            Brand: product.brand,
-            Origin: product.origin,
-            Status: product.status,
-            ImgURL: product.imgURL,
-            SkinType: product.skinType,
-            Description: product.description,
-            Ingredients: product.ingredients,
-            UsageInstructions: product.usageInstructions,
-            ManufactureDate: product.manufactureDate,
-            ngayNhapKho: product.ngayNhapKho
-          };
-        }));
-        console.log('Processed Products:', data);
-        setProducts(data);
-        setOriginalProducts(data);
+        
+        // First, create a map of all products
+        const productsArray = response.$values || [];
+        const productsData = [];
+        
+        // Process products sequentially instead of all at once
+        for (const product of productsArray) {
+          try {
+            // Add a small delay to prevent overwhelming the API
+            await new Promise(resolve => setTimeout(resolve, 100));
+            const categoryType = await fetchCategoryDetails(product.categoryId);
+            
+            productsData.push({
+              ProductID: product.productId,
+              ProductCode: product.productCode,
+              CategoryID: categoryType,
+              categoryType: categoryType,
+              ProductName: product.productName,
+              Quantity: product.quantity,
+              Capacity: product.capacity,
+              Price: product.price,
+              Brand: product.brand,
+              Origin: product.origin,
+              Status: product.status,
+              ImgURL: product.imgURL,
+              SkinType: product.skinType,
+              Description: product.description,
+              Ingredients: product.ingredients,
+              UsageInstructions: product.usageInstructions,
+              ManufactureDate: product.manufactureDate,
+              ngayNhapKho: product.ngayNhapKho
+            });
+          } catch (err) {
+            console.error(`Error processing product ${product.productId}:`, err);
+          }
+        }
+        
+        console.log('Processed Products:', productsData);
+        setProducts(productsData);
+        setOriginalProducts(productsData);
       } catch (error) {
         console.error('Error fetching products:', error);
       }
@@ -121,31 +134,44 @@ const Product = () => {
     const fetchProducts = async () => {
       try {
         const response = await productService.getAllProducts();
-        const data = await Promise.all(response.$values.map(async product => {
-          const categoryDetails = await fetchCategoryDetails(product.categoryId);
-          const [categoryType] = categoryDetails.split(' - ');
-          return {
-            ProductID: product.productId,
-            ProductCode: product.productCode,
-            CategoryID: categoryDetails,
-            categoryType: categoryType,
-            ProductName: product.productName,
-            Quantity: product.quantity,
-            Capacity: product.capacity,
-            Price: product.price,
-            Brand: product.brand,
-            Origin: product.origin,
-            Status: product.status,
-            ImgURL: product.imgURL,
-            SkinType: product.skinType,
-            Description: product.description,
-            Ingredients: product.ingredients,
-            UsageInstructions: product.usageInstructions,
-            ManufactureDate: product.manufactureDate,
-            ngayNhapKho: product.ngayNhapKho
-          };
-        }));
-        setProducts(data);
+        
+        // Process products sequentially
+        const productsArray = response.$values || [];
+        const productsData = [];
+        
+        for (const product of productsArray) {
+          try {
+            // Add a small delay to prevent overwhelming the API
+            await new Promise(resolve => setTimeout(resolve, 100));
+            const categoryType = await fetchCategoryDetails(product.categoryId);
+            
+            productsData.push({
+              ProductID: product.productId,
+              ProductCode: product.productCode,
+              CategoryID: categoryType,
+              categoryType: categoryType,
+              ProductName: product.productName,
+              Quantity: product.quantity,
+              Capacity: product.capacity,
+              Price: product.price,
+              Brand: product.brand,
+              Origin: product.origin,
+              Status: product.status,
+              ImgURL: product.imgURL,
+              SkinType: product.skinType,
+              Description: product.description,
+              Ingredients: product.ingredients,
+              UsageInstructions: product.usageInstructions,
+              ManufactureDate: product.manufactureDate,
+              ngayNhapKho: product.ngayNhapKho
+            });
+          } catch (err) {
+            console.error(`Error processing product ${product.productId}:`, err);
+          }
+        }
+        
+        setProducts(productsData);
+        setOriginalProducts(productsData);
       } catch (error) {
         console.error('Error fetching products:', error);
       }
@@ -160,8 +186,7 @@ const Product = () => {
     const filtered = products.filter(product => {
       console.log('Product categoryType:', product.categoryType);
       console.log('Product SkinType:', product.SkinType);
-      const [productCategoryType, productCategoryName] = product.CategoryID.split(' - ');
-      return (selectedCategoryType ? (productCategoryType === selectedCategoryType || productCategoryName === selectedCategoryType) : true) &&
+      return (selectedCategoryType ? product.categoryType === selectedCategoryType : true) &&
              (selectedSkinType ? product.SkinType === selectedSkinType : true);
     });
 
