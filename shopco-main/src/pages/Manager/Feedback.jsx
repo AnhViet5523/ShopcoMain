@@ -387,7 +387,7 @@ const Feedback = () => {
                     <td style={{ overflow: 'auto', maxHeight: '100px', padding: '8px', borderBottom: '1px solid #dee2e6', fontSize: '14px', textAlign: 'center' }}>{review.reviewDate}</td>
                     <td style={{ whiteSpace: 'nowrap', overflow: 'auto', maxHeight: '100px', padding: '8px', borderBottom: '1px solid #dee2e6', textAlign: 'center' }}>
                       <button
-                        onClick={() => console.log(`Xem chi tiết đánh giá ID: ${review.reviewId}`)}
+                        onClick={() => navigate(`/product/${review.productId}`)}
                         style={{
                           padding: '5px 10px',
                           backgroundColor: '#007bff',
