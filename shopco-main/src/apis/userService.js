@@ -1,6 +1,7 @@
 import axiosClient from './axiosClient';
 import { API_ENDPOINTS } from './apiConstants';
 
+
 const userService = {
     // Lấy danh sách tất cả users
     getAllUsers: async () => {
@@ -8,7 +9,6 @@ const userService = {
             const response = await axiosClient.get(API_ENDPOINTS.USERS.LIST);
             console.log('Raw response:', response);
             
-            // Kiểm tra cấu trúc response
             if (response && response.data && response.data.$values) {
                 return response.data.$values;
             } else if (response && response.data) {

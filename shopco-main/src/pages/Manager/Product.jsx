@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { FaFilter } from 'react-icons/fa';
-import { Box, Dialog, DialogTitle, DialogContent, DialogActions, Button, Select, MenuItem } from '@mui/material';
+import { Box, Dialog, DialogTitle, DialogContent, DialogActions, Button, Select, MenuItem, Pagination, CircularProgress } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import './Manager.css';
 import productService from '../../apis/productService';
@@ -12,10 +12,16 @@ const Product = () => {
   const [products, setProducts] = useState([]);
   const [filteredCount, setFilteredCount] = useState(0);
   const [openFilterDialog, setOpenFilterDialog] = useState(false);
-  const [selectedCategoryType, setSelectedCategoryType] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedSkinType, setSelectedSkinType] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [originalProducts, setOriginalProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  
+  // Phân trang
+  const [page, setPage] = useState(1);
+  const pageSize = 20;
 
   const sidebarItems = [
     { id: 'revenue', name: 'Doanh thu', icon: '📊' },
@@ -30,73 +36,109 @@ const Product = () => {
 
   const tabs = ['Tất cả', 'Hàng mới nhập', 'Hàng sắp hết'];
 
-  const fetchCategoryDetails = async (categoryId) => {
+  // Lấy danh sách danh mục
+  const fetchCategories = async () => {
     try {
-      const category = await categoryService.getCategoryById(categoryId);
-      console.log('Category details:', category);
-      return category.categoryType || 'Unknown';
+      console.log('Fetching categories...');
+      const response = await categoryService.getCategories();
+      console.log('Categories response:', response);
+      
+      const map = {};
+      
+      // Kiểm tra cấu trúc response
+      if (Array.isArray(response)) {
+        // Nếu response là mảng trực tiếp
+        response.forEach(category => {
+          if (category && category.categoryId !== undefined) {
+            map[category.categoryId] = {
+              categoryType: category.categoryType || 'Unknown',
+              categoryName: category.categoryName || 'Unknown'
+            };
+          }
+        });
+      } else if (response && response.$values && Array.isArray(response.$values)) {
+        // Nếu response có cấu trúc $values
+        response.$values.forEach(category => {
+          if (category && category.categoryId !== undefined) {
+            map[category.categoryId] = {
+              categoryType: category.categoryType || 'Unknown',
+              categoryName: category.categoryName || 'Unknown'
+            };
+          }
+        });
+      }
+      
+      console.log('Category mapping:', map);
+      return map;
     } catch (error) {
-      console.error('Error fetching category details:', error);
-      return 'Unknown';
+      console.error('Error fetching categories:', error);
+      return {};
     }
   };
 
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        const response = await productService.getAllProducts();
-        console.log('API Response:', response);
-        
-        // First, create a map of all products
-        const productsArray = response.$values || [];
-        const productsData = [];
-        
-        // Process products sequentially instead of all at once
-        for (const product of productsArray) {
-          try {
-            // Add a small delay to prevent overwhelming the API
-            await new Promise(resolve => setTimeout(resolve, 100));
-            const categoryType = await fetchCategoryDetails(product.categoryId);
-            
-            productsData.push({
-              ProductID: product.productId,
-              ProductCode: product.productCode,
-              CategoryID: categoryType,
-              categoryType: categoryType,
-              ProductName: product.productName,
-              Quantity: product.quantity,
-              Capacity: product.capacity,
-              Price: product.price,
-              Brand: product.brand,
-              Origin: product.origin,
-              Status: product.status,
-              ImgURL: product.imgURL,
-              SkinType: product.skinType,
-              Description: product.description,
-              Ingredients: product.ingredients,
-              UsageInstructions: product.usageInstructions,
-              ManufactureDate: product.manufactureDate,
-              ngayNhapKho: product.ngayNhapKho
-            });
-          } catch (err) {
-            console.error(`Error processing product ${product.productId}:`, err);
-          }
-        }
-        
-        console.log('Processed Products:', productsData);
-        setProducts(productsData);
-        setOriginalProducts(productsData);
-      } catch (error) {
-        console.error('Error fetching products:', error);
-      }
-    };
+  // Xử lý sản phẩm với danh mục đã biết
+  const processProducts = (productsArray, categories) => {
+    return productsArray.map(product => ({
+      ProductID: product.productId,
+      ProductCode: product.productCode,
+      categoryType: categories[product.categoryId]?.categoryType || 'Unknown',
+      categoryName: categories[product.categoryId]?.categoryName || 'Unknown',
+      categoryDisplay: `${categories[product.categoryId]?.categoryType || 'Unknown'} - ${categories[product.categoryId]?.categoryName || 'Unknown'}`,
+      ProductName: product.productName,
+      Quantity: product.quantity,
+      Capacity: product.capacity,
+      Price: product.price,
+      Brand: product.brand,
+      Origin: product.origin,
+      Status: product.status,
+      ImgURL: product.imgURL,
+      SkinType: product.skinType,
+      Description: product.description,
+      Ingredients: product.ingredients,
+      UsageInstructions: product.usageInstructions,
+      ManufactureDate: product.manufactureDate,
+      ngayNhapKho: product.ngayNhapKho
+    }));
+  };
 
+  // Lấy danh sách sản phẩm
+  const fetchProducts = async (categories = null) => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      // Nếu chưa có danh mục, lấy danh mục trước
+      const categoryData = categories || await fetchCategories();
+      
+      // Lấy sản phẩm với phân trang (nếu API hỗ trợ)
+      // Nếu API không hỗ trợ phân trang, lấy tất cả và xử lý phân trang ở client
+      const response = await productService.getAllProducts();
+      const productsArray = response.$values || [];
+      
+      // Xử lý sản phẩm với danh mục
+      const processedProducts = processProducts(productsArray, categoryData);
+      
+      setProducts(processedProducts);
+      setOriginalProducts(processedProducts);
+      setLoading(false);
+    } catch (error) {
+      console.error('Error fetching products:', error);
+      setError('Đã xảy ra lỗi khi tải dữ liệu sản phẩm');
+      setLoading(false);
+    }
+  };
+
+  // Gọi lần đầu khi component mount
+  useEffect(() => {
     fetchProducts();
   }, []);
 
+  // Xử lý tìm kiếm
   useEffect(() => {
     if (!searchTerm.trim()) {
       setProducts(originalProducts);
+      // Reset thông báo số lượng lọc khi xóa tìm kiếm
+      setFilteredCount(0);
       return;
     }
 
@@ -105,16 +147,41 @@ const Product = () => {
       const productName = (product.ProductName || '').toLowerCase();
       const productCode = (product.ProductCode || '').toLowerCase();
       const brand = (product.Brand || '').toLowerCase();
-      const categoryId = (product.CategoryID || '').toLowerCase();
+      const categoryType = (product.categoryType || '').toLowerCase();
+      const categoryName = (product.categoryName || '').toLowerCase();
 
       return productName.includes(searchTermLower) ||
              productCode.includes(searchTermLower) ||
              brand.includes(searchTermLower) ||
-             categoryId.includes(searchTermLower);
+             categoryType.includes(searchTermLower) ||
+             categoryName.includes(searchTermLower);
     });
 
     setProducts(filteredProducts);
+    // Cập nhật thông báo số lượng lọc khi tìm kiếm
+    setFilteredCount(filteredProducts.length !== originalProducts.length ? filteredProducts.length : 0);
   }, [searchTerm, originalProducts]);
+
+  // Sử dụng useMemo để tính toán sản phẩm hiển thị theo tab và phân trang
+  const displayedProducts = useMemo(() => {
+    let filtered = products;
+    
+    // Lọc theo tab
+    if (activeTab === 'Hàng sắp hết') {
+      filtered = products.filter(product => product.Quantity < 9);
+    }
+    
+    // Phân trang ở client (nếu API không hỗ trợ phân trang)
+    const startIndex = (page - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    
+    return filtered.slice(startIndex, endIndex);
+  }, [products, activeTab, page, pageSize]);
+
+  // Xử lý thay đổi trang
+  const handlePageChange = (event, newPage) => {
+    setPage(newPage);
+  };
 
   const handleEdit = (productId) => {
     // Logic để chỉnh sửa sản phẩm
@@ -128,76 +195,51 @@ const Product = () => {
 
   const handleFilterClick = () => {
     // Reset filter selections
-    setSelectedCategoryType('');
+    setSelectedCategory('');
     setSelectedSkinType('');
-    // Fetch original product data
-    const fetchProducts = async () => {
-      try {
-        const response = await productService.getAllProducts();
-        
-        // Process products sequentially
-        const productsArray = response.$values || [];
-        const productsData = [];
-        
-        for (const product of productsArray) {
-          try {
-            // Add a small delay to prevent overwhelming the API
-            await new Promise(resolve => setTimeout(resolve, 100));
-            const categoryType = await fetchCategoryDetails(product.categoryId);
-            
-            productsData.push({
-              ProductID: product.productId,
-              ProductCode: product.productCode,
-              CategoryID: categoryType,
-              categoryType: categoryType,
-              ProductName: product.productName,
-              Quantity: product.quantity,
-              Capacity: product.capacity,
-              Price: product.price,
-              Brand: product.brand,
-              Origin: product.origin,
-              Status: product.status,
-              ImgURL: product.imgURL,
-              SkinType: product.skinType,
-              Description: product.description,
-              Ingredients: product.ingredients,
-              UsageInstructions: product.usageInstructions,
-              ManufactureDate: product.manufactureDate,
-              ngayNhapKho: product.ngayNhapKho
-            });
-          } catch (err) {
-            console.error(`Error processing product ${product.productId}:`, err);
-          }
-        }
-        
-        setProducts(productsData);
-        setOriginalProducts(productsData);
-      } catch (error) {
-        console.error('Error fetching products:', error);
-      }
-    };
-    fetchProducts();
     setOpenFilterDialog(true);
   };
 
   const handleFilterApply = () => {
-    console.log('Selected CategoryType:', selectedCategoryType);
+    console.log('Selected Category:', selectedCategory);
     console.log('Selected SkinType:', selectedSkinType);
-    const filtered = products.filter(product => {
-      console.log('Product categoryType:', product.categoryType);
-      console.log('Product SkinType:', product.SkinType);
-      return (selectedCategoryType ? product.categoryType === selectedCategoryType : true) &&
-             (selectedSkinType ? product.SkinType === selectedSkinType : true);
+    
+    // Nếu không có bộ lọc nào được chọn, reset về danh sách gốc
+    if (!selectedCategory && !selectedSkinType) {
+      setProducts(originalProducts);
+      setFilteredCount(0);
+      setOpenFilterDialog(false);
+      return;
+    }
+    
+    const filtered = originalProducts.filter(product => {
+      // Nếu có chọn danh mục
+      let categoryMatch = true;
+      if (selectedCategory) {
+        // Tìm thông tin danh mục đã chọn từ categoryOptions
+        const selectedCategoryInfo = categoryOptions.find(cat => cat.id === selectedCategory);
+        if (selectedCategoryInfo) {
+          categoryMatch = product.categoryType === selectedCategoryInfo.categoryType && 
+                          product.categoryName === selectedCategoryInfo.categoryName;
+        }
+      }
+      
+      // Lọc theo loại da
+      const skinTypeMatch = selectedSkinType ? product.SkinType === selectedSkinType : true;
+      
+      return categoryMatch && skinTypeMatch;
     });
 
     console.log('Filtered Products:', filtered);
-    setFilteredCount(filtered.length);
+    // Chỉ hiển thị thông báo nếu có sản phẩm được lọc và khác với danh sách gốc
+    setFilteredCount(filtered.length !== originalProducts.length ? filtered.length : 0);
     setProducts(filtered);
+    setPage(1); // Reset về trang đầu tiên khi lọc
     setOpenFilterDialog(false);
   };
 
-  const handleCategoryTypeChange = (event) => {
-    setSelectedCategoryType(event.target.value);
+  const handleCategoryChange = (event) => {
+    setSelectedCategory(event.target.value);
   };
 
   const handleSkinTypeChange = (event) => {
@@ -207,6 +249,8 @@ const Product = () => {
   const handleClear = () => {
     setSearchTerm('');
     setProducts(originalProducts);
+    // Reset thông báo số lượng lọc khi xóa tìm kiếm
+    setFilteredCount(0);
   };
 
   const handleAdd = () => {
@@ -214,9 +258,37 @@ const Product = () => {
     // TODO: Implement add logic
   };
 
-  const filteredProducts = activeTab === 'Hàng sắp hết'
-    ? products.filter(product => product.Quantity < 9)
-    : products;
+  // Tạo danh sách danh mục kết hợp cho bộ lọc
+  const categoryOptions = useMemo(() => {
+    const uniqueCategories = {};
+    
+    originalProducts.forEach(product => {
+      const key = `${product.categoryType}-${product.categoryName}`;
+      if (!uniqueCategories[key]) {
+        uniqueCategories[key] = {
+          id: key,
+          categoryType: product.categoryType,
+          categoryName: product.categoryName,
+          display: `${product.categoryType} - ${product.categoryName}`
+        };
+      }
+    });
+    
+    return Object.values(uniqueCategories);
+  }, [originalProducts]);
+  
+  const skinTypes = useMemo(() => {
+    return [...new Set(originalProducts.map(product => product.SkinType))];
+  }, [originalProducts]);
+
+  // Thêm hàm để xóa bộ lọc
+  const handleClearFilters = () => {
+    setProducts(originalProducts);
+    setFilteredCount(0);
+    setSelectedCategory('');
+    setSelectedSkinType('');
+    setSearchTerm('');
+  };
 
   return (
     <Box sx={{ bgcolor: "#f0f0f0", minHeight: "100vh", width:'99vw' }}>
@@ -307,6 +379,22 @@ const Product = () => {
                   {filteredCount > 0 && <span className="notification">{filteredCount}</span>}
                 </div>
               </button>
+              {filteredCount > 0 && (
+                <button
+                  onClick={handleClearFilters}
+                  style={{
+                    padding: '10px 20px',
+                    backgroundColor: '#6c757d',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '5px',
+                    cursor: 'pointer',
+                    fontSize: '14px'
+                  }}
+                >
+                  Xóa bộ lọc
+                </button>
+              )}
               <button
                 onClick={handleAdd}
                 style={{
@@ -356,40 +444,75 @@ const Product = () => {
               <thead>
                 <tr style={{ backgroundColor: '#f8f9fa', height: '50px' }}>
                   <th style={{ width: '60px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>ID</th>
-                  <th style={{ width: '110px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>ProductCode</th>
-                  <th style={{ width: '120px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>Phân Loại</th>
-                  <th style={{ width: '150px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>Tên Sản Phẩm</th>
-                  <th style={{ width: '80px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>Số lượng</th>
+                  <th style={{ width: '110px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>PRODUCT CODE</th>
+                  <th style={{ width: '120px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>PHÂN LOẠI</th>
+                  <th style={{ width: '150px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>TÊN SẢN PHẨM</th>
+                  <th style={{ width: '80px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>SỐ LƯỢNG</th>
                   {activeTab === 'Hàng sắp hết' && (
                     <>
-                      <th style={{ width: '100px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>Dung Tích</th>
-                      <th style={{ width: '110px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>Giá Tiền</th>
-                      <th style={{ width: '120px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>Thương Hiệu</th>
-                      <th style={{ width: '120px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>Thao Tác</th>
+                      <th style={{ width: '100px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>DUNG TÍCH</th>
+                      <th style={{ width: '110px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>GIÁ TIỀN</th>
+                      <th style={{ width: '120px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>THƯƠNG HIỆU</th>
+                      <th style={{ width: '120px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>THAO TÁC</th>
                     </>
                   )}
                   {activeTab !== 'Hàng sắp hết' && (
                     <>
-                      <th style={{ width: '100px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>Dung Tích</th>
-                      <th style={{ width: '110px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>Giá Tiền</th>
-                      <th style={{ width: '110px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>Thương Hiệu</th>
-                      <th style={{ width: '100px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>Xuất Xứ</th>
-                      <th style={{ width: '100px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>Trạng Thái</th>
-                      <th style={{ width: '100px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>Hình Ảnh</th>
-                      <th style={{ width: '100px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>Loại Da</th>
-                      <th style={{ width: '120px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>Thông Tin</th>
-                      <th style={{ width: '120px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>Thành Phần</th>
-                      <th style={{ width: '120px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>Cách dùng</th>
-                      <th style={{ width: '110px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>Ngày Sản Xuất</th>
-                      <th style={{ width: '110px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>Ngày Nhập Kho</th>
-                      <th style={{ width: '120px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>Thao Tác</th>
+                      <th style={{ width: '100px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>DUNG TÍCH</th>
+                      <th style={{ width: '110px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>GIÁ TIỀN</th>
+                      <th style={{ width: '110px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>THƯƠNG HIỆU</th>
+                      <th style={{ width: '100px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>XUẤT XỨ</th>
+                      <th style={{ width: '100px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>TRẠNG THÁI</th>
+                      <th style={{ width: '100px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>HÌNH ẢNH</th>
+                      <th style={{ width: '100px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>LOẠI DA</th>
+                      <th style={{ width: '120px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>THÔNG TIN</th>
+                      <th style={{ width: '120px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>THÀNH PHẦN</th>
+                      <th style={{ width: '120px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>CÁCH DÙNG</th>
+                      <th style={{ width: '110px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>NGÀY SẢN XUẤT</th>
+                      <th style={{ width: '110px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>NGÀY NHẬP KHO</th>
+                      <th style={{ width: '120px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>THAO TÁC</th>
                     </>
                   )}
                 </tr>
               </thead>
               <tbody>
-                {filteredProducts.length > 0 ? (
-                  filteredProducts.map((product, index) => (
+                {loading ? (
+                  <tr>
+                    <td 
+                      colSpan={activeTab === 'Hàng sắp hết' ? "9" : "18"} 
+                      style={{ 
+                        padding: '30px', 
+                        textAlign: 'center', 
+                        color: '#6c757d', 
+                        fontSize: '16px',
+                        backgroundColor: '#f8f9fa',
+                        borderBottom: '1px solid #dee2e6'
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px' }}>
+                        <CircularProgress size={24} />
+                        <span>Đang tải dữ liệu...</span>
+                      </div>
+                    </td>
+                  </tr>
+                ) : error ? (
+                  <tr>
+                    <td 
+                      colSpan={activeTab === 'Hàng sắp hết' ? "9" : "18"} 
+                      style={{ 
+                        padding: '30px', 
+                        textAlign: 'center', 
+                        color: '#dc3545', 
+                        fontSize: '16px',
+                        backgroundColor: '#f8f9fa',
+                        borderBottom: '1px solid #dee2e6'
+                      }}
+                    >
+                      {error}
+                    </td>
+                  </tr>
+                ) : displayedProducts.length > 0 ? (
+                  displayedProducts.map((product, index) => (
                     <tr 
                       key={product.ProductID} 
                       style={{ 
@@ -400,7 +523,7 @@ const Product = () => {
                     >
                       <td style={{ overflow: 'auto', maxHeight: '100px', padding: '8px', borderBottom: '1px solid #dee2e6', fontSize: '14px', textAlign: 'center' }}>{product.ProductID}</td>
                       <td style={{ overflow: 'auto', maxHeight: '100px', padding: '8px', borderBottom: '1px solid #dee2e6', fontSize: '14px', textAlign: 'center' }}>{product.ProductCode}</td>
-                      <td style={{ overflow: 'auto', maxHeight: '100px', padding: '8px', borderBottom: '1px solid #dee2e6', fontSize: '14px', textAlign: 'left' }}>{product.CategoryID}</td>
+                      <td style={{ overflow: 'auto', maxHeight: '100px', padding: '8px', borderBottom: '1px solid #dee2e6', fontSize: '14px', textAlign: 'left' }}>{product.categoryDisplay}</td>
                       <td style={{ overflow: 'auto', maxHeight: '100px', padding: '8px', borderBottom: '1px solid #dee2e6', fontSize: '14px', textAlign: 'left', fontWeight: '500' }}>{product.ProductName}</td>
                       <td style={{ overflow: 'auto', maxHeight: '100px', padding: '8px', borderBottom: '1px solid #dee2e6', fontSize: '14px', textAlign: 'center' }}>{product.Quantity}</td>
                       {activeTab === 'Hàng sắp hết' && (
@@ -509,12 +632,23 @@ const Product = () => {
                         borderBottom: '1px solid #dee2e6'
                       }}
                     >
-                      Đang tải dữ liệu...
+                      Không có dữ liệu
                     </td>
                   </tr>
                 )}
               </tbody>
             </table>
+            
+            {/* Phân trang */}
+            <div style={{ display: 'flex', justifyContent: 'center', marginTop: '20px' }}>
+              <Pagination
+                count={Math.ceil(products.length / pageSize)}
+                page={page}
+                onChange={handlePageChange}
+                color="primary"
+                size="large"
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -522,14 +656,17 @@ const Product = () => {
         <DialogTitle>Lọc sản phẩm</DialogTitle>
         <DialogContent>
           <Select
-            value={selectedCategoryType}
-            onChange={handleCategoryTypeChange}
+            value={selectedCategory}
+            onChange={handleCategoryChange}
             displayEmpty
             fullWidth
+            style={{ marginBottom: '10px', marginTop: '10px' }}
           >
-            <MenuItem value=""><em>Loại sản phẩm</em></MenuItem>
-            {[...new Set(products.map(product => product.categoryType))].map((categoryType, index) => (
-              <MenuItem key={index} value={categoryType}>{categoryType}</MenuItem>
+            <MenuItem value=""><em>Danh mục sản phẩm</em></MenuItem>
+            {categoryOptions.map((category) => (
+              <MenuItem key={category.id} value={category.id}>
+                {category.display}
+              </MenuItem>
             ))}
           </Select>
           <Select
@@ -537,9 +674,10 @@ const Product = () => {
             onChange={handleSkinTypeChange}
             displayEmpty
             fullWidth
+            style={{ marginTop: '10px' }}
           >
             <MenuItem value=""><em>Loại da</em></MenuItem>
-            {[...new Set(products.map(product => product.SkinType))].map((skinType, index) => (
+            {skinTypes.map((skinType, index) => (
               <MenuItem key={index} value={skinType}>{skinType}</MenuItem>
             ))}
           </Select>
