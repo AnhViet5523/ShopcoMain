@@ -93,146 +93,144 @@ const ViewCustomer = () => {
 
   return (
     <Box sx={{ bgcolor: "#f0f0f0", minHeight: "100vh", width:'99vw' }}>
-    <div className="manager-container">
-      {/* Sidebar */}
-      <div className="sidebar">
-        <div className="logo-container">
-          <div className="logo">
-            <img src="/images/logo.png" alt="Beauty Cosmetics" />
-          </div>
-          <div className="brand">
-            <div>BEAUTY</div>
-            <div>COSMETICS</div>
-          </div>
-        </div>
-        
-        <div className="sidebar-title">MANAGER</div>
-        
-        <div className="sidebar-menu">
-          {sidebarItems.map((item) => (
-            <div key={item.id} className={`sidebar-item ${activeItem === item.id ? 'active' : ''}`} onClick={() => { setActiveItem(item.id); navigate(`/${item.id}`); }} style={{ cursor: 'pointer' }}>
-              <span className="sidebar-icon">{item.icon}</span>
-              <span className="sidebar-text">{item.name}</span>
+      <div className="manager-container">
+        {/* Sidebar */}
+        <div className="sidebar">
+          <div className="logo-container">
+            <div className="logo">
+              <img src="/images/logo.png" alt="Beauty Cosmetics" />
             </div>
-          ))}
-        </div>
-        
-        <div className="logout-button" onClick={() => navigate('/')}>
-          <span className="logout-icon">🚪</span>
-          <span>Đăng Xuất</span>
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="main-content">
-        {/* Header with Search */}
-        <div className="dashboard-header">
-          <div className="search-bar" style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-            <input
-              type="text"
-              placeholder="Tìm kiếm theo tên, email hoặc số điện thoại..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '10px 15px',
-                borderRadius: '5px',
-                border: '1px solid #ddd',
-                fontSize: '14px',
-                color: '#000000',
-                backgroundColor: '#ffffff',
-                outline: 'none',
-                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
-              }}
-            />
-            {searchTerm && (
-              <button
-                onClick={handleClear}
-                style={{
-                  padding: '10px 20px',
-                  backgroundColor: '#6c757d',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '5px',
-                  cursor: 'pointer',
-                  fontSize: '14px'
-                }}
-              >
-                Xóa
-              </button>
-            )}
+            <div className="brand">
+              <div>BEAUTY</div>
+              <div>COSMETICS</div>
+            </div>
           </div>
-        </div>
-        
-        {/* Dashboard Title and Actions */}
-        <div className="dashboard-title-bar">
-          <h1>Hồ sơ khách hàng</h1>
-          <div style={{ marginLeft: 'auto', display: 'flex', gap: '10px' }}>
-            {searchTerm && customers.length > 0 && (
-              <div style={{ color: '#666', fontSize: '14px', alignSelf: 'center' }}>
-                Tìm thấy: {customers.length} khách hàng
+          
+          <div className="sidebar-title">MANAGER</div>
+          
+          <div className="sidebar-menu">
+            {sidebarItems.map((item) => (
+              <div key={item.id} className={`sidebar-item ${activeItem === item.id ? 'active' : ''}`} onClick={() => { setActiveItem(item.id); navigate(`/${item.id}`); }} style={{ cursor: 'pointer' }}>
+                <span className="sidebar-icon">{item.icon}</span>
+                <span className="sidebar-text">{item.name}</span>
               </div>
-            )}
+            ))}
+          </div>
+          
+          <div className="logout-button" onClick={() => navigate('/')}>
+            <span className="logout-icon">🚪</span>
+            <span>Đăng Xuất</span>
           </div>
         </div>
-        
-        {/* Table */}
-        <div className="dashboard-table">
-          <table>
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>TÊN</th>
-                <th>HỌ VÀ TÊN</th>
-                <th>MẬT KHẨU</th>
-                <th>EMAIL</th>
-                <th>VAI TRÒ</th>
-                <th>SỐ ĐIỆN THOẠI</th>
-                <th>ĐỊA CHỈ</th>
-                <th>NGÀY ĐĂNG KÝ</th>
-                <th>LOẠI DA</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan="10" className="empty-data-message">
-                    Đang tải dữ liệu...
-                  </td>
-                </tr>
-              ) : error ? (
-                <tr>
-                  <td colSpan="10" className="empty-data-message error-message">
-                    {error}
-                  </td>
-                </tr>
-              ) : customers.length > 0 ? (
-                customers.map((customer, index) => (
-                  <tr key={customer.userId || index}>
-                    <td>{customer.userId || '-'}</td>
-                    <td>{customer.name || '-'}</td>
-                    <td>{customer.fullName || customer.name || '-'}</td>
-                    <td>{customer.password || '-'}</td>
-                    <td>{customer.email || '-'}</td>
-                    <td>{customer.role || '-'}</td>
-                    <td>{customer.phone || '-'}</td>
-                    <td>{customer.address || '-'}</td>
-                    <td>{customer.registrationDate || '-'}</td>
-                    <td>{customer.skinType || '-'}</td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan="10" className="empty-data-message">
-                    Không có dữ liệu khách hàng
-                  </td>
-                </tr>
+
+        {/* Main Content */}
+        <div className="main-content">
+          {/* Header with Search */}
+          <div className="dashboard-header">
+            <div className="search-bar" style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+              <input
+                type="text"
+                placeholder="Tìm kiếm theo tên, email hoặc số điện thoại..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '10px 15px',
+                  borderRadius: '5px',
+                  border: '1px solid #ddd',
+                  fontSize: '14px',
+                  color: '#000000',
+                  backgroundColor: '#ffffff',
+                  outline: 'none',
+                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
+                }}
+              />
+              {searchTerm && (
+                <button
+                  onClick={handleClear}
+                  style={{
+                    padding: '10px 20px',
+                    backgroundColor: '#6c757d',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '5px',
+                    cursor: 'pointer',
+                    fontSize: '14px'
+                  }}
+                >
+                  Xóa
+                </button>
               )}
-            </tbody>
-          </table>
+            </div>
+          </div>
+          
+          {/* Dashboard Title and Actions */}
+          <div className="dashboard-title-bar">
+            <h1>Hồ sơ khách hàng</h1>
+            <div style={{ marginLeft: 'auto', display: 'flex', gap: '10px' }}>
+              {searchTerm && customers.length > 0 && (
+                <div style={{ color: '#666', fontSize: '14px', alignSelf: 'center' }}>
+                  Tìm thấy: {customers.length} khách hàng
+                </div>
+              )}
+            </div>
+          </div>
+          
+          {/* Table */}
+          <div className="dashboard-table">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>TÊN</th>
+                  <th>HỌ VÀ TÊN</th>
+                  <th>EMAIL</th>
+                  <th>VAI TRÒ</th>
+                  <th>SỐ ĐIỆN THOẠI</th>
+                  <th>ĐỊA CHỈ</th>
+                  <th>NGÀY ĐĂNG KÝ</th>
+                  <th>LOẠI DA</th>
+                </tr>
+              </thead>
+              <tbody>
+                {loading ? (
+                  <tr>
+                    <td colSpan="9" className="empty-data-message">
+                      Đang tải dữ liệu...
+                    </td>
+                  </tr>
+                ) : error ? (
+                  <tr>
+                    <td colSpan="9" className="empty-data-message error-message">
+                      {error}
+                    </td>
+                  </tr>
+                ) : customers.length > 0 ? (
+                  customers.map((customer, index) => (
+                    <tr key={customer.userId || index}>
+                      <td>{customer.userId || '-'}</td>
+                      <td>{customer.name || '-'}</td>
+                      <td>{customer.fullName || customer.name || '-'}</td>
+                      <td>{customer.email || '-'}</td>
+                      <td>{customer.role || '-'}</td>
+                      <td>{customer.phone || '-'}</td>
+                      <td>{customer.address || '-'}</td>
+                      <td>{customer.registrationDate || '-'}</td>
+                      <td>{customer.skinType || '-'}</td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="9" className="empty-data-message">
+                      Không có dữ liệu khách hàng
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
-    </div>
     </Box>
   );
 };

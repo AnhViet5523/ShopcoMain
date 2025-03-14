@@ -1,17 +1,18 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaFilter, FaFileExport, FaPlus } from 'react-icons/fa';
+import { FaFilter } from 'react-icons/fa';
 import { Box } from '@mui/material';
-import orderService from '../../apis/orderService'; // Import orderService
+import adminService from '../../apis/adminService'; 
+import userService from '../../apis/userService'; // Import userService
 import './Manager.css';
 
 const ViewOrder = () => {
   const [activeTab, setActiveTab] = useState('Tất cả');
   const [activeItem, setActiveItem] = useState('');
-  const [orders, setOrders] = useState([]); // State to hold orders
-  const [loading, setLoading] = useState(true); // State to manage loading
-  const [orderItems, setOrderItems] = useState([]); // State to hold order items
-  const [searchKey, setSearchKey] = useState(''); // State to hold search key
+  const [orders, setOrders] = useState([]); 
+  const [loading, setLoading] = useState(true); 
+  const [orderItems, setOrderItems] = useState([]);
+  const [searchKey, setSearchKey] = useState(''); 
   const navigate = useNavigate();
 
   const sidebarItems = [
@@ -30,9 +31,9 @@ const ViewOrder = () => {
   useEffect(() => {
     const fetchOrders = async () => {
       try {
-        const response = await orderService.getAllOrders(); // Gọi API để lấy tất cả đơn hàng
+        const response = await adminService.getAllOrders(); // Gọi API để lấy tất cả đơn hàng
+        console.log('Response từ API:', response); // Log phản hồi từ API
         
-        // Kiểm tra xem response có chứa $values không
         if (response && response.$values && Array.isArray(response.$values)) {
           setOrders(response.$values); // Lưu dữ liệu vào state orders
 
@@ -53,16 +54,48 @@ const ViewOrder = () => {
     fetchOrders();
   }, []);
 
-  // Hàm lọc đơn hàng theo từ khóa
-  const filteredOrders = orders.filter(order => 
-    order.userId.toString().includes(searchKey) || // Tìm theo UserID
-    order.orderId.toString().includes(searchKey) || // Tìm theo OrderID
-    order.note?.toLowerCase().includes(searchKey.toLowerCase()) || // Tìm theo Note
-    order.orderStatus?.toLowerCase().includes(searchKey.toLowerCase()) || // Tìm theo OrderStatus
-    order.totalAmount.toString().includes(searchKey) || // Tìm theo TotalAmount
-    order.deliveryStatus?.toLowerCase().includes(searchKey.toLowerCase()) || // Tìm theo DeliveryStatus
-    order.deliveryAddress?.toLowerCase().includes(searchKey.toLowerCase()) // Tìm theo DeliveryAddress
-  );
+  // Hàm để lấy tên người dùng
+  const getUserName = async (userId) => {
+    try {
+      const user = await userService.getUserProfile(userId); // Sử dụng getUserProfile để lấy thông tin người dùng
+      return user.name; // Giả sử tên người dùng nằm trong thuộc tính 'name'
+    } catch (error) {
+      console.error('Error fetching user name:', error);
+      return 'Unknown'; // Trả về 'Unknown' nếu có lỗi
+    }
+  };
+
+  // Hàm lọc đơn hàng theo trạng thái và từ khóa tìm kiếm
+  const filteredOrders = () => {
+    let filtered = orders;
+
+    // Lọc theo trạng thái
+    if (activeTab === 'Đơn hàng đang xử lý') {
+      filtered = filtered.filter(order => order.orderStatus === 'Pending');
+    } else if (activeTab === 'Đơn hàng bị hủy') {
+      filtered = filtered.filter(order => order.orderStatus === 'cancel');
+    } else if (activeTab === 'Giao thành công') {
+      filtered = filtered.filter(order => order.orderStatus === 'Completed');
+    }
+
+    // Lọc theo từ khóa tìm kiếm
+    if (searchKey) {
+      const lowerCaseSearchKey = searchKey.toLowerCase();
+      filtered = filtered.filter(order => 
+        order.userId.toString().includes(lowerCaseSearchKey) ||
+        order.orderId.toString().includes(lowerCaseSearchKey) ||
+        order.note?.toLowerCase().includes(lowerCaseSearchKey) ||
+        order.orderStatus?.toLowerCase().includes(lowerCaseSearchKey) ||
+        order.totalAmount.toString().includes(lowerCaseSearchKey) ||
+        order.deliveryStatus?.toLowerCase().includes(lowerCaseSearchKey) ||
+        order.deliveryAddress?.toLowerCase().includes(lowerCaseSearchKey) ||
+        order.voucherId?.toString().includes(lowerCaseSearchKey) ||
+        order.orderDate?.toLowerCase().includes(lowerCaseSearchKey)
+      );
+    }
+
+    return filtered; // Trả về danh sách đơn hàng đã lọc
+  };
 
   const handleClearSearch = () => {
     setSearchKey(''); // Xóa từ khóa tìm kiếm
@@ -141,15 +174,6 @@ const ViewOrder = () => {
             </div>
           </div>
           
-          {/* Dashboard Title and Actions */}
-          <div className="dashboard-title-bar">
-            <h1>Đơn Hàng</h1>
-            <div className="dashboard-actions">
-              <button className="btn-filter">
-                <FaFilter /> Lọc <span className="notification">1</span>
-              </button>
-            </div>
-          </div>
           
           {/* Tabs */}
           <div className="dashboard-tabs">
@@ -169,18 +193,18 @@ const ViewOrder = () => {
             <table>
               <thead>
                 <tr>
-                  <th>OrderID</th>
-                  <th>UserID</th>
-                  <th>ProductName</th>
-                  <th>Price</th>
-                  <th>Quantity</th>
-                  <th>VoucherID</th>
-                  <th>TotalAmount</th>
-                  <th>OrderDate</th>
-                  <th>OrderStatus</th>
-                  <th>DeliveryStatus</th>
-                  <th>DeliveryAddress</th>          
-                  <th>Note</th>    
+                  <th>ID ĐƠN HÀNG</th>
+                  <th>ID NGƯỜI DÙNG</th>
+                  <th>TÊN SẢN PHẨM</th>
+                  <th>GIÁ</th>
+                  <th>SỐ LƯỢNG</th>
+                  <th>MÃ GIẢM GIÁ</th>
+                  <th>TỔNG TIỀN</th>
+                  <th>NGÀY ĐẶT HÀNG</th>
+                  <th>TÌNH TRẠNG ĐƠN HÀNG</th>
+                  <th>TÌNH TRẠNG GIAO HÀNG</th>
+                  <th>ĐỊA CHỈ</th>          
+                  <th>GHI CHÚ</th>    
                 </tr>
               </thead>
               <tbody>
@@ -190,14 +214,14 @@ const ViewOrder = () => {
                       Đang tải dữ liệu đơn hàng...
                     </td>
                   </tr>
-                ) : filteredOrders.length > 0 ? (
-                  filteredOrders.map((order, index) => (
+                ) : filteredOrders().length > 0 ? (
+                  filteredOrders().map((order, index) => (
                     <tr key={order.orderId}>
                       <td>{order.orderId}</td>
                       <td>{order.userId}</td>
-                      <td>{orderItems[index]?.map(item => item.productName).join(', ')}</td>
-                      <td>{orderItems[index]?.map(item => item.price).join(', ')}</td>
-                      <td>{orderItems[index]?.map(item => item.quantity).join(', ')}</td>
+                      <td>{order.items?.$values.map(item => item.productName).join(', ')}</td>
+                      <td>{order.items?.$values.map(item => item.price).join(', ')}</td>
+                      <td>{order.items?.$values.map(item => item.quantity).join(', ')}</td>
                       <td>{order.voucherId}</td>
                       <td>{order.totalAmount}</td>
                       <td>{order.orderDate}</td>
@@ -210,7 +234,7 @@ const ViewOrder = () => {
                 ) : (
                   <tr>
                     <td colSpan="12" className="empty-data-message">
-                      Không có đơn hàng nào.
+                      Chưa có đơn hàng nào.
                     </td>
                   </tr>
                 )}

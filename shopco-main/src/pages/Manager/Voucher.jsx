@@ -60,10 +60,20 @@ const Voucher = () => {
       const voucherName = (voucher.voucherName || '').toLowerCase();
       const description = (voucher.description || '').toLowerCase();
       const status = (voucher.status || '').toLowerCase();
+      const discountPercent = (voucher.discountPercent || '').toString();
+      const minOrderAmount = (voucher.minOrderAmount || '').toString();
+      const startDate = new Date(voucher.startDate).toLocaleDateString('vi-VN');
+      const endDate = new Date(voucher.endDate).toLocaleDateString('vi-VN');
+      const quantity = (voucher.quantity || '').toString();
 
       return voucherName.includes(searchTermLower) ||
              description.includes(searchTermLower) ||
-             status.includes(searchTermLower);
+             status.includes(searchTermLower) ||
+             discountPercent.includes(searchTermLower) ||
+             minOrderAmount.includes(searchTermLower) ||
+             startDate.includes(searchTermLower) ||
+             endDate.includes(searchTermLower) ||
+             quantity.includes(searchTermLower);
     });
 
     setVouchers(filteredVouchers);
@@ -208,16 +218,16 @@ const Voucher = () => {
             <table>
               <thead>
                 <tr>
-                  <th>VoucherID</th>
-                  <th>Tên Voucher</th>
-                  <th>Giảm giá (%)</th>
-                  <th>Đơn tối thiểu</th>
-                  <th>Ngày bắt đầu</th>
-                  <th>Ngày kết thúc</th>
-                  <th>Số lượng</th>
-                  <th>Trạng thái</th>
-                  <th>Mô tả</th>
-                  <th>Thao tác</th>
+                  <th>ID</th>
+                  <th>TÊN VOUCHER</th>
+                  <th>GIẢM GIÁ (%)</th>
+                  <th>ĐƠN TỐI THIỂU</th>
+                  <th>NGÀY BẮT ĐẦU</th>
+                  <th>NGÀY KẾT THÚC</th>
+                  <th>SỐ LƯỢNG</th>
+                  <th>TRẠNG THÁI</th>
+                  <th>MÔ TẢ</th>
+                  <th>THAO TÁC</th>
                 </tr>
               </thead>
               <tbody>
