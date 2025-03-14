@@ -267,15 +267,6 @@ const orderService = {
             console.error('Error fetching order items:', error);
             throw error;
         }
-    },
-    getAllOrders: async () => {
-        try {
-            const response = await axiosClient.get('/api/Orders/all');
-            return response; // Trả về dữ liệu từ API
-        } catch (error) {
-            console.error('Error:', error);
-            throw error; 
-        }
     }
 };
 

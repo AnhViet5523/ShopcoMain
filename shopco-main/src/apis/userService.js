@@ -117,13 +117,8 @@ const userService = {
             const response = await axiosClient.get(`/api/Users/profile/${userId}`);
             return response;
         } catch (error) {
-            // Kiểm tra nếu đây là lỗi hủy request
-            if (error.name === 'CanceledError' || error.name === 'AbortError') {
-                console.log('Profile request cancelled:', error.message);
-            } else {
-                console.error('Error fetching user profile:', error);
-            }
-            throw error; // Tiếp tục ném lỗi để component gọi có thể xử lý
+            console.error('Error fetching user profile:', error);
+            throw error;
         }
     },
     // Cập nhật thông tin người dùng hiện tại
