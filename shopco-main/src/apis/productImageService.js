@@ -4,7 +4,13 @@ const productImageService = {
     // Lấy tất cả ảnh sản phẩm
     getAllProductImages: async () => {
         try {
+<<<<<<< Updated upstream
             const response = await axiosClient.get('/api/ProductImages');
+=======
+            console.log('Calling API: GET /api/Photos/product');
+            const response = await axiosClient.get('/api/Photos/product');
+            console.log('API Response:', response);
+>>>>>>> Stashed changes
             return response;
         } catch (error) {
             console.error('Error fetching all product images:', error);
@@ -15,7 +21,13 @@ const productImageService = {
     // Lấy ảnh của một sản phẩm cụ thể
     getProductImages: async (productId) => {
         try {
+<<<<<<< Updated upstream
             const response = await axiosClient.get(`/api/ProductImages/product/${productId}`);
+=======
+            console.log(`Calling API: GET /api/Photos/product/${productId}`);
+            const response = await axiosClient.get(`/api/Photos/product/${productId}`);
+            console.log('API Response:', response);
+>>>>>>> Stashed changes
             return response;
         } catch (error) {
             console.error(`Error fetching images for product ${productId}:`, error);
@@ -26,7 +38,13 @@ const productImageService = {
     // Lấy ảnh được nhóm theo sản phẩm
     getGroupedProductImages: async () => {
         try {
+<<<<<<< Updated upstream
             const response = await axiosClient.get('/api/ProductImages/grouped');
+=======
+            console.log('Calling API: GET /api/Photos/product/grouped');
+            const response = await axiosClient.get('/api/Photos/product/grouped');
+            console.log('API Response:', response);
+>>>>>>> Stashed changes
             return response;
         } catch (error) {
             console.error('Error fetching grouped product images:', error);
@@ -37,6 +55,10 @@ const productImageService = {
     // Thêm ảnh cho sản phẩm
     addProductImages: async (productId, files) => {
         try {
+<<<<<<< Updated upstream
+=======
+            console.log(`Calling API: POST /api/Photos/product with productId: ${productId}`);
+>>>>>>> Stashed changes
             const formData = new FormData();
             formData.append('ProductID', productId);
             
@@ -45,11 +67,19 @@ const productImageService = {
                 formData.append('Files', files[i]);
             }
             
+<<<<<<< Updated upstream
             const response = await axiosClient.post('/api/ProductImages', formData, {
+=======
+            const response = await axiosClient.post('/api/Photos/product', formData, {
+>>>>>>> Stashed changes
                 headers: {
                     'Content-Type': 'multipart/form-data'
                 }
             });
+<<<<<<< Updated upstream
+=======
+            console.log('API Response:', response);
+>>>>>>> Stashed changes
             return response;
         } catch (error) {
             console.error(`Error adding images for product ${productId}:`, error);
@@ -60,6 +90,10 @@ const productImageService = {
     // Cập nhật ảnh sản phẩm
     updateProductImage: async (imageId, productId, file, displayOrder) => {
         try {
+<<<<<<< Updated upstream
+=======
+            console.log(`Calling API: PUT /api/Photos/product/${imageId}`);
+>>>>>>> Stashed changes
             const formData = new FormData();
             formData.append('ImageID', imageId);
             formData.append('ProductID', productId);
@@ -69,11 +103,19 @@ const productImageService = {
                 formData.append('File', file);
             }
             
+<<<<<<< Updated upstream
             const response = await axiosClient.put(`/api/ProductImages/${imageId}`, formData, {
+=======
+            const response = await axiosClient.put(`/api/Photos/product/${imageId}`, formData, {
+>>>>>>> Stashed changes
                 headers: {
                     'Content-Type': 'multipart/form-data'
                 }
             });
+<<<<<<< Updated upstream
+=======
+            console.log('API Response:', response);
+>>>>>>> Stashed changes
             return response;
         } catch (error) {
             console.error(`Error updating image ${imageId}:`, error);
@@ -84,7 +126,13 @@ const productImageService = {
     // Xóa ảnh sản phẩm
     deleteProductImage: async (imageId) => {
         try {
+<<<<<<< Updated upstream
             const response = await axiosClient.delete(`/api/ProductImages/${imageId}`);
+=======
+            console.log(`Calling API: DELETE /api/Photos/product/${imageId}`);
+            const response = await axiosClient.delete(`/api/Photos/product/${imageId}`);
+            console.log('API Response:', response);
+>>>>>>> Stashed changes
             return response;
         } catch (error) {
             console.error(`Error deleting image ${imageId}:`, error);
@@ -95,7 +143,13 @@ const productImageService = {
     // Xóa tất cả ảnh của sản phẩm
     deleteAllProductImages: async (productId) => {
         try {
+<<<<<<< Updated upstream
             const response = await axiosClient.delete(`/api/ProductImages/product/${productId}`);
+=======
+            console.log(`Calling API: DELETE /api/Photos/product/${productId}/all`);
+            const response = await axiosClient.delete(`/api/Photos/product/${productId}/all`);
+            console.log('API Response:', response);
+>>>>>>> Stashed changes
             return response;
         } catch (error) {
             console.error(`Error deleting all images for product ${productId}:`, error);

@@ -1,5 +1,9 @@
 import axiosClient from "./axiosClient"
 import productImageService from "./productImageService";
+<<<<<<< Updated upstream
+=======
+import { API_ENDPOINTS } from "./apiConstants"
+>>>>>>> Stashed changes
 
 const productService = {
     // Lấy tất cả sản phẩm
@@ -9,6 +13,52 @@ const productService = {
                 axiosClient.get('/api/Products'),
                 productImageService.getAllProductImages()
             ]);
+<<<<<<< Updated upstream
+=======
+
+            // Đảm bảo productsResponse là một mảng
+            const products = Array.isArray(productsResponse) ? productsResponse : 
+                            (productsResponse && productsResponse.$values ? productsResponse.$values : []);
+            
+            // Xử lý dữ liệu ảnh
+            let images = [];
+            if (imagesResponse && imagesResponse.$values) {
+                images = imagesResponse.$values;
+            } else if (Array.isArray(imagesResponse)) {
+                images = imagesResponse;
+            }
+
+            console.log('Images from API:', images);
+
+            // Tạo map từ productId đến danh sách ảnh
+            const productImagesMap = {};
+            images.forEach(image => {
+                const productId = image.productId || image.productID;
+                if (productId) {
+                    if (!productImagesMap[productId]) {
+                        productImagesMap[productId] = [];
+                    }
+                    productImagesMap[productId].push(image);
+                }
+            });
+
+            // Gán ảnh cho từng sản phẩm
+            return products.map(product => {
+                const productId = product.productId || product.productID;
+                const productImages = productImagesMap[productId] || [];
+                
+                return {
+                    ...product,
+                    images: productImages,
+                    imgUrl: productImages.length > 0 ? productImages[0].imgUrl : (product.imgURL || '/images/default-product.jpg')
+                };
+            });
+        } catch (error) {
+            console.error('Error fetching all products:', error);
+            throw error;
+        }
+    },
+>>>>>>> Stashed changes
 
             // Đảm bảo imagesResponse là một mảng
             const images = Array.isArray(imagesResponse) ? imagesResponse : 
@@ -67,6 +117,36 @@ const productService = {
         } catch (error) {
             console.error(`Error fetching product with id ${id}:`, error);
             throw error;
+<<<<<<< Updated upstream
+=======
+        }
+    },
+
+    // Lấy tất cả danh mục
+    getAllCategories: async () => {
+        try {
+            const response = await axiosClient.get(API_ENDPOINTS.CATEGORIES.LIST);
+            
+            // Đảm bảo dữ liệu trả về có đầy đủ thông tin
+            let categories = [];
+            if (Array.isArray(response)) {
+                categories = response;
+            } else if (response && response.$values && Array.isArray(response.$values)) {
+                categories = response.$values;
+            }
+            
+            // Kiểm tra và đảm bảo mỗi category có đủ thông tin
+            categories = categories.map(category => ({
+                ...category,
+                categoryType: category.categoryType || 'Unknown',
+                categoryName: category.categoryName || 'Unknown'
+            }));
+            
+            return { $values: categories };
+        } catch (error) {
+            console.error('Error fetching all categories:', error);
+            return { $values: [] };
+>>>>>>> Stashed changes
         }
     },
 

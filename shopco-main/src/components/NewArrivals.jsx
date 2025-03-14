@@ -52,9 +52,32 @@ export default function NewArrivals() {
       } else if (response && response.data) {
         _products = Array.isArray(response.data) ? response.data : [response.data];
       }
-      
-      // Hiển thị tất cả sản phẩm thay vì chỉ 10 sản phẩm đầu tiên
-      // _products = _products.slice(0, 10); // Đã xóa dòng này
+
+      // Xử lý ảnh cho mỗi sản phẩm
+      _products = _products.map(product => {
+        // Nếu sản phẩm đã có ảnh từ API
+        if (product.images && product.images.length > 0) {
+          return {
+            ...product,
+            mainImage: product.images[0].imgUrl || product.images[0].imageUrl,
+            images: product.images
+          };
+        }
+        // Nếu sản phẩm có imgURL
+        else if (product.imgURL) {
+          return {
+            ...product,
+            mainImage: product.imgURL,
+            images: [{ imgUrl: product.imgURL }]
+          };
+        }
+        // Nếu không có ảnh, sử dụng ảnh mặc định
+        return {
+          ...product,
+          mainImage: '/images/default-product.jpg', // Thay đổi đường dẫn ảnh mặc định của bạn
+          images: []
+        };
+      });
       
       setProducts(_products);
       console.log(`Loaded ${_products.length} products successfully`);
@@ -87,7 +110,13 @@ export default function NewArrivals() {
         {products && products.length > 0 ? (
           products.map((product) => (
             <Grid item xs={12} sm={6} md={3} key={product.id || product.productId || `product-${Math.random()}`}>
-              <ProductCard product={product} />
+              <ProductCard 
+                product={{
+                  ...product,
+                  image: product.mainImage, // Đảm bảo ProductCard nhận được ảnh
+                  images: product.images || []
+                }} 
+              />
             </Grid>
           ))
         ) : (
