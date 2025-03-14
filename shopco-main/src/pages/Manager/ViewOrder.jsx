@@ -11,6 +11,7 @@ const ViewOrder = () => {
   const [orders, setOrders] = useState([]); // State to hold orders
   const [loading, setLoading] = useState(true); // State to manage loading
   const [orderItems, setOrderItems] = useState([]); // State to hold order items
+  const [searchKey, setSearchKey] = useState(''); // State to hold search key
   const navigate = useNavigate();
 
   const sidebarItems = [
@@ -29,13 +30,19 @@ const ViewOrder = () => {
   useEffect(() => {
     const fetchOrders = async () => {
       try {
-        const allOrders = await orderService.getOrders(); // Call API to get all orders
-        setOrders(allOrders);
+        const response = await orderService.getAllOrders(); // Gọi API để lấy tất cả đơn hàng
+        
+        // Kiểm tra xem response có chứa $values không
+        if (response && response.$values && Array.isArray(response.$values)) {
+          setOrders(response.$values); // Lưu dữ liệu vào state orders
 
-        // Fetch order items for each order
-        const itemsPromises = allOrders.map(order => orderService.getOrderItems(order.orderId));
-        const allOrderItems = await Promise.all(itemsPromises);
-        setOrderItems(allOrderItems);
+          // Fetch order items for each order
+          const itemsPromises = response.$values.map(order => orderService.getOrderItems(order.orderId));
+          const allOrderItems = await Promise.all(itemsPromises);
+          setOrderItems(allOrderItems);
+        } else {
+          console.error('Dữ liệu trả về không đúng định dạng:', response);
+        }
       } catch (error) {
         console.error('Error fetching orders:', error);
       } finally {
@@ -45,6 +52,21 @@ const ViewOrder = () => {
 
     fetchOrders();
   }, []);
+
+  // Hàm lọc đơn hàng theo từ khóa
+  const filteredOrders = orders.filter(order => 
+    order.userId.toString().includes(searchKey) || // Tìm theo UserID
+    order.orderId.toString().includes(searchKey) || // Tìm theo OrderID
+    order.note?.toLowerCase().includes(searchKey.toLowerCase()) || // Tìm theo Note
+    order.orderStatus?.toLowerCase().includes(searchKey.toLowerCase()) || // Tìm theo OrderStatus
+    order.totalAmount.toString().includes(searchKey) || // Tìm theo TotalAmount
+    order.deliveryStatus?.toLowerCase().includes(searchKey.toLowerCase()) || // Tìm theo DeliveryStatus
+    order.deliveryAddress?.toLowerCase().includes(searchKey.toLowerCase()) // Tìm theo DeliveryAddress
+  );
+
+  const handleClearSearch = () => {
+    setSearchKey(''); // Xóa từ khóa tìm kiếm
+  };
 
   return (
     <Box sx={{ bgcolor: "#f0f0f0", minHeight: "100vh", width:'99vw' }}>
@@ -82,8 +104,40 @@ const ViewOrder = () => {
         <div className="main-content">
           {/* Header */}
           <div className="dashboard-header">
-            <div className="search-bar">
-              <input type="text" placeholder="Search..." />
+            <div className="search-bar" style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+              <input 
+                type="text" 
+                placeholder="Tìm kiếm theo UserID, OrderID, Note, OrderStatus, TotalAmount, DeliveryStatus, DeliveryAddress..." 
+                value={searchKey} 
+                onChange={(e) => setSearchKey(e.target.value)} // Cập nhật state khi người dùng nhập
+                style={{
+                  width: '100%',
+                  padding: '10px 15px',
+                  borderRadius: '5px',
+                  border: '1px solid #ddd',
+                  fontSize: '14px',
+                  color: '#000000',
+                  backgroundColor: '#ffffff',
+                  outline: 'none',
+                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
+                }}
+              />
+              {searchKey && (
+                <button
+                  onClick={handleClearSearch}
+                  style={{
+                    padding: '10px 20px',
+                    backgroundColor: '#6c757d',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '5px',
+                    cursor: 'pointer',
+                    fontSize: '14px'
+                  }}
+                >
+                  Xóa
+                </button>
+              )}
             </div>
           </div>
           
@@ -92,13 +146,7 @@ const ViewOrder = () => {
             <h1>Đơn Hàng</h1>
             <div className="dashboard-actions">
               <button className="btn-filter">
-                <FaFilter /> Filter <span className="notification">1</span>
-              </button>
-              <button className="btn-export">
-                <FaFileExport /> Export
-              </button>
-              <button className="btn-create-payment">
-                <FaPlus /> Create payment
+                <FaFilter /> Lọc <span className="notification">1</span>
               </button>
             </div>
           </div>
@@ -142,8 +190,8 @@ const ViewOrder = () => {
                       Đang tải dữ liệu đơn hàng...
                     </td>
                   </tr>
-                ) : orders.length > 0 ? (
-                  orders.map((order, index) => (
+                ) : filteredOrders.length > 0 ? (
+                  filteredOrders.map((order, index) => (
                     <tr key={order.orderId}>
                       <td>{order.orderId}</td>
                       <td>{order.userId}</td>
