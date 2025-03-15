@@ -204,10 +204,19 @@ const Feedback = () => {
       {/* Sidebar */}
       <div className="sidebar">
         <div className="logo-container">
-          <div className="logo">
-            <img src="/images/logo.png" alt="Beauty Cosmetics" />
+          <div className="logo" style={{ marginRight: '15px', cursor: 'pointer' }} onClick={() => navigate("/")}>
+            <img 
+              src="/images/logo.png" 
+              alt="Beauty Cosmetics"
+              style={{
+                width: 60, 
+                height: 60, 
+                borderRadius: '50%',
+                objectFit: 'cover'
+              }}
+            />
           </div>
-          <div className="brand">
+          <div className="brand" style={{ cursor: 'pointer' }} onClick={() => navigate("/")}>
             <div>BEAUTY</div>
             <div>COSMETICS</div>
           </div>
@@ -320,12 +329,12 @@ const Feedback = () => {
           }}>
             <thead>
               <tr style={{ backgroundColor: '#f8f9fa', height: '50px' }}>
-                <th style={{ width: '80px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>REVIEW ID</th>
-                <th style={{ width: '120px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>TÊN</th>
+                <th style={{ width: '80px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>ID</th>
+                <th style={{ width: '120px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>TÊN NGƯỜI DÙNG</th>
                 <th style={{ width: '200px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>TÊN SẢN PHẨM</th>                              
-                <th style={{ width: '80px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>RATING</th>
-                <th style={{ width: '300px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>REVIEW COMMENT</th>
-                <th style={{ width: '120px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>REVIEW DATE</th>               
+                <th style={{ width: '80px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>ĐÁNH GIÁ</th>
+                <th style={{ width: '300px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>NỘI DUNG</th>
+                <th style={{ width: '120px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>NGÀY ĐÁNH GIÁ</th>               
                 <th style={{ width: '120px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>THAO TÁC</th>
               </tr>
             </thead>

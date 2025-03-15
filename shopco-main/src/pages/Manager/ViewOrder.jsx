@@ -1,16 +1,18 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaFilter, FaFileExport, FaPlus } from 'react-icons/fa';
+import { FaFilter } from 'react-icons/fa';
 import { Box } from '@mui/material';
-import orderService from '../../apis/orderService'; // Import orderService
+import adminService from '../../apis/adminService'; 
+import userService from '../../apis/userService'; // Import userService
 import './Manager.css';
 
 const ViewOrder = () => {
   const [activeTab, setActiveTab] = useState('Tất cả');
   const [activeItem, setActiveItem] = useState('');
-  const [orders, setOrders] = useState([]); // State to hold orders
-  const [loading, setLoading] = useState(true); // State to manage loading
-  const [orderItems, setOrderItems] = useState([]); // State to hold order items
+  const [orders, setOrders] = useState([]); 
+  const [loading, setLoading] = useState(true); 
+  const [orderItems, setOrderItems] = useState([]);
+  const [searchKey, setSearchKey] = useState(''); 
   const navigate = useNavigate();
 
   const sidebarItems = [
@@ -29,13 +31,19 @@ const ViewOrder = () => {
   useEffect(() => {
     const fetchOrders = async () => {
       try {
-        const allOrders = await orderService.getOrders(); // Call API to get all orders
-        setOrders(allOrders);
+        const response = await adminService.getAllOrders(); // Gọi API để lấy tất cả đơn hàng
+        console.log('Response từ API:', response); // Log phản hồi từ API
+        
+        if (response && response.$values && Array.isArray(response.$values)) {
+          setOrders(response.$values); // Lưu dữ liệu vào state orders
 
-        // Fetch order items for each order
-        const itemsPromises = allOrders.map(order => orderService.getOrderItems(order.orderId));
-        const allOrderItems = await Promise.all(itemsPromises);
-        setOrderItems(allOrderItems);
+          // Fetch order items for each order
+          const itemsPromises = response.$values.map(order => orderService.getOrderItems(order.orderId));
+          const allOrderItems = await Promise.all(itemsPromises);
+          setOrderItems(allOrderItems);
+        } else {
+          console.error('Dữ liệu trả về không đúng định dạng:', response);
+        }
       } catch (error) {
         console.error('Error fetching orders:', error);
       } finally {
@@ -46,16 +54,72 @@ const ViewOrder = () => {
     fetchOrders();
   }, []);
 
+  // Hàm để lấy tên người dùng
+  const getUserName = async (userId) => {
+    try {
+      const user = await userService.getUserProfile(userId); // Sử dụng getUserProfile để lấy thông tin người dùng
+      return user.name; // Giả sử tên người dùng nằm trong thuộc tính 'name'
+    } catch (error) {
+      console.error('Error fetching user name:', error);
+      return 'Unknown'; // Trả về 'Unknown' nếu có lỗi
+    }
+  };
+
+  // Hàm lọc đơn hàng theo trạng thái và từ khóa tìm kiếm
+  const filteredOrders = () => {
+    let filtered = orders;
+
+    // Lọc theo trạng thái
+    if (activeTab === 'Đơn hàng đang xử lý') {
+      filtered = filtered.filter(order => order.orderStatus === 'Pending');
+    } else if (activeTab === 'Đơn hàng bị hủy') {
+      filtered = filtered.filter(order => order.orderStatus === 'cancel');
+    } else if (activeTab === 'Giao thành công') {
+      filtered = filtered.filter(order => order.orderStatus === 'Completed');
+    }
+
+    // Lọc theo từ khóa tìm kiếm
+    if (searchKey) {
+      const lowerCaseSearchKey = searchKey.toLowerCase();
+      filtered = filtered.filter(order => 
+        order.userId.toString().includes(lowerCaseSearchKey) ||
+        order.orderId.toString().includes(lowerCaseSearchKey) ||
+        order.note?.toLowerCase().includes(lowerCaseSearchKey) ||
+        order.orderStatus?.toLowerCase().includes(lowerCaseSearchKey) ||
+        order.totalAmount.toString().includes(lowerCaseSearchKey) ||
+        order.deliveryStatus?.toLowerCase().includes(lowerCaseSearchKey) ||
+        order.deliveryAddress?.toLowerCase().includes(lowerCaseSearchKey) ||
+        order.voucherId?.toString().includes(lowerCaseSearchKey) ||
+        order.orderDate?.toLowerCase().includes(lowerCaseSearchKey)
+      );
+    }
+
+    return filtered; // Trả về danh sách đơn hàng đã lọc
+  };
+
+  const handleClearSearch = () => {
+    setSearchKey(''); // Xóa từ khóa tìm kiếm
+  };
+
   return (
     <Box sx={{ bgcolor: "#f0f0f0", minHeight: "100vh", width:'99vw' }}>
       <div className="manager-container">
         {/* Sidebar */}
         <div className="sidebar">
           <div className="logo-container">
-            <div className="logo">
-              <img src="/images/logo.png" alt="Beauty Cosmetics" />
+            <div className="logo" style={{ marginRight: '15px', cursor: 'pointer' }} onClick={() => navigate("/")}>
+              <img 
+                src="/images/logo.png" 
+                alt="Beauty Cosmetics"
+                style={{
+                  width: 60, 
+                  height: 60, 
+                  borderRadius: '50%',
+                  objectFit: 'cover'
+                }}
+              />
             </div>
-            <div className="brand">
+            <div className="brand" style={{ cursor: 'pointer' }} onClick={() => navigate("/")}>
               <div>BEAUTY</div>
               <div>COSMETICS</div>
             </div>
@@ -82,26 +146,43 @@ const ViewOrder = () => {
         <div className="main-content">
           {/* Header */}
           <div className="dashboard-header">
-            <div className="search-bar">
-              <input type="text" placeholder="Search..." />
+            <div className="search-bar" style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+              <input 
+                type="text" 
+                placeholder="Tìm kiếm theo UserID, OrderID, Note, OrderStatus, TotalAmount, DeliveryStatus, DeliveryAddress..." 
+                value={searchKey} 
+                onChange={(e) => setSearchKey(e.target.value)} // Cập nhật state khi người dùng nhập
+                style={{
+                  width: '100%',
+                  padding: '10px 15px',
+                  borderRadius: '5px',
+                  border: '1px solid #ddd',
+                  fontSize: '14px',
+                  color: '#000000',
+                  backgroundColor: '#ffffff',
+                  outline: 'none',
+                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
+                }}
+              />
+              {searchKey && (
+                <button
+                  onClick={handleClearSearch}
+                  style={{
+                    padding: '10px 20px',
+                    backgroundColor: '#6c757d',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '5px',
+                    cursor: 'pointer',
+                    fontSize: '14px'
+                  }}
+                >
+                  Xóa
+                </button>
+              )}
             </div>
           </div>
           
-          {/* Dashboard Title and Actions */}
-          <div className="dashboard-title-bar">
-            <h1>Đơn Hàng</h1>
-            <div className="dashboard-actions">
-              <button className="btn-filter">
-                <FaFilter /> Filter <span className="notification">1</span>
-              </button>
-              <button className="btn-export">
-                <FaFileExport /> Export
-              </button>
-              <button className="btn-create-payment">
-                <FaPlus /> Create payment
-              </button>
-            </div>
-          </div>
           
           {/* Tabs */}
           <div className="dashboard-tabs">
@@ -121,18 +202,18 @@ const ViewOrder = () => {
             <table>
               <thead>
                 <tr>
-                  <th>OrderID</th>
-                  <th>UserID</th>
-                  <th>ProductName</th>
-                  <th>Price</th>
-                  <th>Quantity</th>
-                  <th>VoucherID</th>
-                  <th>TotalAmount</th>
-                  <th>OrderDate</th>
-                  <th>OrderStatus</th>
-                  <th>DeliveryStatus</th>
-                  <th>DeliveryAddress</th>          
-                  <th>Note</th>    
+                  <th>ID ĐƠN HÀNG</th>
+                  <th>ID NGƯỜI DÙNG</th>
+                  <th>TÊN SẢN PHẨM</th>
+                  <th>GIÁ</th>
+                  <th>SỐ LƯỢNG</th>
+                  <th>MÃ GIẢM GIÁ</th>
+                  <th>TỔNG TIỀN</th>
+                  <th>NGÀY ĐẶT HÀNG</th>
+                  <th>TÌNH TRẠNG ĐƠN HÀNG</th>
+                  <th>TÌNH TRẠNG GIAO HÀNG</th>
+                  <th>ĐỊA CHỈ</th>          
+                  <th>GHI CHÚ</th>    
                 </tr>
               </thead>
               <tbody>
@@ -142,14 +223,14 @@ const ViewOrder = () => {
                       Đang tải dữ liệu đơn hàng...
                     </td>
                   </tr>
-                ) : orders.length > 0 ? (
-                  orders.map((order, index) => (
+                ) : filteredOrders().length > 0 ? (
+                  filteredOrders().map((order, index) => (
                     <tr key={order.orderId}>
                       <td>{order.orderId}</td>
                       <td>{order.userId}</td>
-                      <td>{orderItems[index]?.map(item => item.productName).join(', ')}</td>
-                      <td>{orderItems[index]?.map(item => item.price).join(', ')}</td>
-                      <td>{orderItems[index]?.map(item => item.quantity).join(', ')}</td>
+                      <td>{order.items?.$values.map(item => item.productName).join(', ')}</td>
+                      <td>{order.items?.$values.map(item => item.price).join(', ')}</td>
+                      <td>{order.items?.$values.map(item => item.quantity).join(', ')}</td>
                       <td>{order.voucherId}</td>
                       <td>{order.totalAmount}</td>
                       <td>{order.orderDate}</td>
@@ -162,7 +243,7 @@ const ViewOrder = () => {
                 ) : (
                   <tr>
                     <td colSpan="12" className="empty-data-message">
-                      Không có đơn hàng nào.
+                      Chưa có đơn hàng nào.
                     </td>
                   </tr>
                 )}
