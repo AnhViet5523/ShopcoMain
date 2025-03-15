@@ -225,6 +225,24 @@ const Checkout = () => {
     if (!selectedVoucher || !order) return;
 
     try {
+      setVoucherLoading(true);
+      setVoucherError(null);
+      
+      // Kiểm tra xem voucher có hết hạn không
+      const currentDate = new Date();
+      const voucherEndDate = new Date(selectedVoucher.endDate);
+      
+      if (voucherEndDate < currentDate) {
+        setVoucherError('Voucher đã hết hạn sử dụng. Vui lòng chọn voucher khác.');
+        return;
+      }
+      
+      // Nếu đã có voucher được áp dụng trước đó, xóa nó trước
+      if (voucherApplied || order.voucher) {
+        // Có thể cần gọi API để xóa voucher cũ nếu có endpoint này
+        // await orderService.removeVoucher(order.orderId);
+      }
+      
       // Call API to apply voucher to order
       await orderService.applyvoucher(order.orderId, selectedVoucher.voucherId);
       
@@ -237,7 +255,10 @@ const Checkout = () => {
       handleVoucherDialogClose();
     } catch (error) {
       console.error('Error applying voucher:', error);
-      setVoucherError('Failed to apply voucher. Please try again later.');
+      // Hiển thị thông báo lỗi bằng tiếng Việt
+      setVoucherError('Không thể áp dụng voucher. Voucher có thể đã hết hạn hoặc không hợp lệ cho đơn hàng này.');
+    } finally {
+      setVoucherLoading(false);
     }
   };
 
