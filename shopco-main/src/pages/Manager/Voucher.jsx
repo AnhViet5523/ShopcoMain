@@ -126,14 +126,14 @@ const Voucher = () => {
   };
 
   const handleDelete = async (voucherId) => {
-    if (window.confirm('Bạn có chắc chắn muốn xóa voucher này?')) {
+    if (window.confirm('Bạn có chắc chắn muốn thay đổi trạng thái voucher này?')) {
       try {
-        await voucherService.deleteVoucher(voucherId);
-        setVouchers(vouchers.filter(v => v.voucherId !== voucherId));
-        setOriginalVouchers(originalVouchers.filter(v => v.voucherId !== voucherId));
+        await voucherService.toggleVoucherStatus(voucherId);
+        // Trigger refresh data để cập nhật lại danh sách
+        setRefreshData(prev => !prev);
       } catch (error) {
-        console.error('Lỗi khi xóa voucher:', error);
-        alert('Không thể xóa voucher. Vui lòng thử lại sau.');
+        console.error('Lỗi khi thay đổi trạng thái voucher:', error);
+        alert('Không thể thay đổi trạng thái voucher. Vui lòng thử lại sau.');
       }
     }
   };

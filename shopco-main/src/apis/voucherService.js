@@ -89,15 +89,24 @@ const voucherService = {
             throw error;
         }
     },
-    deleteVoucher: async (id) => {
+    toggleVoucherStatus: async (id) => {
         try {
-            const response = await axiosClient.delete(`/api/Voucher/${id}`);
+            const response = await axiosClient.patch(`/api/Voucher/${id}/toggle-status`);
             return response;
         } catch (error) {
             console.error('Error:', error);
             throw error;
         }
-    }
+    },
+    // deleteVoucher: async (id) => {
+    //     try {
+    //         const response = await axiosClient.delete(`/api/Voucher/${id}`);
+    //         return response;
+    //     } catch (error) {
+    //         console.error('Error:', error);
+    //         throw error;
+    //     }
+    // }
 };
 
 export default voucherService; 

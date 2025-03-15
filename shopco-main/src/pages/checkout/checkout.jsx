@@ -54,19 +54,30 @@ const Checkout = () => {
   const userEmail = searchParams.get('email');
   const userPhone = searchParams.get('phone');
   const userAddress = searchParams.get('address');
+  const [note, setNote] = useState('');
 
   useEffect(() => {
-
-
     // Mark component as mounted
     isMounted.current = true;
     
+    // Kiểm tra user đã login chưa
+    const user = JSON.parse(localStorage.getItem('user'));
+    if (!user || !user.userId) {
+      navigate('/login'); // Chuyển về trang login nếu chưa đăng nhập
+      return;
+    }
+
     // Only fetch data if no request is in progress and orderId exists
     if (!requestInProgress.current && orderId) {
       fetchOrderById(orderId);
     } else if (!orderId) {
-      // If no orderId is provided, we're not loading anymore
       setLoading(false);
+    }
+    
+    // Get note from URL params
+    const noteFromUrl = searchParams.get('note');
+    if (noteFromUrl) {
+      setNote(noteFromUrl);
     }
     
     // Cleanup function
@@ -76,41 +87,33 @@ const Checkout = () => {
   }, [orderId]);
 
   const fetchOrderById = async (id) => {
-    // lấy dữ liệu từ orderID,
-    // dựa vào dữ liệu, mình xem nó phù hợp với các voucher nào
-    // gọi api để lấy cái vourchers
-    // khi mà chọn voucher, mình call api apply-voucher
-    // bấm vào nút thanh tóan, mình call api confirm-payment
-
-    // If a request is already in progress, don't send a new one
     if (requestInProgress.current) return;
-    
-    // Mark that a request is in progress
     requestInProgress.current = true;
     
     try {
       setLoading(true);
-      console.log('Fetching order with ID:', id);
+      const user = JSON.parse(localStorage.getItem('user'));
       const response = await orderService.getOrderById(id);
-      console.log('Order response:', response);
       
       if (response) {
         setOrder(response);
         
-        // Set delivery address from order
-        if (response.deliveryAddress) {
+        // Set delivery address từ thông tin user đã login
+        if (user && user.address) {
+          setDeliveryAddress(user.address);
+        } else if (response.deliveryAddress) {
           setDeliveryAddress(response.deliveryAddress);
         } else {
-          setDeliveryAddress(userAddress || '6 Vĩnh Khánh Phường 9 Quận 4 Hồ Chí Minh 700000, Việt Nam');
+          setDeliveryAddress(userAddress || '');
         }
         
-        // Set recipient name and phone number from user info
-        if (response.user) {
-          setRecipientName(`${response.user.firstName} ${response.user.lastName}`);
-          setPhoneNumber(response.user.phoneNumber);
+        // Set recipient name và phone từ thông tin user đã login
+        if (user) {
+          setRecipientName(`${user.firstName} ${user.lastName}`);
+          setPhoneNumber(user.phoneNumber);
         } else {
-          setRecipientName(userName || 'Nguyễn');
-          setPhoneNumber(userPhone || '0386874065');
+          setRecipientName(userName || '');
+          setPhoneNumber(userPhone || '');
         }
         
         // Set payment method if available in the order
@@ -132,7 +135,6 @@ const Checkout = () => {
       if (isMounted.current) {
         setLoading(false);
       }
-      // Mark that no request is in progress
       requestInProgress.current = false;
     }
   };
@@ -265,14 +267,25 @@ const Checkout = () => {
   const handlePlaceOrder = async () => {
     try {
       if (order && order.orderId) {
-        // Call API to confirm payment
-        //max 30 character for delivery address
-        await orderService.confirmpayment(order.orderId, paymentMethod, deliveryAddress.substring(0, 30));
+        // Đảm bảo dữ liệu đúng format và kiểu dữ liệu
+        const paymentData = {
+          orderId: order.orderId,
+          deliveryAddress: deliveryAddress?.trim() || "", // Đảm bảo không null/undefined
+          paymentMethod: paymentMethod?.trim() || "Thanh toán khi nhận hàng (COD)", // Giá trị mặc định
+          note: note?.trim() || "" // Đảm bảo không null/undefined
+        };
+
+        console.log('Payment Data:', paymentData); // Log để debug
+
+        // Gọi API
+        const response = await orderService.confirmpayment(paymentData);
+        console.log('API Response:', response); // Log response
+
         setThankYouDialogOpen(true);
       }
     } catch (error) {
-      console.error('Error confirming payment:', error);
-      setError('Failed to place order. Please try again later.');
+      console.error('Error details:', error.response?.data); // Log chi tiết lỗi
+      setError('Không thể xác nhận thanh toán. Vui lòng thử lại sau.');
     }
   };
 
@@ -468,6 +481,17 @@ const Checkout = () => {
                 </Typography>
               </Box>
               
+              <TextField
+                label="Ghi chú đơn hàng"
+                fullWidth
+                multiline
+                rows={2}
+                margin="normal"
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                sx={{ mb: 2 }}
+              />
+
               <Button 
                 variant="contained" 
                 fullWidth 

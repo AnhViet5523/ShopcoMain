@@ -255,23 +255,19 @@ const orderService = {
                 productId,
                 quantity
             });
-            return response;
+            return response.data || response;
         } catch (error) {
             console.error('Error with buy now:', error);
             throw error;
         }
     },
-    confirmpayment: async (orderId,deliveryAddress) => {
-        try {
-            const response = await axiosClient.post(`/api/Orders/confirm-payment`,{
-                orderId,
-                deliveryAddress
-            });
-            return response; 
-        } catch (error) {
-            console.error('Error fetching user:', error);
-            throw error; 
-        }
+    confirmpayment: async (paymentData) => {
+        const response = await axiosClient.post('/api/Orders/confirm-payment', paymentData, {
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        return response.data;
     },
     getOrderItems: async (orderId) => {
         try {
