@@ -180,16 +180,33 @@ export default function ProductDetail() {
       setQuantity(1);
     } catch (error) {
       console.error('Error adding to cart:', error);
-      alert('Có lỗi xảy ra khi thêm vào giỏ hàng. Vui lòng thử lại sau.');
+      alert(`Có lỗi xảy ra khi thêm vào giỏ hàng. ${error}`);
     }
   };
 
   const handleBuyNow = async () => {
-    // Logic để thêm sản phẩm vào giỏ hàng nếu cần
-    // ...
-    await addToCart();
-    // Chuyển hướng đến trang checkout
-    navigate('/cart');
+    if (!product) return;
+    
+    try {
+      // Get user ID from localStorage
+      const user = JSON.parse(localStorage.getItem('user'));
+      const userId = user?.userId || 1; // Fallback to 1 if no user ID found
+      
+      // Call the API to buy now
+      const response = await orderService.buyNow(userId, product.productId, quantity);
+      
+      // Extract the order ID from the response
+      const orderId = response.order.orderId;
+      
+      // Show success message
+      alert(`Mua hàng thành công, vui lòng thanh toán!`);
+      
+      // Navigate to checkout page with the order ID
+      navigate(`/checkout?orderId=${orderId}`);
+    } catch (error) {
+      console.error('Error with buy now:', error);
+      alert(`Có lỗi xảy ra khi mua hàng. ${error}`);
+    }
   };
 
   const handleOpenModal = () => setIsModalOpen(true);
