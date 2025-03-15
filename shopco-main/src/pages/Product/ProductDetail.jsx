@@ -23,9 +23,6 @@ import productService from '../../apis/productService';
 import orderService from '../../apis/orderService';
 import reviewService from "../../apis/reviewService";
 
-
-
-// Create a separate memoized component for the timer
 const FlashDealTimer = memo(({ initialHours = 0, initialMinutes = 0, initialSeconds = 45 }) => {
   const [time, setTime] = useState({
     hours: initialHours,
@@ -69,7 +66,6 @@ const FlashDealTimer = memo(({ initialHours = 0, initialMinutes = 0, initialSeco
   );
 });
 
-// Add display name and prop types
 FlashDealTimer.displayName = 'FlashDealTimer';
 FlashDealTimer.propTypes = {
   initialHours: PropTypes.number,
@@ -91,6 +87,8 @@ export default function ProductDetail() {
   const [reviewContent, setReviewContent] = useState('');
   const [reviewRating, setReviewRating] = useState(0);
   const [totalSold, setTotalSold] = useState(0);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [productImages, setProductImages] = useState([]);
 
   useEffect(() => {
     isMounted.current = true;
@@ -100,17 +98,34 @@ export default function ProductDetail() {
     return () => {
       isMounted.current = false;
     };
-  }, []);
+  }, [id]);
 
   const fetchProduct = async () => {
     if (requestInProgress.current) return;
     requestInProgress.current = true;
     try {
       setLoading(true);
+      console.log(`Fetching product with ID: ${id}`);
       const fetchedProduct = await productService.getProductById(id);
+      console.log('Fetched product:', fetchedProduct);
+      
       const fetchedReviews = await reviewService.getReviewsProductId(id);
       const totalSold = await orderService.countBoughtProducts(id);
-      if (isMounted.current) {
+      
+      if (isMounted.current && fetchedProduct) {
+        // Xử lý hình ảnh sản phẩm
+        let images = [];
+        if (fetchedProduct.images && fetchedProduct.images.length > 0) {
+          images = fetchedProduct.images;
+        } else if (fetchedProduct.imgURL) {
+          images = [{ imgUrl: fetchedProduct.imgURL }];
+        } else {
+          images = [{ imgUrl: '/images/default-product.jpg' }];
+        }
+        
+        setProductImages(images);
+        console.log('Product images:', images);
+        
         setProduct({
           ...fetchedProduct,
           discountedPrice: fetchedProduct.price - (fetchedProduct.price * 15 / 100),
@@ -128,7 +143,7 @@ export default function ProductDetail() {
             }
           ]
         });
-        setReviews(fetchedReviews);
+        setReviews(fetchedReviews || []);
         if (totalSold) {
           setTotalSold(totalSold.totalSold);
         }
@@ -142,7 +157,9 @@ export default function ProductDetail() {
       requestInProgress.current = false;
     }
   };
-  console.log("review",reviews);
+  console.log("review", reviews);
+  console.log("product", product);
+  console.log("productImages", productImages);
 
   if (loading) {
     return <Typography>Đang tải sản phẩm...</Typography>;
@@ -180,33 +197,15 @@ export default function ProductDetail() {
       setQuantity(1);
     } catch (error) {
       console.error('Error adding to cart:', error);
-      alert(`Có lỗi xảy ra khi thêm vào giỏ hàng. ${error}`);
+      alert('Có lỗi xảy ra khi thêm vào giỏ hàng. Vui lòng thử lại sau.');
     }
   };
 
   const handleBuyNow = async () => {
-    if (!product) return;
-    
-    try {
-      // Get user ID from localStorage
-      const user = JSON.parse(localStorage.getItem('user'));
-      const userId = user?.userId || 1; // Fallback to 1 if no user ID found
-      
-      // Call the API to buy now
-      const response = await orderService.buyNow(userId, product.productId, quantity);
-      
-      // Extract the order ID from the response
-      const orderId = response.order.orderId;
-      
-      // Show success message
-      alert(`Mua hàng thành công, vui lòng thanh toán!`);
-      
-      // Navigate to checkout page with the order ID
-      navigate(`/checkout?orderId=${orderId}`);
-    } catch (error) {
-      console.error('Error with buy now:', error);
-      alert(`Có lỗi xảy ra khi mua hàng. ${error}`);
-    }
+    // Logic để thêm sản phẩm vào giỏ hàng nếu cần
+    await addToCart();
+    // Chuyển hướng đến trang checkout
+    navigate('/cart');
   };
 
   const handleOpenModal = () => setIsModalOpen(true);
@@ -236,10 +235,27 @@ export default function ProductDetail() {
     }
   };
 
-  // Helper function to check if image exists
-  const getImageUrl = (imgUrl) => {
-    if (!imgUrl) return null;
-    return `/images/products/${imgUrl}.jpg`;
+  // Helper function to get image URL
+  const getImageUrl = (image) => {
+    if (!image) return '/images/default-product.jpg';
+    
+    // Nếu là đường dẫn đầy đủ (bắt đầu bằng http hoặc https)
+    if (typeof image === 'string') {
+      if (image.startsWith('http')) return image;
+      return image;
+    }
+    
+    // Nếu là object có thuộc tính imgUrl
+    if (image.imgUrl) {
+      if (image.imgUrl.startsWith('http')) return image.imgUrl;
+      return image.imgUrl;
+    }
+    
+    return '/images/default-product.jpg';
+  };
+
+  const handleSelectImage = (index) => {
+    setSelectedImageIndex(index);
   };
 
   return (
@@ -287,31 +303,45 @@ export default function ProductDetail() {
                         }}
                       >
                         <Typography variant="caption" color="#bdbdbd">
-                          Loading...22
+                          Loading...
                         </Typography>
                       </Box>
                     </Box>
                   ))
                 ) : (
                   // Actual thumbnails or placeholders
-                  Array(4).fill().map((_, index) => (
-                    <Box 
-                      key={index} 
-                      sx={{ 
-                        mb: 1, 
-                        border: '1px solid #eee',
-                        background:'gray',
-                        p: 1
-                      }}
-                    >
-                      {getImageUrl(product.imgUrl) ? (
+                  productImages.length > 0 ? 
+                    productImages.map((image, index) => (
+                      <Box 
+                        key={index} 
+                        sx={{ 
+                          mb: 1, 
+                          border: selectedImageIndex === index ? '2px solid #1976d2' : '1px solid #eee',
+                          p: 1,
+                          cursor: 'pointer'
+                        }}
+                        onClick={() => handleSelectImage(index)}
+                      >
                         <img
-                          src={getImageUrl(product.imgUrl)}
+                          src={getImageUrl(image)}
                           alt={`Thumbnail ${index + 1}`}
-                          style={{ width: '100%', cursor: 'pointer' }}
-                
+                          style={{ width: '100%', height: '80px', objectFit: 'cover' }}
+                          onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.src = '/images/default-product.jpg';
+                          }}
                         />
-                      ) : (
+                      </Box>
+                    )) : 
+                    Array(4).fill().map((_, index) => (
+                      <Box 
+                        key={index} 
+                        sx={{ 
+                          mb: 1, 
+                          border: '1px solid #eee',
+                          p: 1
+                        }}
+                      >
                         <Box 
                           sx={{ 
                             bgcolor: '#f5f5f5', 
@@ -325,18 +355,17 @@ export default function ProductDetail() {
                             No Image
                           </Typography>
                         </Box>
-                      )}
-                    </Box>
-                  ))
+                      </Box>
+                    ))
                 )}
               </Box>
               
               {/* Main image */}
-              <Box sx={{ width: '80%',background:'gray' }}>
+              <Box sx={{ width: '80%' }}>
                 {loading ? (
                   <Box 
                     sx={{ 
-                      bgcolor: 'red', 
+                      bgcolor: '#f0f0f0', 
                       height: 400, 
                       width: '100%',
                       display: 'flex',
@@ -350,13 +379,32 @@ export default function ProductDetail() {
                     </Typography>
                   </Box>
                 ) : (
-                  getImageUrl(product.imgUrl) ? (
-                    <img
-                      src={getImageUrl(product.imgUrl)}
-                      alt={product.productName}
-                      style={{ width: '100%', cursor: 'pointer' }}
-      
-                    />
+                  productImages.length > 0 ? (
+                    <Box
+                      sx={{
+                        height: 400,
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        border: '1px solid #eee',
+                        overflow: 'hidden'
+                      }}
+                    >
+                      <img
+                        src={getImageUrl(productImages[selectedImageIndex])}
+                        alt={product.productName}
+                        style={{ 
+                          maxWidth: '100%', 
+                          maxHeight: '100%', 
+                          objectFit: 'contain' 
+                        }}
+                        onError={(e) => {
+                          e.target.onerror = null;
+                          e.target.src = '/images/default-product.jpg';
+                        }}
+                      />
+                    </Box>
                   ) : (
                     <Box 
                       sx={{ 
@@ -467,7 +515,19 @@ export default function ProductDetail() {
                 {/* Product Specifications */}
                 <Box sx={{ mb: 3 }}>
                   <Typography variant="body1">
-                    Dung tích: {product?.capacity}g
+                    <strong>Dung tích:</strong> {product?.capacity || 'Chưa có thông tin'}
+                  </Typography>
+                  <Typography variant="body1" sx={{ mt: 1 }}>
+                    <strong>Thương hiệu:</strong> {product?.brand || 'Chưa có thông tin'}
+                  </Typography>
+                  <Typography variant="body1" sx={{ mt: 1 }}>
+                    <strong>Xuất xứ:</strong> {product?.origin || 'Chưa có thông tin'}
+                  </Typography>
+                  <Typography variant="body1" sx={{ mt: 1 }}>
+                    <strong>Loại da:</strong> {product?.skinType || 'Chưa có thông tin'}
+                  </Typography>
+                  <Typography variant="body1" sx={{ mt: 1 }}>
+                    <strong>Trạng thái:</strong> {product?.status === 'Available' ? 'Còn hàng' : 'Hết hàng'}
                   </Typography>
                 </Box>
                 
@@ -573,22 +633,11 @@ export default function ProductDetail() {
             <>
               {tabValue === 0 && (
                 <Box sx={{ p: 2 }}>
-                  <Typography variant="body1">{product?.description}</Typography>
-                  <Typography variant="body1" sx={{ mt: 2 }}>{product?.ingredients}</Typography>
+                  <Typography variant="body1">{product?.description || 'Chưa có thông tin mô tả sản phẩm.'}</Typography>
+                  <Typography variant="body1" sx={{ mt: 2 }}>{product?.ingredients || 'Chưa có thông tin về thành phần sản phẩm.'}</Typography>
                 </Box>
               )}
               
-              {/* {
-    "$id": "2",
-    "reviewId": 16,
-    "userId": 4,
-    "productId": 7,
-    "rating": 5,
-    "reviewDate": "2025-03-12T12:45:04.397",
-    "reviewComment": "viet anh review",
-    "product": null,
-    "user": null
-} */}
               {tabValue === 1 && (
                 <Box sx={{ p: 2 }}>
                   {reviews?.map((review, index) => (
@@ -628,21 +677,29 @@ export default function ProductDetail() {
                   {reviews?.length === 0 && (
                     <Typography>Chưa có đánh giá nào</Typography>
                   )}
-                  <Button onClick={handleOpenModal}>Add Review</Button>
+                  <Button 
+                    variant="contained" 
+                    color="primary" 
+                    onClick={handleOpenModal}
+                    sx={{ mt: 2 }}
+                  >
+                    Viết đánh giá
+                  </Button>
                   <Modal open={isModalOpen} onClose={handleCloseModal}>
                     <Box sx={{ p: 4, bgcolor: 'background.paper', borderRadius: 1, boxShadow: 24, maxWidth: 400, mx: 'auto', mt: 4 }}>
                      <Box>
-                     <Typography variant="h6" gutterBottom>Write a Review</Typography>
+                     <Typography variant="h6" gutterBottom>Viết đánh giá</Typography>
                       <TextField
                         fullWidth
                         multiline
                         rows={4}
                         variant="outlined"
-                        label="Review"
+                        label="Nhận xét của bạn"
                         value={reviewContent}
                         onChange={(e) => setReviewContent(e.target.value)}
                         sx={{ mb: 2 }}
                       />
+                      <Typography variant="body2" sx={{ mb: 1 }}>Đánh giá của bạn:</Typography>
                       <Rating
                         value={reviewRating}
                         onChange={(e, newValue) => setReviewRating(newValue)}
@@ -650,17 +707,14 @@ export default function ProductDetail() {
                       />
                      </Box>
                       <Button variant="contained" color="primary" onClick={handleReviewSubmit}>Xác nhận</Button>
-
-
                     </Box>
-
                   </Modal>
                 </Box>
               )}
               
               {tabValue === 2 && (
                 <Box sx={{ p: 2 }}>
-                  <Typography variant="body1">{product?.usageInstructions}</Typography>
+                  <Typography variant="body1">{product?.usageInstructions || 'Chưa có hướng dẫn sử dụng sản phẩm.'}</Typography>
                 </Box>
               )}
             </>
@@ -671,4 +725,3 @@ export default function ProductDetail() {
     </>
   );
 }
-
