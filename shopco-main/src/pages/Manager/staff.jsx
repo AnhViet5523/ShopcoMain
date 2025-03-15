@@ -65,6 +65,7 @@ const Staff = () => {
   const filteredStaff = staff.filter(member => {
     const fullName = (member.fullName || '').toLowerCase();
     const email = (member.email || '').toLowerCase();
+    const password = (member.password || '').toLowerCase();
     const phone = (member.phone || '').toLowerCase();
     const address = (member.address || '').toLowerCase();
     const searchTermLower = searchTerm.toLowerCase();
@@ -72,6 +73,7 @@ const Staff = () => {
     return (
       fullName.includes(searchTermLower) ||
       email.includes(searchTermLower) ||
+      password.includes(searchTermLower) ||
       phone.includes(searchTermLower) ||
       address.includes(searchTermLower)
     );
@@ -83,10 +85,19 @@ const Staff = () => {
         {/* Sidebar */}
         <div className="sidebar">
           <div className="logo-container">
-            <div className="logo">
-              <img src="/images/logo.png" alt="Beauty Cosmetics" />
+            <div className="logo" style={{ marginRight: '15px', cursor: 'pointer' }} onClick={() => navigate("/")}>
+              <img 
+                src="/images/logo.png" 
+                alt="Beauty Cosmetics"
+                style={{
+                  width: 60, 
+                  height: 60, 
+                  borderRadius: '50%',
+                  objectFit: 'cover'
+                }}
+              />
             </div>
-            <div className="brand">
+            <div className="brand" style={{ cursor: 'pointer' }} onClick={() => navigate("/")}>
               <div>BEAUTY</div>
               <div>COSMETICS</div>
             </div>
@@ -157,6 +168,7 @@ const Staff = () => {
                   <th>TÊN</th>
                   <th>HỌ VÀ TÊN</th>
                   <th>EMAIL</th>
+                  <th>MẬT KHẨU</th>
                   <th>VAI TRÒ</th>
                   <th>SỐ ĐIỆN THOẠI</th>
                   <th>ĐỊA CHỈ</th>
@@ -184,38 +196,42 @@ const Staff = () => {
                       <td>{member.name || '-'}</td>
                       <td>{member.fullName || member.name || '-'}</td>
                       <td>{member.email || '-'}</td>
+                      <td>{member.password || '-'}</td>
                       <td>{member.role || '-'}</td>
                       <td>{member.phone || '-'}</td>
                       <td>{member.address || '-'}</td>
                       <td>{member.registrationDate || '-'}</td>
                       <td>
-                        <button
-                          onClick={() => handleEdit(member.userId)}
-                          style={{
-                            padding: '5px 10px',
-                            backgroundColor: '#007bff', // Màu xanh cho nút sửa
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '3px',
-                            cursor: 'pointer',
-                            marginRight: '5px'
-                          }}
-                        >
-                          Sửa
-                        </button>
-                        <button
-                          onClick={() => handleDelete(member.userId)}
-                          style={{
-                            padding: '5px 10px',
-                            backgroundColor: '#dc3545', // Màu đỏ cho nút xóa
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '3px',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          Xóa
-                        </button>
+                        <div style={{ display: 'flex', justifyContent: 'center', gap: '8px' }}>
+                          <button
+                            onClick={() => handleEdit(member.userId)}
+                            style={{
+                              padding: '5px 10px',
+                              backgroundColor: '#007bff',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '3px',
+                              cursor: 'pointer',
+                              minWidth: '60px'
+                            }}
+                          >
+                            Sửa
+                          </button>
+                          <button
+                            onClick={() => handleDelete(member.userId)}
+                            style={{
+                              padding: '5px 10px',
+                              backgroundColor: '#dc3545',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '3px',
+                              cursor: 'pointer',
+                              minWidth: '60px'
+                            }}
+                          >
+                            Xóa
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))

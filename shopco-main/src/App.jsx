@@ -44,6 +44,13 @@ import ViewCustomer from "./pages/Manager/ViewCustomer";
 import ViewSupport from "./pages/Manager/ViewSupport";
 import Voucher from "./pages/Manager/Voucher";
 import Feedback from "./pages/Manager/Feedback";
+import OrderStaff from "./pages/Staff/OrderStaff";
+import CustomerStaff from "./pages/Staff/CustomerStaff";
+import ProductStaff from "./pages/Staff/ProductStaff";
+import FeedbackStaff from "./pages/Staff/FeedbackStaff";
+import SupportStaff from "./pages/Staff/SupportStaff";
+import VoucherStaff from "./pages/Staff/VoucherStaff";
+import Unauthorized from "./components/Unauthorized";
 
 // Component để hủy request khi chuyển trang
 function NavigationHandler() {
@@ -130,6 +137,7 @@ export default function App() {
           <Route path="/policy" element={<PrivacyPolicy />} />
           <Route path="/complaint" element={<Complaint />} />
           <Route path="/return" element={<Return />} />
+          <Route path="/unauthorized" element={<Unauthorized />} />
 
           {/* Auth Routes */}
           <Route
@@ -143,7 +151,7 @@ export default function App() {
             }
           />
 
-          {/* Protected Routes */}
+          {/* Protected Routes cho người dùng đã đăng nhập */}
           <Route
             path="/cart"
             element={
@@ -176,16 +184,138 @@ export default function App() {
               </ProtectedRoute>
             }
           />
-          <Route path="/checkout/:orderId" element={<Checkout />} />
-          <Route path="/checkout" element={<Checkout />} />
-          <Route path="/viewOrder" element={<ViewOrder />} />
-          <Route path="/product" element={<Product />} />
-          <Route path="/revenue" element={<Revenue />} />
-          <Route path="/staff" element={<Staff />} />
-          <Route path="/viewCustomer" element={<ViewCustomer />} />
-          <Route path="/viewSupport" element={<ViewSupport />} />
-          <Route path="/voucher" element={<Voucher />} />
-          <Route path="/feedback" element={<Feedback />} />
+          <Route 
+            path="/checkout/:orderId" 
+            element={
+              <ProtectedRoute>
+                <Checkout />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/checkout" 
+            element={
+              <ProtectedRoute>
+                <Checkout />
+              </ProtectedRoute>
+            } 
+          />
+          
+          {/* Protected Routes cho Manager */}
+          <Route
+            path="/viewOrder"
+            element={
+              <ProtectedRoute requiredRole="Manager">
+                <ViewOrder />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/product"
+            element={
+              <ProtectedRoute requiredRole="Manager">
+                <Product />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/revenue"
+            element={
+              <ProtectedRoute requiredRole="Manager">
+                <Revenue />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/staff"
+            element={
+              <ProtectedRoute requiredRole="Manager">
+                <Staff />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/viewCustomer"
+            element={
+              <ProtectedRoute requiredRole="Manager">
+                <ViewCustomer />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/viewSupport"
+            element={
+              <ProtectedRoute requiredRole="Manager">
+                <ViewSupport />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/voucher"
+            element={
+              <ProtectedRoute requiredRole="Manager">
+                <Voucher />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/feedback"
+            element={
+              <ProtectedRoute requiredRole="Manager">
+                <Feedback />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Protected Routes cho Staff */}
+          <Route
+            path="/orderStaff"
+            element={
+              <ProtectedRoute requiredRole="Staff">
+                <OrderStaff />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/customerStaff"
+            element={
+              <ProtectedRoute requiredRole="Staff">
+                <CustomerStaff />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/productStaff"
+            element={
+              <ProtectedRoute requiredRole="Staff">
+                <ProductStaff />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/feedbackStaff"
+            element={
+              <ProtectedRoute requiredRole="Staff">
+                <FeedbackStaff />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/supportStaff"
+            element={
+              <ProtectedRoute requiredRole="Staff">
+                <SupportStaff />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/voucherStaff"
+            element={
+              <ProtectedRoute requiredRole="Staff">
+                <VoucherStaff />
+              </ProtectedRoute>
+            }
+          />
         </Routes>
       </BrowserRouter>
     </ErrorBoundary>

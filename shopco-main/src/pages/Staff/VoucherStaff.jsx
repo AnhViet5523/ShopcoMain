@@ -9,7 +9,7 @@ import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import dayjs from 'dayjs';
 
-const Voucher = () => {
+const VoucherStaff = () => {
   const navigate = useNavigate();
   const [activeItem, setActiveItem] = useState('');
   const [vouchers, setVouchers] = useState([]);
@@ -37,14 +37,12 @@ const Voucher = () => {
   const [refreshData, setRefreshData] = useState(false);
 
   const sidebarItems = [
-    { id: 'revenue', name: 'Doanh thu', icon: '📊' },
-    { id: 'staff', name: 'Nhân viên', icon: '👤' },
-    { id: 'viewOrder', name: 'Đơn hàng', icon: '📋' },
-    { id: 'product', name: 'Sản phẩm', icon: '📦' },
-    { id: 'viewCustomer', name: 'Hồ sơ khách hàng', icon: '📝' },
-    { id: 'viewSupport', name: 'Đơn hỗ trợ', icon: '📫' },
-    { id: 'voucher', name: 'Vouchers', icon: '🎫' },
-    { id: 'feedback', name: 'Feedback', icon: '📢' },
+    { id: 'orderStaff', name: 'Đơn hàng', icon: '📋' },
+    { id: 'productStaff', name: 'Sản phẩm', icon: '📦' },
+    { id: 'customerStaff', name: 'Hồ sơ khách hàng', icon: '📝' },
+    { id: 'supportStaff', name: 'Đơn hỗ trợ', icon: '📫' },
+    { id: 'voucherStaff', name: 'Vouchers', icon: '🎫' },
+    { id: 'feedbackStaff', name: 'Feedback', icon: '📢' },
   ];
 
   useEffect(() => {
@@ -246,11 +244,17 @@ const Voucher = () => {
             </div>
           </div>
           
-          <div className="sidebar-title">MANAGER</div>
+          <div className="sidebar-title">STAFF</div>
           
           <div className="sidebar-menu">
             {sidebarItems.map((item) => (
-              <div key={item.id} className={`sidebar-item ${activeItem === item.id ? 'active' : ''}`} onClick={() => { setActiveItem(item.id); navigate(`/${item.id}`); }} style={{ cursor: 'pointer' }}>
+              <div key={item.id} 
+                   className={`sidebar-item ${activeItem === item.id ? 'active' : ''}`} 
+                   onClick={() => { 
+                     setActiveItem(item.id); 
+                     navigate(`/${item.id}`);  // Đảm bảo đường dẫn phù hợp với route
+                   }} 
+                   style={{ cursor: 'pointer' }}>
                 <span className="sidebar-icon">{item.icon}</span>
                 <span className="sidebar-text">{item.name}</span>
               </div>
@@ -511,4 +515,4 @@ const Voucher = () => {
   );
 };
 
-export default Voucher;
+export default VoucherStaff;

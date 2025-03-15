@@ -28,10 +28,19 @@ const Revenue = () => {
       {/* Sidebar */}
       <div className="sidebar">
         <div className="logo-container">
-          <div className="logo">
-            <img src="/images/logo.png" alt="Beauty Cosmetics" />
+          <div className="logo" style={{ marginRight: '15px', cursor: 'pointer' }} onClick={() => navigate("/")}>
+            <img 
+              src="/images/logo.png" 
+              alt="Beauty Cosmetics"
+              style={{
+                width: 60, 
+                height: 60, 
+                borderRadius: '50%',
+                objectFit: 'cover'
+              }}
+            />
           </div>
-          <div className="brand">
+          <div className="brand" style={{ cursor: 'pointer' }} onClick={() => navigate("/")}>
             <div>BEAUTY</div>
             <div>COSMETICS</div>
           </div>
