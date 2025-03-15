@@ -3,6 +3,11 @@ import { Box } from '@mui/material';
 import './Manager.css';
 import { useState, useEffect } from 'react';
 import voucherService from '../../apis/voucherService';
+import { Dialog, DialogActions, DialogContent, DialogTitle, TextField, Button } from '@mui/material';
+import { DatePicker } from '@mui/x-date-pickers';
+import { LocalizationProvider } from '@mui/x-date-pickers';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import dayjs from 'dayjs';
 
 const Voucher = () => {
   const navigate = useNavigate();
@@ -12,6 +17,24 @@ const Voucher = () => {
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [originalVouchers, setOriginalVouchers] = useState([]);
+
+  // State cho dialog thêm voucher
+  const [openDialog, setOpenDialog] = useState(false);
+  const [newVoucher, setNewVoucher] = useState({
+    voucherName: '',
+    discountPercent: '',
+    minOrderAmount: '',
+    startDate: null,
+    endDate: null,
+    quantity: '',
+    description: '',
+    status: 'Active'
+  });
+
+  const [editingVoucherId, setEditingVoucherId] = useState(null);
+
+  // Thêm state để theo dõi khi nào cần refresh dữ liệu
+  const [refreshData, setRefreshData] = useState(false);
 
   const sidebarItems = [
     { id: 'revenue', name: 'Doanh thu', icon: '📊' },
@@ -47,7 +70,7 @@ const Voucher = () => {
     };
 
     fetchVouchers();
-  }, []);
+  }, [refreshData]);
 
   useEffect(() => {
     if (!searchTerm.trim()) {
@@ -84,12 +107,21 @@ const Voucher = () => {
     setVouchers(originalVouchers);
   };
 
-  const handleEdit = async (voucherId) => {
-    try {
-      console.log(`Chỉnh sửa voucher có ID: ${voucherId}`);
-      // TODO: Implement edit logic
-    } catch (error) {
-      console.error('Lỗi khi chỉnh sửa voucher:', error);
+  const handleEdit = (voucherId) => {
+    const voucherToEdit = vouchers.find(v => v.voucherId === voucherId);
+    if (voucherToEdit) {
+      setNewVoucher({
+        voucherName: voucherToEdit.voucherName,
+        discountPercent: voucherToEdit.discountPercent,
+        minOrderAmount: voucherToEdit.minOrderAmount,
+        startDate: voucherToEdit.startDate ? dayjs(voucherToEdit.startDate) : null,
+        endDate: voucherToEdit.endDate ? dayjs(voucherToEdit.endDate) : null,
+        quantity: voucherToEdit.quantity,
+        description: voucherToEdit.description,
+        status: voucherToEdit.status
+      });
+      setEditingVoucherId(voucherId);
+      setOpenDialog(true);
     }
   };
 
@@ -107,8 +139,87 @@ const Voucher = () => {
   };
 
   const handleAdd = () => {
-    console.log('Thêm voucher mới');
-    // TODO: Implement add logic
+    setOpenDialog(true); // Mở dialog khi nhấn nút "Thêm Voucher"
+  };
+
+  const handleDialogClose = () => {
+    setOpenDialog(false);
+    setNewVoucher({
+      voucherName: '',
+      discountPercent: '',
+      minOrderAmount: '',
+      startDate: null,
+      endDate: null,
+      quantity: '',
+      description: '',
+      status: 'Active'
+    }); // Đặt lại giá trị voucher mới
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setNewVoucher((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleDateChange = (name, value) => {
+    setNewVoucher((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleKeyPress = (e) => {
+    const charCode = e.which ? e.which : e.keyCode;
+    if (charCode < 48 || charCode > 57) {
+      e.preventDefault();
+    }
+  };
+
+  const handleSubmit = async () => {
+    // Kiểm tra các trường bắt buộc
+    if (!newVoucher.voucherName || !newVoucher.discountPercent || !newVoucher.minOrderAmount || 
+        !newVoucher.startDate || !newVoucher.endDate || !newVoucher.quantity) {
+      alert('Vui lòng điền đầy đủ thông tin.');
+      return;
+    }
+
+    // Kiểm tra ngày kết thúc phải sau ngày bắt đầu
+    if (dayjs(newVoucher.endDate).isBefore(dayjs(newVoucher.startDate))) {
+      alert('Ngày kết thúc phải sau ngày bắt đầu.');
+      return;
+    }
+
+    // Chuẩn bị dữ liệu để gửi đi
+    const voucherData = {
+      voucherName: newVoucher.voucherName,
+      discountPercent: parseInt(newVoucher.discountPercent),
+      minOrderAmount: parseInt(newVoucher.minOrderAmount),
+      startDate: dayjs(newVoucher.startDate).format(),
+      endDate: dayjs(newVoucher.endDate).format(),
+      quantity: parseInt(newVoucher.quantity),
+      description: newVoucher.description,
+      status: newVoucher.status
+    };
+
+    try {
+      if (editingVoucherId) {
+        // Cập nhật voucher
+        await voucherService.updateVoucher(editingVoucherId, voucherData);
+        alert('Đã cập nhật voucher thành công');
+      } else {
+        // Thêm voucher mới
+        await voucherService.createVoucher(voucherData);
+        alert('Đã thêm voucher thành công');
+      }
+      
+      // Đóng dialog và cập nhật state
+      setEditingVoucherId(null);
+      handleDialogClose();
+      
+      // Trigger refresh data
+      setRefreshData(prev => !prev);
+      
+    } catch (error) {
+      console.error('Lỗi khi thêm hoặc cập nhật voucher:', error.response ? error.response.data : error.message);
+      alert('Không thể thêm hoặc cập nhật voucher. Vui lòng thử lại sau.');
+    }
   };
 
   return (
@@ -249,7 +360,7 @@ const Voucher = () => {
                       <td>{voucher.voucherId}</td>
                       <td>{voucher.voucherName}</td>
                       <td>{voucher.discountPercent}%</td>
-                      <td>{voucher.minOrderAmount.toLocaleString()}đ</td>
+                      <td>{voucher.minOrderAmount ? voucher.minOrderAmount.toLocaleString() : 0}đ</td>
                       <td>{new Date(voucher.startDate).toLocaleDateString('vi-VN')}</td>
                       <td>{new Date(voucher.endDate).toLocaleDateString('vi-VN')}</td>
                       <td>{voucher.quantity}</td>
@@ -298,6 +409,95 @@ const Voucher = () => {
           </div>
         </div>
       </div>
+
+      {/* Dialog thêm voucher */}
+      <Dialog open={openDialog} onClose={handleDialogClose}>
+        <DialogTitle>{editingVoucherId ? 'Cập nhật Voucher' : 'Thêm Voucher Mới'}</DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            margin="dense"
+            name="voucherName"
+            label="Tên Voucher"
+            type="text"
+            fullWidth
+            variant="outlined"
+            value={newVoucher.voucherName}
+            onChange={handleInputChange}
+          />
+          <TextField
+            margin="dense"
+            name="discountPercent"
+            label="Giảm Giá (%)"
+            type="number"
+            fullWidth
+            variant="outlined"
+            value={newVoucher.discountPercent}
+            onChange={handleInputChange}
+            onKeyPress={handleKeyPress}
+            error={isNaN(newVoucher.discountPercent) || newVoucher.discountPercent === ''}
+            helperText={isNaN(newVoucher.discountPercent) || newVoucher.discountPercent === '' ? 'Vui lòng nhập số' : ''}
+          />
+          <TextField
+            margin="dense"
+            name="minOrderAmount"
+            label="Đơn Tối Thiểu"
+            type="number"
+            fullWidth
+            variant="outlined"
+            value={newVoucher.minOrderAmount}
+            onChange={handleInputChange}
+            onKeyPress={handleKeyPress}
+            error={isNaN(newVoucher.minOrderAmount) || newVoucher.minOrderAmount === ''}
+            helperText={isNaN(newVoucher.minOrderAmount) || newVoucher.minOrderAmount === '' ? 'Vui lòng nhập số' : ''}
+          />
+          <LocalizationProvider dateAdapter={AdapterDayjs}>
+            <DatePicker 
+              label="Ngày Bắt Đầu"
+              value={newVoucher.startDate}
+              onChange={(value) => handleDateChange('startDate', value)}
+              slotProps={{ textField: { fullWidth: true, margin: 'dense' } }}
+            />
+            <DatePicker
+              label="Ngày Kết Thúc"
+              value={newVoucher.endDate}
+              onChange={(value) => handleDateChange('endDate', value)}
+              slotProps={{ textField: { fullWidth: true, margin: 'dense' } }}
+            />
+          </LocalizationProvider>
+          <TextField
+            margin="dense"
+            name="quantity"
+            label="Số Lượng"
+            type="number"
+            fullWidth
+            variant="outlined"
+            value={newVoucher.quantity}
+            onChange={handleInputChange}
+            onKeyPress={handleKeyPress}
+            error={isNaN(newVoucher.quantity) || newVoucher.quantity === ''}
+            helperText={isNaN(newVoucher.quantity) || newVoucher.quantity === '' ? 'Vui lòng nhập số' : ''}
+          />
+          <TextField
+            margin="dense"
+            name="description"
+            label="Mô Tả"
+            type="text"
+            fullWidth
+            variant="outlined"
+            value={newVoucher.description}
+            onChange={handleInputChange}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleDialogClose} color="primary">
+            Hủy
+          </Button>
+          <Button onClick={handleSubmit} color="primary">
+            {editingVoucherId ? 'Cập nhật' : 'Thêm'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
