@@ -211,6 +211,7 @@ const orderService = {
             return response; 
         } catch (error) {
             console.error('Error:', error);
+            return error;
             throw error; 
         }
     },
@@ -245,6 +246,19 @@ const orderService = {
         } catch (error) {
             console.error('Error fetching user:', error);
             throw error; 
+        }
+    },
+    buyNow: async (userId, productId, quantity) => {
+        try {
+            const response = await axiosClient.post('/api/Orders/buy-now', {
+                userId,
+                productId,
+                quantity
+            });
+            return response;
+        } catch (error) {
+            console.error('Error with buy now:', error);
+            throw error;
         }
     },
     confirmpayment: async (orderId,deliveryAddress) => {

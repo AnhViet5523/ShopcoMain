@@ -400,9 +400,8 @@ const Checkout = () => {
                     fontWeight: 'bold' 
                   }}
                   onClick={handleVoucherDialogOpen}
-                  disabled={voucherApplied}
                 >
-                  {voucherApplied ? 'Đã áp dụng' : 'Nhập mã giảm giá'}
+                  {voucherApplied ? 'Thay đổi' : 'Nhập mã giảm giá'}
                 </Button>
               </Box>
               {(order.voucher || (selectedVoucher && voucherApplied)) && (
