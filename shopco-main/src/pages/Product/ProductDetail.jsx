@@ -1,4 +1,4 @@
-<<<<<<< Updated upstream
+
 import { useState, useEffect, memo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import PropTypes from 'prop-types';
@@ -673,7 +673,7 @@ export default function ProductDetail() {
   );
 }
 
-=======
+
 import { useState, useEffect, memo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import PropTypes from 'prop-types';
@@ -1431,4 +1431,4 @@ export default function ProductDetail() {
     </>
   );
 }
->>>>>>> Stashed changes
+
