@@ -57,10 +57,35 @@ export default function NewArrivals() {
       _products = _products.map(product => {
         // Nếu sản phẩm đã có ảnh từ API
         if (product.images && product.images.length > 0) {
+          // Sắp xếp ảnh theo displayOrder (nếu có)
+          const sortedImages = [...product.images].sort((a, b) => {
+            // Nếu cả hai ảnh đều có displayOrder, sắp xếp theo displayOrder
+            if (a.displayOrder !== undefined && b.displayOrder !== undefined) {
+              return a.displayOrder - b.displayOrder;
+            }
+            // Nếu chỉ a có displayOrder, a sẽ được ưu tiên
+            if (a.displayOrder !== undefined) return -1;
+            // Nếu chỉ b có displayOrder, b sẽ được ưu tiên
+            if (b.displayOrder !== undefined) return 1;
+            // Nếu không có displayOrder, giữ nguyên thứ tự
+            return 0;
+          });
+          
+          // Log thông tin về ảnh đã sắp xếp
+          if (product.productId) {
+            console.log(`Product ${product.productId} (${product.productName || 'Unknown'}): Sorted ${sortedImages.length} images by displayOrder`);
+            if (sortedImages.length > 0) {
+              console.log(`Main image displayOrder: ${sortedImages[0].displayOrder !== undefined ? sortedImages[0].displayOrder : 'Not set'}`);
+            }
+          }
+          
+          // Lấy ảnh đầu tiên sau khi sắp xếp làm ảnh đại diện
+          const mainImageUrl = sortedImages[0]?.imgUrl || sortedImages[0]?.imageUrl;
+          
           return {
             ...product,
-            mainImage: product.images[0].imgUrl || product.images[0].imageUrl,
-            images: product.images
+            mainImage: mainImageUrl || '/images/default-product.jpg',
+            images: sortedImages
           };
         }
         // Nếu sản phẩm có imgURL
