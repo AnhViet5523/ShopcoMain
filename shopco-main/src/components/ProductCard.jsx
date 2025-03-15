@@ -1,8 +1,33 @@
 import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import { Card, CardMedia, CardContent, Typography, Box, Rating } from '@mui/material';
+import orderService from '../apis/orderService';
 
 export default function ProductCard({ product }) {
   const navigate = useNavigate();
+  const [soldCount, setSoldCount] = useState(product.soldCount || 0);
+
+  useEffect(() => {
+    const fetchSoldCount = async () => {
+      try {
+        // Get product ID based on available properties
+        const productId = product.id || product.productId;
+        if (productId) {
+          const result = await orderService.countBoughtProducts(productId);
+          if (result && result.totalSold !== undefined) {
+            setSoldCount(result.totalSold);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching sold count:', error);
+      }
+    };
+
+    // Only fetch if soldCount is not already provided in the product prop
+    if (!product.soldCount) {
+      fetchSoldCount();
+    }
+  }, [product]);
 
   const handleClick = () => {
     if(product.id){
@@ -51,10 +76,10 @@ export default function ProductCard({ product }) {
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <Rating value={product.rating} precision={0.5} readOnly size="small" />
           <Typography variant="body2" color="text.secondary">
-            ({product.ratingCount})
+            {product.ratingCount ? `(${product.ratingCount})` : ""}
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Đã bán {product.soldCount}
+            Đã bán {soldCount}
           </Typography>
         </Box>
       </CardContent>

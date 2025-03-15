@@ -203,7 +203,6 @@ export default function ProductDetail() {
 
   const handleBuyNow = async () => {
     // Logic để thêm sản phẩm vào giỏ hàng nếu cần
-    // ...
     await addToCart();
     // Chuyển hướng đến trang checkout
     navigate('/cart');
