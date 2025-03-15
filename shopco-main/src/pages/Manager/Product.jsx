@@ -1,10 +1,11 @@
 import { useState, useEffect, useMemo } from 'react';
 import { FaFilter } from 'react-icons/fa';
-import { Box, Dialog, DialogTitle, DialogContent, DialogActions, Button, Select, MenuItem, Pagination, CircularProgress } from '@mui/material';
+import { Box, Dialog, DialogTitle, DialogContent, DialogActions, Button, Select, MenuItem, Pagination, CircularProgress, TextField } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import './Manager.css';
 import productService from '../../apis/productService';
 import categoryService from '../../apis/categoryService';
+import adminService from '../../apis/adminService';
 
 const Product = () => {
   const [activeTab, setActiveTab] = useState('Tất cả');
@@ -22,6 +23,30 @@ const Product = () => {
   // Phân trang
   const [page, setPage] = useState(1);
   const pageSize = 20;
+
+  // Thêm state cho dialog và form thêm sản phẩm
+  const [openAddDialog, setOpenAddDialog] = useState(false);
+  const [newProduct, setNewProduct] = useState({
+    productCode: '',
+    productName: '',
+    categoryId: '',
+    quantity: '',
+    capacity: '',
+    price: '',
+    brand: '',
+    origin: '',
+    status: 'Available',
+    imgURL: '',
+    skinType: '',
+    description: '',
+    ingredients: '',
+    usageInstructions: '',
+    manufactureDate: null,
+    ngayNhapKho: null
+  });
+
+  // Thêm biến lưu trữ mapping giữa tên danh mục và ID
+  const [categoryMapping, setCategoryMapping] = useState({});
 
   const sidebarItems = [
     { id: 'revenue', name: 'Doanh thu', icon: '📊' },
@@ -44,6 +69,7 @@ const Product = () => {
       console.log('Categories response:', response);
       
       const map = {};
+      const idMapping = {}; // Thêm mapping cho ID
       
       // Kiểm tra cấu trúc response
       if (Array.isArray(response)) {
@@ -54,6 +80,10 @@ const Product = () => {
               categoryType: category.categoryType || 'Unknown',
               categoryName: category.categoryName || 'Unknown'
             };
+            
+            // Tạo mapping ngược từ tên đến ID
+            const key = `${category.categoryType || 'Unknown'} - ${category.categoryName || 'Unknown'}`;
+            idMapping[key] = category.categoryId;
           }
         });
       } else if (response && response.$values && Array.isArray(response.$values)) {
@@ -64,11 +94,17 @@ const Product = () => {
               categoryType: category.categoryType || 'Unknown',
               categoryName: category.categoryName || 'Unknown'
             };
+            
+            // Tạo mapping ngược từ tên đến ID
+            const key = `${category.categoryType || 'Unknown'} - ${category.categoryName || 'Unknown'}`;
+            idMapping[key] = category.categoryId;
           }
         });
       }
       
+      setCategoryMapping(idMapping); // Lưu mapping vào state
       console.log('Category mapping:', map);
+      console.log('ID mapping:', idMapping);
       return map;
     } catch (error) {
       console.error('Error fetching categories:', error);
@@ -253,29 +289,144 @@ const Product = () => {
     setFilteredCount(0);
   };
 
+  // Cập nhật hàm handleAdd
   const handleAdd = () => {
-    console.log('Thêm sản phẩm mới');
-    // TODO: Implement add logic
+    setOpenAddDialog(true);
+  };
+  
+  // Thêm hàm để đóng dialog
+  const handleDialogClose = () => {
+    setOpenAddDialog(false);
+    // Reset form data
+    setNewProduct({
+      productCode: '',
+      productName: '',
+      categoryId: '',
+      quantity: '',
+      capacity: '',
+      price: '',
+      brand: '',
+      origin: '',
+      status: 'Available',
+      imgURL: '',
+      skinType: '',
+      description: '',
+      ingredients: '',
+      usageInstructions: '',
+      manufactureDate: null,
+      ngayNhapKho: null
+    });
+  };
+  
+  // Thêm hàm xử lý thay đổi input
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    
+    if (name === 'categoryId') {
+      // Khi chọn category, lưu giá trị ID (dạng số)
+      setNewProduct(prev => ({ ...prev, [name]: parseInt(value) || value }));
+    } else {
+      setNewProduct(prev => ({ ...prev, [name]: value }));
+    }
+  };
+  
+  // Thêm options cho status vào component
+  const statusOptions = ['Available', 'Unavailable', 'OutOfStock'];
+
+  // Cập nhật hàm handleSubmitProduct để khắc phục lỗi
+  const handleSubmitProduct = async () => {
+    // Kiểm tra các trường bắt buộc
+    if (!newProduct.productName) {
+      alert('Vui lòng nhập tên sản phẩm');
+      return;
+    }
+    if (!newProduct.quantity || isNaN(parseInt(newProduct.quantity))) {
+      alert('Vui lòng nhập số lượng sản phẩm (phải là số)');
+      return;
+    }
+    if (!newProduct.price || isNaN(parseFloat(newProduct.price))) {
+      alert('Vui lòng nhập giá sản phẩm (phải là số)');
+      return;
+    }
+    if (!newProduct.categoryId) {
+      alert('Vui lòng chọn danh mục sản phẩm');
+      return;
+    }
+    
+    try {
+      // Thử với cấu trúc đơn giản nhất có thể
+      const productData = {
+        productName: newProduct.productName,
+        categoryId: 4, // Cố định ID = 4 (Đức Trị - Serum / Tinh Chất) để thử
+        quantity: parseInt(newProduct.quantity),
+        capacity: newProduct.capacity || "50g",
+        price: parseFloat(newProduct.price),
+        brand: newProduct.brand || "Việt",
+        origin: newProduct.origin || "Việt",
+        status: "Available", // Cố định trạng thái
+        imgUrl: "15", // Cố định URL hình ảnh
+        skinType: newProduct.skinType || "Da nhạy cảm",
+        description: newProduct.description || "test",
+        ingredients: newProduct.ingredients || "test",
+        usageInstructions: newProduct.usageInstructions || "test",
+        manufactureDate: "2025-01-15T10:45:23.977Z" // Cố định ngày
+      };
+      
+      console.log("Dữ liệu gửi đi:", JSON.stringify(productData));
+      
+      // Sử dụng AJAX trực tiếp thay vì fetch để thử
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', 'https://localhost:7175/api/Admin/Product', true);
+      xhr.setRequestHeader('Content-Type', 'application/json');
+      
+      xhr.onload = function() {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          console.log('Thành công:', xhr.responseText);
+          alert('Đã thêm sản phẩm thành công');
+          handleDialogClose();
+          fetchProducts();
+        } else {
+          console.error('Lỗi:', xhr.status, xhr.responseText);
+          alert(`Không thể thêm sản phẩm: ${xhr.status} - ${xhr.responseText}`);
+        }
+      };
+      
+      xhr.onerror = function() {
+        console.error('Lỗi kết nối');
+        alert('Không thể kết nối đến server. Vui lòng kiểm tra kết nối mạng.');
+      };
+      
+      xhr.send(JSON.stringify(productData));
+    } catch (error) {
+      console.error('Lỗi khi thêm sản phẩm:', error);
+      alert(`Không thể thêm sản phẩm: ${error.message || 'Lỗi không xác định'}`);
+    }
   };
 
   // Tạo danh sách danh mục kết hợp cho bộ lọc
   const categoryOptions = useMemo(() => {
-    const uniqueCategories = {};
+    // Sử dụng data từ API nếu có
+    if (Object.keys(categoryMapping).length > 0) {
+      return Object.entries(categoryMapping).map(([display, id]) => ({
+        id: id,
+        display: display
+      }));
+    }
     
+    // Fallback nếu chưa có data từ API
+    const uniqueCategories = {};
     originalProducts.forEach(product => {
-      const key = `${product.categoryType}-${product.categoryName}`;
+      const key = `${product.categoryType} - ${product.categoryName}`;
       if (!uniqueCategories[key]) {
         uniqueCategories[key] = {
-          id: key,
-          categoryType: product.categoryType,
-          categoryName: product.categoryName,
-          display: `${product.categoryType} - ${product.categoryName}`
+          id: product.ProductID.toString(), // Sử dụng ID thực tế nếu có
+          display: key
         };
       }
     });
     
     return Object.values(uniqueCategories);
-  }, [originalProducts]);
+  }, [categoryMapping, originalProducts]);
   
   const skinTypes = useMemo(() => {
     return [...new Set(originalProducts.map(product => product.SkinType))];
@@ -685,6 +836,182 @@ const Product = () => {
         <DialogActions>
           <Button onClick={() => setOpenFilterDialog(false)}>Hủy</Button>
           <Button onClick={handleFilterApply} color="primary">Áp dụng</Button>
+        </DialogActions>
+      </Dialog>
+      {/* Thêm Dialog để thêm sản phẩm */}
+      <Dialog open={openAddDialog} onClose={handleDialogClose} maxWidth="md" fullWidth>
+        <DialogTitle>Thêm Sản Phẩm Mới</DialogTitle>
+        <DialogContent>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginTop: '10px' }}>
+            <TextField
+              margin="dense"
+              name="productName"
+              label="Tên Sản Phẩm *"
+              type="text"
+              fullWidth
+              variant="outlined"
+              value={newProduct.productName}
+              onChange={handleInputChange}
+              required
+              error={!newProduct.productName}
+              helperText={!newProduct.productName ? "Tên sản phẩm là bắt buộc" : ""}
+            />
+            <TextField
+              margin="dense"
+              name="productCode"
+              label="Mã Sản Phẩm"
+              type="text"
+              fullWidth
+              variant="outlined"
+              value={newProduct.productCode}
+              onChange={handleInputChange}
+            />
+            <Select
+              name="categoryId"
+              displayEmpty
+              fullWidth
+              value={newProduct.categoryId}
+              onChange={handleInputChange}
+              label="Danh Mục *"
+            >
+              <MenuItem value=""><em>Chọn danh mục</em></MenuItem>
+              {categoryOptions.map((category) => (
+                <MenuItem key={category.display} value={category.id}>
+                  {category.display}
+                </MenuItem>
+              ))}
+            </Select>
+            <TextField
+              margin="dense"
+              name="quantity"
+              label="Số Lượng *"
+              type="number"
+              fullWidth
+              variant="outlined"
+              value={newProduct.quantity}
+              onChange={handleInputChange}
+            />
+            <TextField
+              margin="dense"
+              name="price"
+              label="Giá Tiền *"
+              type="number"
+              fullWidth
+              variant="outlined"
+              value={newProduct.price}
+              onChange={handleInputChange}
+            />
+            <TextField
+              margin="dense"
+              name="capacity"
+              label="Dung Tích"
+              type="text"
+              fullWidth
+              variant="outlined"
+              value={newProduct.capacity}
+              onChange={handleInputChange}
+            />
+            <TextField
+              margin="dense"
+              name="brand"
+              label="Thương Hiệu"
+              type="text"
+              fullWidth
+              variant="outlined"
+              value={newProduct.brand}
+              onChange={handleInputChange}
+            />
+            <TextField
+              margin="dense"
+              name="origin"
+              label="Xuất Xứ"
+              type="text"
+              fullWidth
+              variant="outlined"
+              value={newProduct.origin}
+              onChange={handleInputChange}
+            />
+            <TextField
+              margin="dense"
+              name="imgURL"
+              label="URL Hình Ảnh"
+              type="text"
+              fullWidth
+              variant="outlined"
+              value={newProduct.imgURL}
+              onChange={handleInputChange}
+            />
+            <Select
+              name="skinType"
+              displayEmpty
+              fullWidth
+              value={newProduct.skinType}
+              onChange={handleInputChange}
+              label="Loại Da"
+            >
+              <MenuItem value=""><em>Chọn loại da</em></MenuItem>
+              {skinTypes.map((skinType, index) => (
+                <MenuItem key={index} value={skinType}>{skinType}</MenuItem>
+              ))}
+            </Select>
+            <Select
+              name="status"
+              displayEmpty
+              fullWidth
+              value={newProduct.status || 'Available'}
+              onChange={handleInputChange}
+              label="Trạng Thái *"
+              style={{ marginTop: '16px' }}
+            >
+              <MenuItem value="Available">Available</MenuItem>
+              <MenuItem value="Unavailable">Unavailable</MenuItem>
+              <MenuItem value="OutOfStock">Out of Stock</MenuItem>
+            </Select>
+          </div>
+          
+          <div style={{ marginTop: '15px' }}>
+            <TextField
+              margin="dense"
+              name="description"
+              label="Mô Tả Sản Phẩm"
+              multiline
+              rows={3}
+              fullWidth
+              variant="outlined"
+              value={newProduct.description}
+              onChange={handleInputChange}
+            />
+            <TextField
+              margin="dense"
+              name="ingredients"
+              label="Thành Phần"
+              multiline
+              rows={3}
+              fullWidth
+              variant="outlined"
+              value={newProduct.ingredients}
+              onChange={handleInputChange}
+            />
+            <TextField
+              margin="dense"
+              name="usageInstructions"
+              label="Hướng Dẫn Sử Dụng"
+              multiline
+              rows={3}
+              fullWidth
+              variant="outlined"
+              value={newProduct.usageInstructions}
+              onChange={handleInputChange}
+            />
+          </div>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleDialogClose} color="primary">
+            Hủy
+          </Button>
+          <Button onClick={handleSubmitProduct} color="primary" variant="contained">
+            Thêm Sản Phẩm
+          </Button>
         </DialogActions>
       </Dialog>
     </Box>

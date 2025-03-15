@@ -10,6 +10,17 @@ const adminService = {
             throw error; 
         }
     },
+    
+    // Thêm phương thức mới để thêm sản phẩm
+    addProduct: async (productData) => {
+        try {
+            const response = await axiosClient.post('/api/Admin/Product', productData);
+            return response;
+        } catch (error) {
+            console.error('Error adding product:', error);
+            throw error;
+        }
+    },
     // ... các phương thức khác nếu có ...
 };
 
