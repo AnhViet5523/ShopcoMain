@@ -6,7 +6,7 @@ import adminService from '../../apis/adminService';
 import userService from '../../apis/userService'; // Import userService
 import './Manager.css';
 
-const ViewOrder = () => {
+const OrderStaff = () => {
   const [activeTab, setActiveTab] = useState('Tất cả');
   const [activeItem, setActiveItem] = useState('');
   const [orders, setOrders] = useState([]); 
@@ -16,14 +16,12 @@ const ViewOrder = () => {
   const navigate = useNavigate();
 
   const sidebarItems = [
-    { id: 'revenue', name: 'Doanh thu', icon: '📊' },
-    { id: 'staff', name: 'Nhân viên', icon: '👤' },
-    { id: 'viewOrder', name: 'Đơn hàng', icon: '📋' },
-    { id: 'product', name: 'Sản phẩm', icon: '📦' },
-    { id: 'viewCustomer', name: 'Hồ sơ khách hàng', icon: '📝' },
-    { id: 'viewSupport', name: 'Đơn hỗ trợ', icon: '📫' },
-    { id: 'voucher', name: 'Vouchers', icon: '🎫' },
-    { id: 'feedback', name: 'Feedback', icon: '📢' },
+    { id: 'orderStaff', name: 'Đơn hàng', icon: '📋' },
+    { id: 'productStaff', name: 'Sản phẩm', icon: '📦' },
+    { id: 'customerStaff', name: 'Hồ sơ khách hàng', icon: '📝' },
+    { id: 'supportStaff', name: 'Đơn hỗ trợ', icon: '📫' },
+    { id: 'voucherStaff', name: 'Vouchers', icon: '🎫' },
+    { id: 'feedbackStaff', name: 'Feedback', icon: '📢' },
   ];
 
   const tabs = ['Tất cả', 'Đơn hàng đang xử lý', 'Đơn hàng bị hủy', 'Giao thành công'];
@@ -125,7 +123,7 @@ const ViewOrder = () => {
             </div>
           </div>
           
-          <div className="sidebar-title">MANAGER</div>
+          <div className="sidebar-title">STAFF</div>
           
           <div className="sidebar-menu">
             {sidebarItems.map((item) => (
@@ -256,4 +254,4 @@ const ViewOrder = () => {
   );
 };
 
-export default ViewOrder;
+export default OrderStaff;

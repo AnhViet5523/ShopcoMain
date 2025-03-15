@@ -4,7 +4,7 @@ import './Manager.css';
 import { useState, useEffect } from 'react';
 import userService from '../../apis/userService';
 
-const ViewCustomer = () => {
+const CustomerStaff = () => {
   const [activeItem, setActiveItem] = useState('');
   const navigate = useNavigate();
   const [customers, setCustomers] = useState([]);
@@ -14,14 +14,12 @@ const ViewCustomer = () => {
   const [originalCustomers, setOriginalCustomers] = useState([]);
 
   const sidebarItems = [
-    { id: 'revenue', name: 'Doanh thu', icon: '📊' },
-    { id: 'staff', name: 'Nhân viên', icon: '👤' },
-    { id: 'viewOrder', name: 'Đơn hàng', icon: '📋' },
-    { id: 'product', name: 'Sản phẩm', icon: '📦' },
-    { id: 'viewCustomer', name: 'Hồ sơ khách hàng', icon: '📝' },
-    { id: 'viewSupport', name: 'Đơn hỗ trợ', icon: '📫' },
-    { id: 'voucher', name: 'Vouchers', icon: '🎫' },
-    { id: 'feedback', name: 'Feedback', icon: '📢' },
+    { id: 'orderStaff', name: 'Đơn hàng', icon: '📋' },
+    { id: 'productStaff', name: 'Sản phẩm', icon: '📦' },
+    { id: 'customerStaff', name: 'Hồ sơ khách hàng', icon: '📝' },
+    { id: 'supportStaff', name: 'Đơn hỗ trợ', icon: '📫' },
+    { id: 'voucherStaff', name: 'Vouchers', icon: '🎫' },
+    { id: 'feedbackStaff', name: 'Feedback', icon: '📢' },
   ];
 
   useEffect(() => {
@@ -115,7 +113,7 @@ const ViewCustomer = () => {
             </div>
           </div>
           
-          <div className="sidebar-title">MANAGER</div>
+          <div className="sidebar-title">STAFF</div>
           
           <div className="sidebar-menu">
             {sidebarItems.map((item) => (
@@ -244,4 +242,4 @@ const ViewCustomer = () => {
   );
 };
 
-export default ViewCustomer;
+export default CustomerStaff;

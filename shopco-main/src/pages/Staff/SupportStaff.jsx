@@ -4,19 +4,17 @@ import { Box } from '@mui/material';
 import './Manager.css';
 import { useState } from 'react';
 
-const ViewSupport = () => {
+const SupportStaff = () => {
   const navigate = useNavigate();
   const [activeItem, setActiveItem] = useState('');
 
   const sidebarItems = [
-    { id: 'revenue', name: 'Doanh thu', icon: '📊' },
-    { id: 'staff', name: 'Nhân viên', icon: '👤' },
-    { id: 'viewOrder', name: 'Đơn hàng', icon: '📋' },
-    { id: 'product', name: 'Sản phẩm', icon: '📦' },
-    { id: 'viewCustomer', name: 'Hồ sơ khách hàng', icon: '📝' },
-    { id: 'viewSupport', name: 'Đơn hỗ trợ', icon: '📫' },
-    { id: 'voucher', name: 'Vouchers', icon: '🎫' },
-    { id: 'feedback', name: 'Feedback', icon: '📢' },
+    { id: 'orderStaff', name: 'Đơn hàng', icon: '📋' },
+    { id: 'productStaff', name: 'Sản phẩm', icon: '📦' },
+    { id: 'customerStaff', name: 'Hồ sơ khách hàng', icon: '📝' },
+    { id: 'supportStaff', name: 'Đơn hỗ trợ', icon: '📫' },
+    { id: 'voucherStaff', name: 'Vouchers', icon: '🎫' },
+    { id: 'feedbackStaff', name: 'Feedback', icon: '📢' },
   ];
 
   return (
@@ -43,7 +41,7 @@ const ViewSupport = () => {
           </div>
         </div>
         
-        <div className="sidebar-title">MANAGER</div>
+        <div className="sidebar-title">STAFF</div>
         
         <div className="sidebar-menu">
           {sidebarItems.map((item) => (
@@ -120,4 +118,4 @@ const ViewSupport = () => {
   );
 };
 
-export default ViewSupport;
+export default SupportStaff;

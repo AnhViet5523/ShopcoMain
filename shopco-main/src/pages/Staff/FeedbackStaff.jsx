@@ -7,7 +7,7 @@ import reviewService from '../../apis/reviewService';
 import userService from '../../apis/userService';
 import productService from '../../apis/productService';
 
-const Feedback = () => {
+const FeedbackStaff = () => {
   const navigate = useNavigate();
   const [activeItem, setActiveItem] = useState('feedback');
   const [reviews, setReviews] = useState([]);
@@ -26,14 +26,12 @@ const Feedback = () => {
   const pageSize = 10;
 
   const sidebarItems = [
-    { id: 'revenue', name: 'Doanh thu', icon: '📊' },
-    { id: 'staff', name: 'Nhân viên', icon: '👤' },
-    { id: 'viewOrder', name: 'Đơn hàng', icon: '📋' },
-    { id: 'product', name: 'Sản phẩm', icon: '📦' },
-    { id: 'viewCustomer', name: 'Hồ sơ khách hàng', icon: '📝' },
-    { id: 'viewSupport', name: 'Đơn hỗ trợ', icon: '📫' },
-    { id: 'voucher', name: 'Vouchers', icon: '🎫' },
-    { id: 'feedback', name: 'Feedback', icon: '📢' },
+    { id: 'orderStaff', name: 'Đơn hàng', icon: '📋' },
+    { id: 'productStaff', name: 'Sản phẩm', icon: '📦' },
+    { id: 'customerStaff', name: 'Hồ sơ khách hàng', icon: '📝' },
+    { id: 'supportStaff', name: 'Đơn hỗ trợ', icon: '📫' },
+    { id: 'voucherStaff', name: 'Vouchers', icon: '🎫' },
+    { id: 'feedbackStaff', name: 'Feedback', icon: '📢' },
   ];
 
   // Lấy danh sách đánh giá
@@ -222,7 +220,7 @@ const Feedback = () => {
           </div>
         </div>
         
-        <div className="sidebar-title">MANAGER</div>
+        <div className="sidebar-title">STAFF</div>
         
         <div className="sidebar-menu">
           {sidebarItems.map((item) => (
@@ -475,4 +473,4 @@ const Feedback = () => {
   );
 };
 
-export default Feedback;
+export default FeedbackStaff;

@@ -7,7 +7,7 @@ import productService from '../../apis/productService';
 import categoryService from '../../apis/categoryService';
 import adminService from '../../apis/adminService';
 
-const Product = () => {
+const ProductStaff = () => {
   const [activeTab, setActiveTab] = useState('Tất cả');
   const navigate = useNavigate();
   const [products, setProducts] = useState([]);
@@ -49,14 +49,12 @@ const Product = () => {
   const [categoryMapping, setCategoryMapping] = useState({});
 
   const sidebarItems = [
-    { id: 'revenue', name: 'Doanh thu', icon: '📊' },
-    { id: 'staff', name: 'Nhân viên', icon: '👤' },
-    { id: 'viewOrder', name: 'Đơn hàng', icon: '📋' },
-    { id: 'product', name: 'Sản phẩm', icon: '📦' },
-    { id: 'viewCustomer', name: 'Hồ sơ khách hàng', icon: '📝' },
-    { id: 'viewSupport', name: 'Đơn hỗ trợ', icon: '📫' },
-    { id: 'voucher', name: 'Vouchers', icon: '🎫' },
-    { id: 'feedback', name: 'Feedback', icon: '📢' },
+    { id: 'orderStaff', name: 'Đơn hàng', icon: '📋' },
+    { id: 'productStaff', name: 'Sản phẩm', icon: '📦' },
+    { id: 'customerStaff', name: 'Hồ sơ khách hàng', icon: '📝' },
+    { id: 'supportStaff', name: 'Đơn hỗ trợ', icon: '📫' },
+    { id: 'voucherStaff', name: 'Vouchers', icon: '🎫' },
+    { id: 'feedbackStaff', name: 'Feedback', icon: '📢' },
   ];
 
   const tabs = ['Tất cả', 'Hàng mới nhập', 'Hàng sắp hết'];
@@ -447,7 +445,7 @@ const Product = () => {
         {/* Sidebar */}
         <div className="sidebar">
           <div className="logo-container">
-            <div className="logo" style={{ marginRight: '15px' }}>
+            <div className="logo" style={{ marginRight: '15px', cursor: 'pointer' }} onClick={() => navigate("/")}>
               <img 
                 src="/images/logo.png" 
                 alt="Beauty Cosmetics"
@@ -459,13 +457,13 @@ const Product = () => {
                 }}
               />
             </div>
-            <div className="brand">
+            <div className="brand" style={{ cursor: 'pointer' }} onClick={() => navigate("/")}>
               <div>BEAUTY</div>
               <div>COSMETICS</div>
             </div>
           </div>
           
-          <div className="sidebar-title">MANAGER</div>
+          <div className="sidebar-title">STAFF</div>
           
           <div className="sidebar-menu">
             {sidebarItems.map((item) => (
@@ -1027,4 +1025,4 @@ const Product = () => {
   );
 };
 
-export default Product;
+export default ProductStaff;
