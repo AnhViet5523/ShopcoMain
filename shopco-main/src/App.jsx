@@ -1,10 +1,10 @@
-import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { useState, useEffect } from "react";
 import SigninPage from "./pages/SigninPage";
 import MainScreen from "./pages/MainScreen";
 import CategoryScreen from "./pages/Category/CategoryScreen";
 import SearchResults from "./pages/Product/SearchResults";
-import { Box, CssBaseline } from "@mui/material";
+import { CssBaseline } from "@mui/material";
 import CustomerSp from "./pages/CustomerSp/CustomerSp";
 import Info from "./pages/Account/Info";
 import Order from "./pages/Account/Order";
@@ -35,6 +35,22 @@ import Blog4 from "./pages/Blog/blog4";
 import Blog5 from "./pages/Blog/blog5";
 import Blog6 from "./pages/Blog/blog6";
 import QuizTest from "./pages/Quiz/QuizTest";
+import Checkout from "./pages/checkout/checkout";
+import ViewOrder from "./pages/Manager/ViewOrder";
+import Product from "./pages/Manager/Product";
+import Revenue from "./pages/Manager/revenue";
+import Staff from "./pages/Manager/staff";
+import ViewCustomer from "./pages/Manager/ViewCustomer";
+import ViewSupport from "./pages/Manager/ViewSupport";
+import Voucher from "./pages/Manager/Voucher";
+import Feedback from "./pages/Manager/Feedback";
+import OrderStaff from "./pages/Staff/OrderStaff";
+import CustomerStaff from "./pages/Staff/CustomerStaff";
+import ProductStaff from "./pages/Staff/ProductStaff";
+import FeedbackStaff from "./pages/Staff/FeedbackStaff";
+import SupportStaff from "./pages/Staff/SupportStaff";
+import VoucherStaff from "./pages/Staff/VoucherStaff";
+import Unauthorized from "./components/Unauthorized";
 
 // Component để hủy request khi chuyển trang
 function NavigationHandler() {
@@ -74,7 +90,7 @@ export default function App() {
     };
   }, []);
 
-  const handleSignIn = (userData) => {
+  const handleSignIn = () => {
     setIsAuthenticated(true);
   };
 
@@ -88,6 +104,7 @@ export default function App() {
       <BrowserRouter>
         {/* Component để hủy request khi chuyển trang */}
         <NavigationHandler />
+        <CssBaseline />
         
         <Routes>
           {/* Public Routes */}
@@ -120,6 +137,7 @@ export default function App() {
           <Route path="/policy" element={<PrivacyPolicy />} />
           <Route path="/complaint" element={<Complaint />} />
           <Route path="/return" element={<Return />} />
+          <Route path="/unauthorized" element={<Unauthorized />} />
 
           {/* Auth Routes */}
           <Route
@@ -133,7 +151,7 @@ export default function App() {
             }
           />
 
-          {/* Protected Routes */}
+          {/* Protected Routes cho người dùng đã đăng nhập */}
           <Route
             path="/cart"
             element={
@@ -163,6 +181,138 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <Order onSignOut={handleSignOut} />
+              </ProtectedRoute>
+            }
+          />
+          <Route 
+            path="/checkout/:orderId" 
+            element={
+              <ProtectedRoute>
+                <Checkout />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/checkout" 
+            element={
+              <ProtectedRoute>
+                <Checkout />
+              </ProtectedRoute>
+            } 
+          />
+          
+          {/* Protected Routes cho Manager */}
+          <Route
+            path="/viewOrder"
+            element={
+              <ProtectedRoute requiredRole="Manager">
+                <ViewOrder />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/product"
+            element={
+              <ProtectedRoute requiredRole="Manager">
+                <Product />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/revenue"
+            element={
+              <ProtectedRoute requiredRole="Manager">
+                <Revenue />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/staff"
+            element={
+              <ProtectedRoute requiredRole="Manager">
+                <Staff />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/viewCustomer"
+            element={
+              <ProtectedRoute requiredRole="Manager">
+                <ViewCustomer />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/viewSupport"
+            element={
+              <ProtectedRoute requiredRole="Manager">
+                <ViewSupport />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/voucher"
+            element={
+              <ProtectedRoute requiredRole="Manager">
+                <Voucher />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/feedback"
+            element={
+              <ProtectedRoute requiredRole="Manager">
+                <Feedback />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Protected Routes cho Staff */}
+          <Route
+            path="/orderStaff"
+            element={
+              <ProtectedRoute requiredRole="Staff">
+                <OrderStaff />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/customerStaff"
+            element={
+              <ProtectedRoute requiredRole="Staff">
+                <CustomerStaff />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/productStaff"
+            element={
+              <ProtectedRoute requiredRole="Staff">
+                <ProductStaff />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/feedbackStaff"
+            element={
+              <ProtectedRoute requiredRole="Staff">
+                <FeedbackStaff />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/supportStaff"
+            element={
+              <ProtectedRoute requiredRole="Staff">
+                <SupportStaff />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/voucherStaff"
+            element={
+              <ProtectedRoute requiredRole="Staff">
+                <VoucherStaff />
               </ProtectedRoute>
             }
           />

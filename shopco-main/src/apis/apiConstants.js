@@ -1,13 +1,20 @@
 export const API_ENDPOINTS = {
+    USERS: {
+        LIST: '/api/Users',
+        DETAIL: (id) => `/api/Users/${id}`,
+        PROFILE: '/api/Users/profile',
+        REGISTER: '/api/Users/register',
+        LOGIN: '/api/Users/login'
+    },
     PRODUCTS: {
-        LIST: '/Products',
-        DETAIL: (id) => `/Products/${id}`,
-        BY_CATEGORY: (categoryId) => `/Products/category/${categoryId}`,
-        SEARCH: '/Products/search'
+        LIST: '/api/Products',
+        DETAIL: (id) => `/api/Products/${id}`,
+        BY_CATEGORY: (categoryId) => `/api/Products/category/${categoryId}`,
+        SEARCH: '/api/Products/search'
     },
     CATEGORIES: {
-        LIST: '/Category',
-        DETAIL: (id) => `/Category/${id}`
+        LIST: '/api/Category',
+        DETAIL: (id) => `/api/Category/${id}`
     },
     QUIZ: {
         QUESTIONS: '/Quiz/questions',
