@@ -91,6 +91,11 @@ axiosClient.interceptors.request.use(
                 if (user && user.userId) {
                     config.headers['User-Id'] = user.userId;
                 }
+                // Thêm role vào header để dễ debug
+                if (user && user.role) {
+                    config.headers['User-Role'] = user.role;
+                    console.log('User role in request:', user.role);
+                }
             } catch (error) {
                 console.error('Error parsing user data:', error);
             }

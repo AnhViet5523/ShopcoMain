@@ -74,6 +74,19 @@ export default function App() {
       try {
         const isAuth = userService.isAuthenticated();
         setIsAuthenticated(isAuth);
+        
+        // Hiển thị thông tin người dùng trong console để debug
+        if (isAuth) {
+          const user = userService.getCurrentUser();
+          console.log("Current user in App:", user);
+          
+          if (user && user.role) {
+            console.log("User role in App:", user.role);
+            console.log("Normalized role:", String(user.role).trim().toLowerCase());
+          } else {
+            console.warn("User is authenticated but role is missing");
+          }
+        }
       } catch (error) {
         console.error("Error checking authentication in App:", error);
         setIsAuthenticated(false);
@@ -91,6 +104,14 @@ export default function App() {
   }, []);
 
   const handleSignIn = () => {
+    // Kiểm tra lại thông tin người dùng sau khi đăng nhập
+    const user = userService.getCurrentUser();
+    console.log("User after sign in:", user);
+    
+    if (user && user.role) {
+      console.log("User role after sign in:", user.role);
+    }
+    
     setIsAuthenticated(true);
   };
 

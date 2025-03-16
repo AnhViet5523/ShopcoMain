@@ -54,23 +54,36 @@ const img2 = "https://png.pngtree.com/background/20210716/original/pngtree-hello
     
     // Điều hướng dựa vào role của người dùng
     if (userData && userData.role) {
-      const userRole = String(userData.role).trim();
-      console.log("User role:", userRole);
+      // Chuẩn hóa role để so sánh không phân biệt chữ hoa/thường
+      const userRole = String(userData.role).trim().toLowerCase();
+      console.log("User role (normalized):", userRole);
       
-      if (userRole.toLowerCase() === "manager") {
-        console.log("Redirecting to Manager page");
-        navigate('/revenue');
-      } else if (userRole.toLowerCase() === "staff") {
-        console.log("Redirecting to Staff page");
-        navigate('/orderStaff');
+      // Lưu role vào localStorage để debug
+      localStorage.setItem('debug_role', userRole);
+      
+      // Kiểm tra role và chuyển hướng tương ứng
+      if (userRole === "manager") {
+        console.log("Redirecting to Manager page: /revenue");
+        setTimeout(() => {
+          navigate('/revenue');
+        }, 100);
+      } else if (userRole === "staff") {
+        console.log("Redirecting to Staff page: /orderStaff");
+        setTimeout(() => {
+          navigate('/orderStaff');
+        }, 100);
       } else {
-        console.log("Redirecting to home page");
-        navigate('/');
+        console.log("Redirecting to home page (Customer role)");
+        setTimeout(() => {
+          navigate('/');
+        }, 100);
       }
     } else {
       // Nếu không có role, chuyển đến trang chủ
       console.log("No role found, redirecting to home page");
-      navigate('/');
+      setTimeout(() => {
+        navigate('/');
+      }, 100);
     }
   };
 
