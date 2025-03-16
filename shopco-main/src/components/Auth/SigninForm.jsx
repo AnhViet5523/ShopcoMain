@@ -82,11 +82,6 @@ const SigninForm = ({ onSwitchMode, onSignIn }) => {
       
       try {
         // Gọi hàm đăng nhập từ userService
-
-        const respones = await userService.login(formData.username, formData.password); 
-        console.log('Login success:', respones);
-        onSignIn(respones.userId); 
-
         const response = await userService.login(formData.username, formData.password);
         
         console.log('Login successful, response:', response);
@@ -95,7 +90,31 @@ const SigninForm = ({ onSwitchMode, onSignIn }) => {
           throw new Error('Không nhận được phản hồi từ máy chủ');
         }
         
-        // Gọi callback onSignIn để cập nhật trạng thái đăng nhập
+        // Kiểm tra xem response có role không
+        if (!response.role) {
+          console.warn('Warning: User role is missing in login response');
+          // Thử lấy role từ API nếu không có trong response
+          try {
+            const userProfile = await userService.getCurrentUserProfile();
+            if (userProfile && userProfile.role) {
+              console.log('Got role from user profile:', userProfile.role);
+              response.role = userProfile.role;
+              
+              // Cập nhật lại thông tin người dùng trong localStorage
+              const userStr = localStorage.getItem('user');
+              if (userStr) {
+                const userData = JSON.parse(userStr);
+                userData.role = userProfile.role;
+                localStorage.setItem('user', JSON.stringify(userData));
+                localStorage.setItem('user_role', userProfile.role);
+              }
+            }
+          } catch (profileError) {
+            console.error('Error fetching user profile:', profileError);
+          }
+        }
+        
+        // Gọi callback onSignIn để cập nhật trạng thái đăng nhập và chuyển hướng
         onSignIn(response);
 
       } catch (error) {

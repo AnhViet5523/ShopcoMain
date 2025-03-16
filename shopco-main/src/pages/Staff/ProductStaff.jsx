@@ -48,6 +48,10 @@ const ProductStaff = () => {
   // Thêm biến lưu trữ mapping giữa tên danh mục và ID
   const [categoryMapping, setCategoryMapping] = useState({});
 
+  // Thêm state cho dialog chi tiết sản phẩm
+  const [openDetailDialog, setOpenDetailDialog] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+
   const sidebarItems = [
     { id: 'orderStaff', name: 'Đơn hàng', icon: '📋' },
     { id: 'productStaff', name: 'Sản phẩm', icon: '📦' },
@@ -62,9 +66,9 @@ const ProductStaff = () => {
   // Lấy danh sách danh mục
   const fetchCategories = async () => {
     try {
-      console.log('Fetching categories...');
+      console.log('Bắt đầu lấy danh sách danh mục...');
       const response = await categoryService.getCategories();
-      console.log('Categories response:', response);
+      console.log('Phản hồi API danh mục:', response);
       
       const map = {};
       const idMapping = {}; // Thêm mapping cho ID
@@ -72,6 +76,7 @@ const ProductStaff = () => {
       // Kiểm tra cấu trúc response
       if (Array.isArray(response)) {
         // Nếu response là mảng trực tiếp
+        console.log(`Xử lý ${response.length} danh mục từ mảng`);
         response.forEach(category => {
           if (category && category.categoryId !== undefined) {
             map[category.categoryId] = {
@@ -86,6 +91,7 @@ const ProductStaff = () => {
         });
       } else if (response && response.$values && Array.isArray(response.$values)) {
         // Nếu response có cấu trúc $values
+        console.log(`Xử lý ${response.$values.length} danh mục từ $values`);
         response.$values.forEach(category => {
           if (category && category.categoryId !== undefined) {
             map[category.categoryId] = {
@@ -98,6 +104,31 @@ const ProductStaff = () => {
             idMapping[key] = category.categoryId;
           }
         });
+      } else if (response && typeof response === 'object') {
+        // Nếu response là một object nhưng không có $values, thử xem nó có phải là một sản phẩm không
+        console.log('Xử lý danh mục từ object');
+        Object.entries(response).forEach(([key, categories]) => {
+          if (Array.isArray(categories)) {
+            categories.forEach(category => {
+              if (category && category.categoryId !== undefined) {
+                map[category.categoryId] = {
+                  categoryType: key,
+                  categoryName: category.categoryName || 'Unknown'
+                };
+                
+                // Tạo mapping ngược từ tên đến ID
+                const mapKey = `${key} - ${category.categoryName || 'Unknown'}`;
+                idMapping[mapKey] = category.categoryId;
+              }
+            });
+          }
+        });
+      }
+      
+      if (Object.keys(map).length === 0) {
+        console.warn('Không có danh mục nào được xử lý');
+      } else {
+        console.log(`Đã xử lý ${Object.keys(map).length} danh mục`);
       }
       
       setCategoryMapping(idMapping); // Lưu mapping vào state
@@ -106,33 +137,57 @@ const ProductStaff = () => {
       return map;
     } catch (error) {
       console.error('Error fetching categories:', error);
+      console.error('Error details:', error.message);
+      console.error('Error stack:', error.stack);
       return {};
     }
   };
 
   // Xử lý sản phẩm với danh mục đã biết
   const processProducts = (productsArray, categories) => {
-    return productsArray.map(product => ({
-      ProductID: product.productId,
-      ProductCode: product.productCode,
-      categoryType: categories[product.categoryId]?.categoryType || 'Unknown',
-      categoryName: categories[product.categoryId]?.categoryName || 'Unknown',
-      categoryDisplay: `${categories[product.categoryId]?.categoryType || 'Unknown'} - ${categories[product.categoryId]?.categoryName || 'Unknown'}`,
-      ProductName: product.productName,
-      Quantity: product.quantity,
-      Capacity: product.capacity,
-      Price: product.price,
-      Brand: product.brand,
-      Origin: product.origin,
-      Status: product.status,
-      ImgURL: product.imgURL,
-      SkinType: product.skinType,
-      Description: product.description,
-      Ingredients: product.ingredients,
-      UsageInstructions: product.usageInstructions,
-      ManufactureDate: product.manufactureDate,
-      ngayNhapKho: product.ngayNhapKho
-    }));
+    console.log('Bắt đầu xử lý sản phẩm với danh mục:', { productsArray, categories });
+    
+    if (!productsArray || productsArray.length === 0) {
+      console.warn('Không có sản phẩm để xử lý');
+      return [];
+    }
+    
+    // Kiểm tra cấu trúc của sản phẩm đầu tiên để hiểu cấu trúc dữ liệu
+    const firstProduct = productsArray[0];
+    console.log('Cấu trúc sản phẩm đầu tiên:', firstProduct);
+    
+    return productsArray.map(product => {
+      // Lấy ID sản phẩm, hỗ trợ nhiều cách đặt tên
+      const productId = product.productId || product.ProductID || product.productID || product.id;
+      
+      // Lấy ID danh mục, hỗ trợ nhiều cách đặt tên
+      const categoryId = product.categoryId || product.CategoryID || product.categoryID;
+      
+      // Lấy thông tin danh mục từ mapping
+      const categoryInfo = categories[categoryId] || { categoryType: 'Unknown', categoryName: 'Unknown' };
+      
+      return {
+        ProductID: productId,
+        ProductCode: product.productCode || product.ProductCode || '',
+        categoryType: categoryInfo.categoryType,
+        categoryName: categoryInfo.categoryName,
+        categoryDisplay: `${categoryInfo.categoryType} - ${categoryInfo.categoryName}`,
+        ProductName: product.productName || product.ProductName || product.name || '',
+        Quantity: product.quantity || product.Quantity || 0,
+        Capacity: product.capacity || product.Capacity || '',
+        Price: product.price || product.Price || 0,
+        Brand: product.brand || product.Brand || '',
+        Origin: product.origin || product.Origin || '',
+        Status: product.status || product.Status || 'Unknown',
+        ImgURL: product.imgURL || product.ImgURL || product.imgUrl || product.image || '',
+        SkinType: product.skinType || product.SkinType || '',
+        Description: product.description || product.Description || '',
+        Ingredients: product.ingredients || product.Ingredients || '',
+        UsageInstructions: product.usageInstructions || product.UsageInstructions || '',
+        ManufactureDate: product.manufactureDate || product.ManufactureDate || null,
+        ngayNhapKho: product.ngayNhapKho || product.importDate || null
+      };
+    });
   };
 
   // Lấy danh sách sản phẩm
@@ -141,23 +196,53 @@ const ProductStaff = () => {
     setError(null);
     
     try {
+      console.log('Bắt đầu lấy danh sách sản phẩm...');
+      
       // Nếu chưa có danh mục, lấy danh mục trước
       const categoryData = categories || await fetchCategories();
+      console.log('Dữ liệu danh mục:', categoryData);
       
       // Lấy sản phẩm với phân trang (nếu API hỗ trợ)
       // Nếu API không hỗ trợ phân trang, lấy tất cả và xử lý phân trang ở client
+      console.log('Gọi API lấy tất cả sản phẩm...');
       const response = await productService.getAllProducts();
-      const productsArray = response.$values || [];
+      console.log('Phản hồi API sản phẩm:', response);
+      
+      // Xử lý dữ liệu sản phẩm từ nhiều định dạng có thể có
+      let productsArray = [];
+      if (response && response.$values) {
+        productsArray = response.$values;
+      } else if (Array.isArray(response)) {
+        productsArray = response;
+      } else if (response && typeof response === 'object') {
+        // Nếu response là một object nhưng không có $values, thử xem nó có phải là một sản phẩm không
+        if (response.productId || response.ProductID) {
+          productsArray = [response];
+        }
+      }
+      
+      console.log(`Đã nhận được ${productsArray.length} sản phẩm từ API`);
+      
+      if (productsArray.length === 0) {
+        console.warn('Không có sản phẩm nào được trả về từ API');
+        setProducts([]);
+        setOriginalProducts([]);
+        setLoading(false);
+        return;
+      }
       
       // Xử lý sản phẩm với danh mục
       const processedProducts = processProducts(productsArray, categoryData);
+      console.log('Sản phẩm đã xử lý:', processedProducts);
       
       setProducts(processedProducts);
       setOriginalProducts(processedProducts);
       setLoading(false);
     } catch (error) {
       console.error('Error fetching products:', error);
-      setError('Đã xảy ra lỗi khi tải dữ liệu sản phẩm');
+      console.error('Error details:', error.message);
+      console.error('Error stack:', error.stack);
+      setError('Đã xảy ra lỗi khi tải dữ liệu sản phẩm: ' + error.message);
       setLoading(false);
     }
   };
@@ -439,6 +524,18 @@ const ProductStaff = () => {
     setSearchTerm('');
   };
 
+  // Thêm hàm để mở dialog chi tiết
+  const handleViewDetail = (product) => {
+    setSelectedProduct(product);
+    setOpenDetailDialog(true);
+  };
+
+  // Thêm hàm để đóng dialog chi tiết
+  const handleCloseDetail = () => {
+    setOpenDetailDialog(false);
+    setSelectedProduct(null);
+  };
+
   return (
     <Box sx={{ bgcolor: "#f0f0f0", minHeight: "100vh", width:'99vw' }}>
       <div className="manager-container">
@@ -691,15 +788,33 @@ const ProductStaff = () => {
                           <td style={{ overflow: 'auto', maxHeight: '100px', padding: '8px', borderBottom: '1px solid #dee2e6', fontSize: '14px', textAlign: 'left' }}>{product.Brand}</td>
                           <td style={{ whiteSpace: 'nowrap', overflow: 'auto', maxHeight: '100px', padding: '8px', borderBottom: '1px solid #dee2e6', textAlign: 'center' }}>
                             <button
+                              onClick={() => handleViewDetail(product)}
+                              style={{
+                                padding: '4px 8px',
+                                backgroundColor: '#17a2b8',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '3px',
+                                cursor: 'pointer',
+                                marginRight: '4px',
+                                fontSize: '12px',
+                                transition: 'background-color 0.2s',
+                                ':hover': { backgroundColor: '#138496' }
+                              }}
+                            >
+                              Chi tiết
+                            </button>
+                            <button
                               onClick={() => handleEdit(product.ProductID)}
                               style={{
-                                padding: '5px 10px',
+                                padding: '4px 8px',
                                 backgroundColor: '#007bff',
                                 color: 'white',
                                 border: 'none',
                                 borderRadius: '3px',
                                 cursor: 'pointer',
-                                marginRight: '5px',
+                                marginRight: '4px',
+                                fontSize: '12px',
                                 transition: 'background-color 0.2s',
                                 ':hover': { backgroundColor: '#0069d9' }
                               }}
@@ -709,12 +824,13 @@ const ProductStaff = () => {
                             <button
                               onClick={() => handleDelete(product.ProductID)}
                               style={{
-                                padding: '5px 10px',
+                                padding: '4px 8px',
                                 backgroundColor: '#dc3545',
                                 color: 'white',
                                 border: 'none',
                                 borderRadius: '3px',
                                 cursor: 'pointer',
+                                fontSize: '12px',
                                 transition: 'background-color 0.2s',
                                 ':hover': { backgroundColor: '#c82333' }
                               }}
@@ -740,15 +856,33 @@ const ProductStaff = () => {
                           <td style={{ overflow: 'auto', maxHeight: '100px', padding: '8px', borderBottom: '1px solid #dee2e6', fontSize: '14px', textAlign: 'center' }}>{product.ngayNhapKho}</td>
                           <td style={{ whiteSpace: 'nowrap', overflow: 'auto', maxHeight: '100px', padding: '8px', borderBottom: '1px solid #dee2e6', textAlign: 'center' }}>
                             <button
+                              onClick={() => handleViewDetail(product)}
+                              style={{
+                                padding: '4px 8px',
+                                backgroundColor: '#17a2b8',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '3px',
+                                cursor: 'pointer',
+                                marginRight: '4px',
+                                fontSize: '12px',
+                                transition: 'background-color 0.2s',
+                                ':hover': { backgroundColor: '#138496' }
+                              }}
+                            >
+                              Chi tiết
+                            </button>
+                            <button
                               onClick={() => handleEdit(product.ProductID)}
                               style={{
-                                padding: '5px 10px',
+                                padding: '4px 8px',
                                 backgroundColor: '#007bff',
                                 color: 'white',
                                 border: 'none',
                                 borderRadius: '3px',
                                 cursor: 'pointer',
-                                marginRight: '5px',
+                                marginRight: '4px',
+                                fontSize: '12px',
                                 transition: 'background-color 0.2s',
                                 ':hover': { backgroundColor: '#0069d9' }
                               }}
@@ -758,12 +892,13 @@ const ProductStaff = () => {
                             <button
                               onClick={() => handleDelete(product.ProductID)}
                               style={{
-                                padding: '5px 10px',
+                                padding: '4px 8px',
                                 backgroundColor: '#dc3545',
                                 color: 'white',
                                 border: 'none',
                                 borderRadius: '3px',
                                 cursor: 'pointer',
+                                fontSize: '12px',
                                 transition: 'background-color 0.2s',
                                 ':hover': { backgroundColor: '#c82333' }
                               }}
@@ -1020,6 +1155,119 @@ const ProductStaff = () => {
             Thêm Sản Phẩm
           </Button>
         </DialogActions>
+      </Dialog>
+      {/* Dialog chi tiết sản phẩm */}
+      <Dialog open={openDetailDialog} onClose={handleCloseDetail} maxWidth="md" fullWidth>
+        {selectedProduct && (
+          <>
+            <DialogTitle>
+              Chi tiết sản phẩm: {selectedProduct.ProductName}
+            </DialogTitle>
+            <DialogContent>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '10px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div>
+                    <strong>ID:</strong> {selectedProduct.ProductID}
+                  </div>
+                  <div>
+                    <strong>Mã sản phẩm:</strong> {selectedProduct.ProductCode}
+                  </div>
+                  <div>
+                    <strong>Tên sản phẩm:</strong> {selectedProduct.ProductName}
+                  </div>
+                  <div>
+                    <strong>Danh mục:</strong> {selectedProduct.categoryDisplay}
+                  </div>
+                  <div>
+                    <strong>Số lượng:</strong> {selectedProduct.Quantity}
+                  </div>
+                  <div>
+                    <strong>Dung tích:</strong> {selectedProduct.Capacity}
+                  </div>
+                  <div>
+                    <strong>Giá:</strong> {selectedProduct.Price ? `${selectedProduct.Price.toLocaleString()}đ` : ''}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div>
+                    <strong>Thương hiệu:</strong> {selectedProduct.Brand}
+                  </div>
+                  <div>
+                    <strong>Xuất xứ:</strong> {selectedProduct.Origin}
+                  </div>
+                  <div>
+                    <strong>Trạng thái:</strong> {selectedProduct.Status}
+                  </div>
+                  <div>
+                    <strong>Hình ảnh:</strong> {selectedProduct.ImgURL}
+                  </div>
+                  <div>
+                    <strong>Loại da:</strong> {selectedProduct.SkinType}
+                  </div>
+                  <div>
+                    <strong>Ngày sản xuất:</strong> {selectedProduct.ManufactureDate}
+                  </div>
+                  <div>
+                    <strong>Ngày nhập kho:</strong> {selectedProduct.ngayNhapKho}
+                  </div>
+                </div>
+              </div>
+              <div style={{ marginTop: '20px' }}>
+                <div style={{ marginBottom: '16px' }}>
+                  <strong>Mô tả sản phẩm:</strong>
+                  <div style={{ 
+                    padding: '8px', 
+                    backgroundColor: '#f8f9fa', 
+                    borderRadius: '4px', 
+                    marginTop: '4px',
+                    minHeight: '60px'
+                  }}>
+                    {selectedProduct.Description || 'Không có mô tả'}
+                  </div>
+                </div>
+                <div style={{ marginBottom: '16px' }}>
+                  <strong>Thành phần:</strong>
+                  <div style={{ 
+                    padding: '8px', 
+                    backgroundColor: '#f8f9fa', 
+                    borderRadius: '4px', 
+                    marginTop: '4px',
+                    minHeight: '60px'
+                  }}>
+                    {selectedProduct.Ingredients || 'Không có thông tin thành phần'}
+                  </div>
+                </div>
+                <div>
+                  <strong>Hướng dẫn sử dụng:</strong>
+                  <div style={{ 
+                    padding: '8px', 
+                    backgroundColor: '#f8f9fa', 
+                    borderRadius: '4px', 
+                    marginTop: '4px',
+                    minHeight: '60px'
+                  }}>
+                    {selectedProduct.UsageInstructions || 'Không có hướng dẫn sử dụng'}
+                  </div>
+                </div>
+              </div>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={handleCloseDetail} color="primary">
+                Đóng
+              </Button>
+              <Button 
+                onClick={() => {
+                  handleCloseDetail();
+                  handleEdit(selectedProduct.ProductID);
+                }} 
+                color="primary" 
+                variant="contained"
+              >
+                Chỉnh sửa
+              </Button>
+            </DialogActions>
+          </>
+        )}
       </Dialog>
     </Box>
   );

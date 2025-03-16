@@ -18,22 +18,39 @@ const ProtectedRoute = ({ children, requiredRole = null }) => {
       try {
         // Kiểm tra xem người dùng đã đăng nhập hay chưa
         const isAuth = userService.isAuthenticated();
+        console.log('Is authenticated:', isAuth);
         
         if (isMounted) {
           if (isAuth) {
             // Đơn giản hóa logic xác thực để tránh lỗi
             setIsAuthenticated(true);
             
-            // Lấy thông tin role của người dùng từ localStorage hoặc từ service
-            const userData = userService.getCurrentUser();
-            console.log("User data from ProtectedRoute:", userData);
+            // Lấy vai trò người dùng bằng hàm mới
+            const role = userService.getUserRole();
+            console.log("User role from userService.getUserRole():", role);
             
-            if (userData && userData.role) {
-              // Chuyển đổi role thành chuỗi và chuẩn hóa để so sánh nhất quán
-              setUserRole(String(userData.role).trim());
+            // Lấy thông tin người dùng trực tiếp từ localStorage để debug
+            const userStr = localStorage.getItem('user');
+            if (userStr) {
+              try {
+                const userData = JSON.parse(userStr);
+                console.log('User data from localStorage:', userData);
+                if (userData.role) {
+                  console.log('Role from localStorage:', userData.role);
+                }
+              } catch (e) {
+                console.error('Error parsing user data:', e);
+              }
             }
+            
+            // Lấy role từ localStorage riêng để debug
+            const debugRole = localStorage.getItem('user_role');
+            console.log('Debug role from localStorage:', debugRole);
+            
+            setUserRole(role);
           } else {
             setIsAuthenticated(false);
+            setUserRole(null);
           }
           setIsLoading(false);
         }
@@ -41,6 +58,7 @@ const ProtectedRoute = ({ children, requiredRole = null }) => {
         if (isMounted) {
           console.error('Authentication check failed:', error);
           setIsAuthenticated(false);
+          setUserRole(null);
           setIsLoading(false);
         }
       }
@@ -83,10 +101,13 @@ const ProtectedRoute = ({ children, requiredRole = null }) => {
   // Debug logs để xác định vấn đề
   console.log("Required role:", requiredRole);
   console.log("User role:", userRole);
-  console.log("Role match comparison:", userRole === requiredRole);
   
-  // Kiểm tra role nếu có yêu cầu - cải thiện so sánh để không phân biệt chữ hoa/thường
-  if (requiredRole && String(userRole).toLowerCase() !== String(requiredRole).toLowerCase()) {
+  // Sử dụng hàm hasRole để kiểm tra vai trò
+  const hasRequiredRole = requiredRole ? userService.hasRole(requiredRole) : true;
+  console.log("Has required role:", hasRequiredRole);
+  
+  // Kiểm tra role nếu có yêu cầu
+  if (requiredRole && !hasRequiredRole) {
     console.log(`Quyền truy cập bị từ chối: Cần ${requiredRole}, nhưng người dùng có ${userRole}`);
     // Nếu không đủ quyền, chuyển hướng đến trang không có quyền truy cập
     return <Navigate to="/unauthorized" replace />;
