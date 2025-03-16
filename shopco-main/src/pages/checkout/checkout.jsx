@@ -139,11 +139,10 @@ const Checkout = () => {
     
     try {
       setLoading(true);
-      setError(null); // Reset error
+      setError(null);
       
       const user = JSON.parse(localStorage.getItem('user'));
       
-      // Thêm retry logic với thời gian chờ
       let retries = 3;
       let response = null;
       
@@ -153,7 +152,6 @@ const Checkout = () => {
         } catch (err) {
           retries--;
           if (retries === 0) throw err;
-          // Đợi 500ms trước khi thử lại
           await new Promise(resolve => setTimeout(resolve, 500));
         }
       }
@@ -161,48 +159,68 @@ const Checkout = () => {
       if (response) {
         setOrder(response);
         
-        // Kiểm tra nếu đơn hàng có pendingOrderId và không ở trạng thái Paid
+        // Lấy thông tin cá nhân từ người dùng đã đăng nhập
+        let fullName = '';
+        let phone = '';
+        let address = '';
+        
+        if (user) {
+          fullName = `${user.firstName || ''} ${user.lastName || ''}`.trim();
+          phone = user.phoneNumber || '';
+          address = user.address || '';
+        } else if (response.deliveryAddress) {
+          // Nếu đơn hàng có sẵn địa chỉ giao hàng, thử phân tích nó
+          const parts = response.deliveryAddress.split('-').map(part => part.trim());
+          if (parts.length >= 3) {
+            // Nếu địa chỉ đã có định dạng "Tên - SĐT - Địa chỉ"
+            fullName = parts[0];
+            phone = parts[1];
+            address = parts.slice(2).join(' - ');
+          } else {
+            // Nếu không, sử dụng toàn bộ làm địa chỉ
+            address = response.deliveryAddress;
+          }
+        } else {
+          fullName = userName || '';
+          phone = userPhone || '';
+          address = userAddress || '';
+        }
+        
+        // Cập nhật các trường riêng lẻ
+        setRecipientName(fullName);
+        setPhoneNumber(phone);
+        
+        // Tạo chuỗi địa chỉ đầy đủ
+        // Đảm bảo không có các phần rỗng
+        const parts = [];
+        if (fullName) parts.push(fullName);
+        if (phone) parts.push(phone);
+        if (address) parts.push(address);
+        
+        const fullDeliveryAddress = parts.join(' - ');
+        console.log("Địa chỉ đầy đủ:", fullDeliveryAddress); // Debug
+        
+        setDeliveryAddress(fullDeliveryAddress);
+        
+        // Các phần còn lại của hàm giữ nguyên...
         const pendingOrderId = localStorage.getItem('pendingOrderId');
         if (pendingOrderId && pendingOrderId === id && 
             response.orderStatus !== 'Paid') {
-          // Đánh dấu đơn hàng đang chờ thanh toán
           setPaymentPending(true);
           
-          // Nếu payment method trong đơn hàng là VNPAY, cho phép chọn lại
           if (response.payments && response.payments.$values && 
               response.payments.$values.some(p => p.paymentMethod === 'Thanh toán ví VNPAY')) {
-            // Đặt lại paymentMethod để người dùng có thể chọn lại
             setPaymentMethod('Thanh toán khi nhận hàng (COD)');
           }
         } else if (response.orderStatus === 'Paid') {
           setSentToVnpay(true);
         }
         
-        // Set delivery address từ thông tin user đã login
-        if (user && user.address) {
-          setDeliveryAddress(user.address);
-        } else if (response.deliveryAddress) {
-          setDeliveryAddress(response.deliveryAddress);
-        } else {
-          setDeliveryAddress(userAddress || '');
-        }
-        
-        // Set recipient name và phone từ thông tin user đã login
-        if (user) {
-          setRecipientName(`${user.firstName} ${user.lastName}`);
-          setPhoneNumber(user.phoneNumber);
-        } else {
-          setRecipientName(userName || '');
-          setPhoneNumber(userPhone || '');
-        }
-        
-        // Set payment method if available in the order
         if (response.payments && response.payments.$values && response.payments.$values.length > 0) {
           const paymentInfo = response.payments.$values[0];
           setPaymentMethod(paymentInfo.paymentMethod || 'Thanh toán khi nhận hàng (COD)');
         }
 
-        // Set voucher if available in the order
         if (response.voucher) {
           setSelectedVoucher(response.voucher);
           setVoucherApplied(true);
@@ -217,7 +235,6 @@ const Checkout = () => {
       if (isMounted.current) {
         setLoading(false);
       }
-      // Đợi một khoảng thời gian trước khi đặt requestInProgress về false
       setTimeout(() => {
         requestInProgress.current = false;
       }, 300);
@@ -228,6 +245,8 @@ const Checkout = () => {
     try {
       setVoucherLoading(true);
       setVoucherError(null);
+      console.log("Đang tải danh sách voucher...");
+      
       const response = await voucherService.getVouchers();
       if (response && response.$values) {
         // Filter active vouchers that meet the minimum order amount
@@ -237,13 +256,15 @@ const Checkout = () => {
             voucher.quantity > 0 && 
             order.totalAmount >= voucher.minOrderAmount
         );
+        console.log("Tìm thấy", activeVouchers.length, "voucher hợp lệ");
         setVouchers(activeVouchers);
       } else {
+        console.log("Không tìm thấy voucher nào");
         setVouchers([]);
       }
     } catch (error) {
       console.error('Error fetching vouchers:', error);
-      setVoucherError('Failed to load vouchers. Please try again later.');
+      setVoucherError('Không thể tải danh sách voucher. Vui lòng thử lại sau.');
     } finally {
       setVoucherLoading(false);
     }
@@ -258,9 +279,8 @@ const Checkout = () => {
   };
 
   const handleAddressDialogOpen = () => {
-    setTempDeliveryAddress(deliveryAddress);
-    setTempRecipientName(recipientName);
-    setTempPhoneNumber(phoneNumber);
+    // Chỉ đặt giá trị hiện tại vào biến temporary
+    setTempDeliveryAddress(deliveryAddress || '');
     setAddressDialogOpen(true);
   };
 
@@ -277,30 +297,96 @@ const Checkout = () => {
     setVoucherDialogOpen(false);
   };
 
+  // Sửa lại hàm ensureFullAddressFormat để tôn trọng địa chỉ mới người dùng nhập
+  const ensureFullAddressFormat = (address) => {
+    // Nếu người dùng đã nhập đầy đủ địa chỉ theo định dạng gồm 2 dấu gạch ngang
+    if (address && address.split('-').length >= 3) {
+      return address.trim();
+    }
+    
+    // Nếu người dùng nhập địa chỉ không theo định dạng, thử tạo định dạng đầy đủ
+    const parts = [];
+    if (recipientName) parts.push(recipientName);
+    if (phoneNumber) parts.push(phoneNumber);
+    if (address) parts.push(address);
+    
+    return parts.join(' - ');
+  };
+
   const handleConfirmAddressChange = async () => {
-    // Update the delivery address
-    setDeliveryAddress(tempDeliveryAddress);
-    setRecipientName(tempRecipientName);
-    setPhoneNumber(tempPhoneNumber);
+    // Sử dụng giá trị người dùng nhập trực tiếp
+    if (tempDeliveryAddress && tempDeliveryAddress.trim() !== '') {
+      // Chỉ định dạng nếu người dùng chưa nhập đủ thông tin
+      const formattedAddress = tempDeliveryAddress.includes('-') && tempDeliveryAddress.split('-').length >= 3
+        ? tempDeliveryAddress.trim()
+        : ensureFullAddressFormat(tempDeliveryAddress);
+      
+      // Đặt địa chỉ mới
+      setDeliveryAddress(formattedAddress);
+      console.log("Địa chỉ đã được cập nhật:", formattedAddress);
+    }
     
-    // Here you would typically call an API to update the order's delivery address
-    // For example:
-    // try {
-    //   await orderService.updateOrderAddress(order.orderId, tempDeliveryAddress);
-    // } catch (error) {
-    //   console.error('Error updating address:', error);
-    // }
-    
-    // Close the dialog
+    // Đóng dialog
     handleAddressDialogClose();
   };
 
   const handlePaymentMethodChange = (event) => {
-    setPaymentMethod(event.target.value);
+    const newPaymentMethod = event.target.value;
+    setPaymentMethod(newPaymentMethod);
+    
+    // Nếu người dùng chuyển từ VNPAY sang COD sau khi quay lại, cần reset một số trạng thái
+    if (paymentPending && newPaymentMethod === 'Thanh toán khi nhận hàng (COD)') {
+      console.log("Đã chuyển từ VNPAY sang COD, đang reset trạng thái...");
+      // Reset trạng thái để cho phép áp dụng voucher
+      setSentToVnpay(false);
+      setPaymentPending(false); // Reset trạng thái thanh toán đang chờ
+      
+      // Xóa pendingOrderId để tránh xung đột
+      localStorage.removeItem('pendingOrderId');
+      
+      // Nếu có pendingOrderId, cập nhật lại thông tin đơn hàng từ server
+      const pendingOrderId = localStorage.getItem('pendingOrderId');
+      if (pendingOrderId && pendingOrderId === order.orderId) {
+        // Reset trạng thái đơn hàng trên server (nếu API có hỗ trợ)
+        orderService.resetOrderPaymentState(pendingOrderId)
+          .then(() => {
+            // Sau khi reset, tải lại thông tin đơn hàng
+            return orderService.getOrderById(pendingOrderId);
+          })
+          .then(response => {
+            if (response) {
+              // Cập nhật đơn hàng với dữ liệu mới nhất
+              setOrder(response);
+              
+              // Nếu đơn hàng có voucher, cập nhật lại thông tin voucher
+              if (response.voucher) {
+                setSelectedVoucher(response.voucher);
+                setVoucherApplied(true);
+              } else {
+                // Reset voucher nếu không có
+                setSelectedVoucher(null);
+                setVoucherApplied(false);
+              }
+            }
+          })
+          .catch(error => {
+            console.error("Không thể cập nhật đơn hàng:", error);
+          });
+      }
+    }
   };
 
   const handleConfirmPaymentMethod = () => {
-    // Here you would typically handle saving the payment method
+    // Nếu đang có đơn hàng đang chờ xử lý từ VNPAY và đã chuyển sang COD
+    if (paymentPending && paymentMethod === 'Thanh toán khi nhận hàng (COD)') {
+      // Cập nhật phương thức thanh toán trên server (nếu cần)
+      console.log("Xác nhận chuyển đổi sang thanh toán COD");
+      
+      // Reset trạng thái của voucher để có thể chọn lại
+      fetchVouchers();
+    }
+    
+    // Đóng dialog
     handleClose();
   };
 
@@ -324,10 +410,27 @@ const Checkout = () => {
         return;
       }
       
+      // Reset trạng thái đơn hàng VNPAY nếu đang chuyển sang COD
+      if (paymentPending && paymentMethod === 'Thanh toán khi nhận hàng (COD)') {
+        try {
+          // Cập nhật trạng thái đơn hàng về pending để có thể áp dụng voucher
+          await orderService.resetOrderPaymentState(order.orderId);
+          console.log("Đã reset trạng thái đơn hàng thành công");
+        } catch (resetError) {
+          console.error("Lỗi khi reset trạng thái đơn hàng:", resetError);
+        }
+      }
+      
       // Nếu đã có voucher được áp dụng trước đó, xóa nó trước
       if (voucherApplied || order.voucher) {
-        // Có thể cần gọi API để xóa voucher cũ nếu có endpoint này
-        // await orderService.removeVoucher(order.orderId);
+        try {
+          // Gọi API để xóa voucher cũ nếu cần
+          await orderService.removeVoucher(order.orderId);
+          console.log("Đã xóa voucher cũ thành công");
+        } catch (removeError) {
+          console.log("Không cần xóa voucher cũ hoặc lỗi khi xóa:", removeError);
+          // Tiếp tục xử lý ngay cả khi có lỗi khi xóa voucher cũ
+        }
       }
       
       // Call API to apply voucher to order
@@ -342,8 +445,12 @@ const Checkout = () => {
       handleVoucherDialogClose();
     } catch (error) {
       console.error('Error applying voucher:', error);
-      // Hiển thị thông báo lỗi bằng tiếng Việt
-      setVoucherError('Không thể áp dụng voucher. Voucher có thể đã hết hạn hoặc không hợp lệ cho đơn hàng này.');
+      // Hiển thị thông báo lỗi chi tiết hơn
+      if (error.response && error.response.status === 400) {
+        setVoucherError('Không thể áp dụng voucher cho đơn hàng này. Vui lòng thử lại với voucher khác hoặc làm mới trang.');
+      } else {
+        setVoucherError('Không thể áp dụng voucher. Voucher có thể đã hết hạn hoặc không hợp lệ cho đơn hàng này.');
+      }
     } finally {
       setVoucherLoading(false);
     }
@@ -363,11 +470,34 @@ const Checkout = () => {
         return;
       }
 
+      // Nếu đơn hàng đã từng được gửi đến VNPAY và giờ chuyển sang COD
+      if (paymentPending && paymentMethod === 'Thanh toán khi nhận hàng (COD)') {
+        try {
+          // Reset trạng thái đơn hàng trước khi tiếp tục
+          console.log("Đang reset trạng thái đơn hàng từ VNPAY sang COD...");
+          await orderService.resetOrderPaymentState(order.orderId);
+          
+          // Cập nhật lại đơn hàng sau khi reset
+          const updatedOrder = await orderService.getOrderById(order.orderId);
+          setOrder(updatedOrder);
+          
+          // Reset các trạng thái
+          setSentToVnpay(false);
+          setPaymentPending(false);
+          localStorage.removeItem('pendingOrderId');
+        } catch (resetError) {
+          console.error("Lỗi khi reset trạng thái đơn hàng:", resetError);
+          setError('Không thể chuyển đổi phương thức thanh toán. Vui lòng tải lại trang và thử lại.');
+          setIsProcessing(false);
+          return;
+        }
+      }
+
       // Luôn thêm phương thức thanh toán vào dữ liệu
       const paymentData = {
         orderId: order.orderId,
         deliveryAddress: deliveryAddress?.trim() || "",
-        paymentMethod: paymentMethod?.trim(), // Luôn lưu phương thức thanh toán
+        paymentMethod: paymentMethod?.trim(), 
         note: note?.trim() || ""
       };
 
@@ -396,6 +526,8 @@ const Checkout = () => {
             localStorage.setItem('pendingOrderId', order.orderId);
             // Đặt trạng thái đã gửi đến VNPAY
             setSentToVnpay(true);
+            
+            // Chuyển hướng đến URL thanh toán VNPAY
             window.location.href = response.paymentUrl;
             return;
           } else {
@@ -475,27 +607,27 @@ const Checkout = () => {
         try {
           setLoading(true);
           
-          // Lấy các tham số từ URL
-          const urlParams = new URLSearchParams(queryString);
-          const vnp_ResponseCode = urlParams.get('vnp_ResponseCode');
-          const vnp_TransactionStatus = urlParams.get('vnp_TransactionStatus');
+          // Gọi hàm xử lý vnpay-return trong paymentService
+          const response = await paymentService.handleVnpayReturn(queryString);
           
-          if (vnp_ResponseCode === '00' && vnp_TransactionStatus === '00') {
-            // Thanh toán thành công - chuyển về trang chính
-            navigate('/');
+          if (response && response.status === 'success') {
+            // Thanh toán thành công - chuyển đến trang kết quả thanh toán với trạng thái success
+            navigate('/payment-result', { state: { success: true } });
           } else {
-            // Thanh toán thất bại - chuyển về trang chính với thông báo lỗi
-            navigate('/', { 
+            // Thanh toán thất bại - chuyển đến trang kết quả thanh toán với trạng thái error
+            navigate('/payment-result', { 
               state: { 
+                success: false,
                 error: 'Thanh toán không thành công hoặc đã bị hủy. Vui lòng thử lại hoặc chọn phương thức thanh toán khác.' 
               } 
             });
           }
         } catch (error) {
           console.error('Error handling VNPAY return:', error);
-          // Trong trường hợp lỗi, vẫn chuyển về trang chính
-          navigate('/', { 
+          // Trong trường hợp lỗi, vẫn chuyển đến trang kết quả thanh toán
+          navigate('/payment-result', { 
             state: { 
+              success: false,
               error: 'Có lỗi xảy ra khi xử lý kết quả thanh toán. Vui lòng liên hệ hỗ trợ.' 
             } 
           });
@@ -505,6 +637,18 @@ const Checkout = () => {
 
     handleVnpayReturn();
   }, [navigate]);
+
+  // Thêm hàm này để định dạng địa chỉ khi hiển thị
+  const formatDeliveryAddress = (address) => {
+    if (!address) return '';
+    
+    // Nếu địa chỉ không chứa dấu gạch nối, thêm thông tin người dùng vào trước
+    if (!address.includes('-') && recipientName && phoneNumber) {
+      return `${recipientName} - ${phoneNumber} - ${address}`;
+    }
+    
+    return address;
+  };
 
   if (!order && !loading && !orderId) {
     return (
@@ -598,9 +742,7 @@ const Checkout = () => {
                   Thay đổi
                 </Button>
               </Box>
-              <p>{recipientName} - {phoneNumber}</p>
-              <p>{deliveryAddress}</p>
-              <p>{userEmail}</p>
+              <p>{deliveryAddress || 'Vui lòng nhập địa chỉ giao hàng'}</p>
             </div>
             
             <div className="payment-method">
@@ -837,30 +979,16 @@ const Checkout = () => {
         <DialogContent>
           <Box sx={{ mt: 2 }}>
             <TextField
-              label="Họ và tên người nhận"
-              fullWidth
-              margin="normal"
-              value={tempRecipientName}
-              onChange={(e) => setTempRecipientName(e.target.value)}
-              sx={{ mb: 2 }}
-            />
-            <TextField
-              label="Số điện thoại"
-              fullWidth
-              margin="normal"
-              value={tempPhoneNumber}
-              onChange={(e) => setTempPhoneNumber(e.target.value)}
-              sx={{ mb: 2 }}
-            />
-            <TextField
               label="Địa chỉ nhận hàng"
               fullWidth
               multiline
-              rows={3}
+              rows={4}
               margin="normal"
               value={tempDeliveryAddress}
               onChange={(e) => setTempDeliveryAddress(e.target.value)}
-              placeholder="Nhập địa chỉ đầy đủ (số nhà, đường, phường/xã, quận/huyện, tỉnh/thành phố)"
+              placeholder="Nhập địa chỉ đầy đủ (tên người nhận - số điện thoại - địa chỉ chi tiết)"
+              helperText="Ví dụ: Nguyễn Văn A - 0912345678 - 123 Đường ABC, Phường XYZ, Quận/Huyện, Tỉnh/Thành phố"
+              sx={{ mt: 1 }}
             />
           </Box>
         </DialogContent>

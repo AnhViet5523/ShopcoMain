@@ -51,6 +51,7 @@ import FeedbackStaff from "./pages/Staff/FeedbackStaff";
 import SupportStaff from "./pages/Staff/SupportStaff";
 import VoucherStaff from "./pages/Staff/VoucherStaff";
 import Unauthorized from "./components/Unauthorized";
+import PaymentResult from "./pages/PaymentResult";
 
 // Component để hủy request khi chuyển trang
 function NavigationHandler() {
@@ -336,6 +337,16 @@ export default function App() {
                 <VoucherStaff />
               </ProtectedRoute>
             }
+          />
+
+          {/* Thêm route cho trang kết quả thanh toán */}
+          <Route 
+            path="/payment-result" 
+            element={
+              <ProtectedRoute>
+                <PaymentResult />
+              </ProtectedRoute>
+            } 
           />
         </Routes>
       </BrowserRouter>
