@@ -48,6 +48,16 @@ const ProductStaff = () => {
   // Thêm biến lưu trữ mapping giữa tên danh mục và ID
   const [categoryMapping, setCategoryMapping] = useState({});
 
+  // Thêm state cho dialog chi tiết sản phẩm
+  const [openDetailDialog, setOpenDetailDialog] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+
+  // Thêm state cho dialog xem tất cả ảnh
+  const [openImageGallery, setOpenImageGallery] = useState(false);
+
+  // Thêm state cho lưu trữ ảnh sản phẩm
+  const [productImages, setProductImages] = useState([]);
+
   const sidebarItems = [
     { id: 'orderStaff', name: 'Đơn hàng', icon: '📋' },
     { id: 'productStaff', name: 'Sản phẩm', icon: '📦' },
@@ -62,9 +72,9 @@ const ProductStaff = () => {
   // Lấy danh sách danh mục
   const fetchCategories = async () => {
     try {
-      console.log('Fetching categories...');
+      console.log('Bắt đầu lấy danh sách danh mục...');
       const response = await categoryService.getCategories();
-      console.log('Categories response:', response);
+      console.log('Phản hồi API danh mục:', response);
       
       const map = {};
       const idMapping = {}; // Thêm mapping cho ID
@@ -72,6 +82,7 @@ const ProductStaff = () => {
       // Kiểm tra cấu trúc response
       if (Array.isArray(response)) {
         // Nếu response là mảng trực tiếp
+        console.log(`Xử lý ${response.length} danh mục từ mảng`);
         response.forEach(category => {
           if (category && category.categoryId !== undefined) {
             map[category.categoryId] = {
@@ -86,6 +97,7 @@ const ProductStaff = () => {
         });
       } else if (response && response.$values && Array.isArray(response.$values)) {
         // Nếu response có cấu trúc $values
+        console.log(`Xử lý ${response.$values.length} danh mục từ $values`);
         response.$values.forEach(category => {
           if (category && category.categoryId !== undefined) {
             map[category.categoryId] = {
@@ -98,6 +110,31 @@ const ProductStaff = () => {
             idMapping[key] = category.categoryId;
           }
         });
+      } else if (response && typeof response === 'object') {
+        // Nếu response là một object nhưng không có $values, thử xem nó có phải là một sản phẩm không
+        console.log('Xử lý danh mục từ object');
+        Object.entries(response).forEach(([key, categories]) => {
+          if (Array.isArray(categories)) {
+            categories.forEach(category => {
+              if (category && category.categoryId !== undefined) {
+                map[category.categoryId] = {
+                  categoryType: key,
+                  categoryName: category.categoryName || 'Unknown'
+                };
+                
+                // Tạo mapping ngược từ tên đến ID
+                const mapKey = `${key} - ${category.categoryName || 'Unknown'}`;
+                idMapping[mapKey] = category.categoryId;
+              }
+            });
+          }
+        });
+      }
+      
+      if (Object.keys(map).length === 0) {
+        console.warn('Không có danh mục nào được xử lý');
+      } else {
+        console.log(`Đã xử lý ${Object.keys(map).length} danh mục`);
       }
       
       setCategoryMapping(idMapping); // Lưu mapping vào state
@@ -106,33 +143,57 @@ const ProductStaff = () => {
       return map;
     } catch (error) {
       console.error('Error fetching categories:', error);
+      console.error('Error details:', error.message);
+      console.error('Error stack:', error.stack);
       return {};
     }
   };
 
   // Xử lý sản phẩm với danh mục đã biết
   const processProducts = (productsArray, categories) => {
-    return productsArray.map(product => ({
-      ProductID: product.productId,
-      ProductCode: product.productCode,
-      categoryType: categories[product.categoryId]?.categoryType || 'Unknown',
-      categoryName: categories[product.categoryId]?.categoryName || 'Unknown',
-      categoryDisplay: `${categories[product.categoryId]?.categoryType || 'Unknown'} - ${categories[product.categoryId]?.categoryName || 'Unknown'}`,
-      ProductName: product.productName,
-      Quantity: product.quantity,
-      Capacity: product.capacity,
-      Price: product.price,
-      Brand: product.brand,
-      Origin: product.origin,
-      Status: product.status,
-      ImgURL: product.imgURL,
-      SkinType: product.skinType,
-      Description: product.description,
-      Ingredients: product.ingredients,
-      UsageInstructions: product.usageInstructions,
-      ManufactureDate: product.manufactureDate,
-      ngayNhapKho: product.ngayNhapKho
-    }));
+    console.log('Bắt đầu xử lý sản phẩm với danh mục:', { productsArray, categories });
+    
+    if (!productsArray || productsArray.length === 0) {
+      console.warn('Không có sản phẩm để xử lý');
+      return [];
+    }
+    
+    // Kiểm tra cấu trúc của sản phẩm đầu tiên để hiểu cấu trúc dữ liệu
+    const firstProduct = productsArray[0];
+    console.log('Cấu trúc sản phẩm đầu tiên:', firstProduct);
+    
+    return productsArray.map(product => {
+      // Lấy ID sản phẩm, hỗ trợ nhiều cách đặt tên
+      const productId = product.productId || product.ProductID || product.productID || product.id;
+      
+      // Lấy ID danh mục, hỗ trợ nhiều cách đặt tên
+      const categoryId = product.categoryId || product.CategoryID || product.categoryID;
+      
+      // Lấy thông tin danh mục từ mapping
+      const categoryInfo = categories[categoryId] || { categoryType: 'Unknown', categoryName: 'Unknown' };
+      
+      return {
+        ProductID: productId,
+        ProductCode: product.productCode || product.ProductCode || '',
+        categoryType: categoryInfo.categoryType,
+        categoryName: categoryInfo.categoryName,
+        categoryDisplay: `${categoryInfo.categoryType} - ${categoryInfo.categoryName}`,
+        ProductName: product.productName || product.ProductName || product.name || '',
+        Quantity: product.quantity || product.Quantity || 0,
+        Capacity: product.capacity || product.Capacity || '',
+        Price: product.price || product.Price || 0,
+        Brand: product.brand || product.Brand || '',
+        Origin: product.origin || product.Origin || '',
+        Status: product.status || product.Status || 'Unknown',
+        ImgURL: product.imgURL || product.ImgURL || product.imgUrl || product.image || '',
+        SkinType: product.skinType || product.SkinType || '',
+        Description: product.description || product.Description || '',
+        Ingredients: product.ingredients || product.Ingredients || '',
+        UsageInstructions: product.usageInstructions || product.UsageInstructions || '',
+        ManufactureDate: product.manufactureDate || product.ManufactureDate || null,
+        ngayNhapKho: product.ngayNhapKho || product.importDate || null
+      };
+    });
   };
 
   // Lấy danh sách sản phẩm
@@ -141,23 +202,53 @@ const ProductStaff = () => {
     setError(null);
     
     try {
+      console.log('Bắt đầu lấy danh sách sản phẩm...');
+      
       // Nếu chưa có danh mục, lấy danh mục trước
       const categoryData = categories || await fetchCategories();
+      console.log('Dữ liệu danh mục:', categoryData);
       
       // Lấy sản phẩm với phân trang (nếu API hỗ trợ)
       // Nếu API không hỗ trợ phân trang, lấy tất cả và xử lý phân trang ở client
+      console.log('Gọi API lấy tất cả sản phẩm...');
       const response = await productService.getAllProducts();
-      const productsArray = response.$values || [];
+      console.log('Phản hồi API sản phẩm:', response);
+      
+      // Xử lý dữ liệu sản phẩm từ nhiều định dạng có thể có
+      let productsArray = [];
+      if (response && response.$values) {
+        productsArray = response.$values;
+      } else if (Array.isArray(response)) {
+        productsArray = response;
+      } else if (response && typeof response === 'object') {
+        // Nếu response là một object nhưng không có $values, thử xem nó có phải là một sản phẩm không
+        if (response.productId || response.ProductID) {
+          productsArray = [response];
+        }
+      }
+      
+      console.log(`Đã nhận được ${productsArray.length} sản phẩm từ API`);
+      
+      if (productsArray.length === 0) {
+        console.warn('Không có sản phẩm nào được trả về từ API');
+        setProducts([]);
+        setOriginalProducts([]);
+        setLoading(false);
+        return;
+      }
       
       // Xử lý sản phẩm với danh mục
       const processedProducts = processProducts(productsArray, categoryData);
+      console.log('Sản phẩm đã xử lý:', processedProducts);
       
       setProducts(processedProducts);
       setOriginalProducts(processedProducts);
       setLoading(false);
     } catch (error) {
       console.error('Error fetching products:', error);
-      setError('Đã xảy ra lỗi khi tải dữ liệu sản phẩm');
+      console.error('Error details:', error.message);
+      console.error('Error stack:', error.stack);
+      setError('Đã xảy ra lỗi khi tải dữ liệu sản phẩm: ' + error.message);
       setLoading(false);
     }
   };
@@ -439,6 +530,68 @@ const ProductStaff = () => {
     setSearchTerm('');
   };
 
+  // Cập nhật hàm để mở dialog chi tiết và lấy ảnh sản phẩm
+  const handleViewDetail = async (product) => {
+    setSelectedProduct(product);
+    setOpenDetailDialog(true);
+    
+    try {
+      // Lấy thông tin chi tiết sản phẩm từ API để có thông tin ảnh đầy đủ
+      const productDetail = await productService.getProductById(product.ProductID);
+      console.log('Chi tiết sản phẩm:', productDetail);
+      
+      // Xử lý hình ảnh sản phẩm
+      let images = [];
+      if (productDetail.images && productDetail.images.length > 0) {
+        images = productDetail.images;
+        console.log('Ảnh sản phẩm từ API:', images);
+      } else if (productDetail.imgURL) {
+        images = [{ imgUrl: productDetail.imgURL }];
+      } else if (product.ImgURL) {
+        images = [{ imgUrl: product.ImgURL }];
+      } else {
+        images = [{ imgUrl: '/images/default-product.jpg' }];
+      }
+      
+      setProductImages(images);
+    } catch (error) {
+      console.error('Lỗi khi lấy chi tiết sản phẩm:', error);
+      // Nếu có lỗi, vẫn hiển thị ảnh đại diện
+      setProductImages([{ imgUrl: product.ImgURL || '/images/default-product.jpg' }]);
+    }
+  };
+
+  // Hàm để lấy URL ảnh
+  const getImageUrl = (image) => {
+    if (!image) return '/images/default-product.jpg';
+    
+    // Nếu là đường dẫn đầy đủ (bắt đầu bằng http hoặc https)
+    if (typeof image === 'string') {
+      if (image.startsWith('http')) return image;
+      return image;
+    }
+    
+    // Nếu là object có thuộc tính imgUrl
+    if (image.imgUrl) {
+      if (image.imgUrl.startsWith('http')) return image.imgUrl;
+      return image.imgUrl;
+    }
+    
+    // Nếu là object có thuộc tính imageUrl
+    if (image.imageUrl) {
+      if (image.imageUrl.startsWith('http')) return image.imageUrl;
+      return image.imageUrl;
+    }
+    
+    return '/images/default-product.jpg';
+  };
+
+  // Thêm hàm để đóng dialog chi tiết
+  const handleCloseDetail = () => {
+    setOpenDetailDialog(false);
+    setSelectedProduct(null);
+  };
+
   return (
     <Box sx={{ bgcolor: "#f0f0f0", minHeight: "100vh", width:'99vw' }}>
       <div className="manager-container">
@@ -588,7 +741,7 @@ const ProductStaff = () => {
           </div>
           
           {/* Table */}
-          <div className="dashboard-table">
+          <div className="dashboard-table" style={{ overflowX: 'auto' }}>
             <table style={{ 
               tableLayout: 'fixed', 
               width: '100%', 
@@ -601,43 +754,24 @@ const ProductStaff = () => {
             }}>
               <thead>
                 <tr style={{ backgroundColor: '#f8f9fa', height: '50px' }}>
-                  <th style={{ width: '60px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>ID</th>
-                  <th style={{ width: '110px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>MÃ SẢN PHẨM</th>
-                  <th style={{ width: '120px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>PHÂN LOẠI</th>
-                  <th style={{ width: '150px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>TÊN SẢN PHẨM</th>
-                  <th style={{ width: '80px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>SỐ LƯỢNG</th>
-                  {activeTab === 'Hàng sắp hết' && (
-                    <>
-                      <th style={{ width: '100px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>DUNG TÍCH</th>
-                      <th style={{ width: '110px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>GIÁ TIỀN</th>
-                      <th style={{ width: '120px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>THƯƠNG HIỆU</th>
-                      <th style={{ width: '120px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>THAO TÁC</th>
-                    </>
-                  )}
-                  {activeTab !== 'Hàng sắp hết' && (
-                    <>
-                      <th style={{ width: '100px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>DUNG TÍCH</th>
-                      <th style={{ width: '110px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>GIÁ TIỀN</th>
-                      <th style={{ width: '110px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>THƯƠNG HIỆU</th>
-                      <th style={{ width: '100px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>XUẤT XỨ</th>
-                      <th style={{ width: '100px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>TRẠNG THÁI</th>
-                      <th style={{ width: '100px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>HÌNH ẢNH</th>
-                      <th style={{ width: '100px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>LOẠI DA</th>
-                      <th style={{ width: '120px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>THÔNG TIN</th>
-                      <th style={{ width: '120px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>THÀNH PHẦN</th>
-                      <th style={{ width: '120px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>CÁCH DÙNG</th>
-                      <th style={{ width: '110px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>NGÀY SẢN XUẤT</th>
-                      <th style={{ width: '110px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>NGÀY NHẬP KHO</th>
-                      <th style={{ width: '120px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>THAO TÁC</th>
-                    </>
-                  )}
+                  <th style={{ width: '50px', padding: '8px 4px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>ID</th>
+                  <th style={{ width: '80px', padding: '8px 4px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>MÃ SP</th>
+                  <th style={{ width: '100px', padding: '8px 4px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>PHÂN LOẠI</th>
+                  <th style={{ width: '120px', padding: '8px 4px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>TÊN SP</th>
+                  <th style={{ width: '60px', padding: '8px 4px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>SL</th>
+                  <th style={{ width: '70px', padding: '8px 4px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>DUNG TÍCH</th>
+                  <th style={{ width: '80px', padding: '8px 4px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>GIÁ</th>
+                  <th style={{ width: '90px', padding: '8px 4px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>THƯƠNG HIỆU</th>
+                  <th style={{ width: '70px', padding: '8px 4px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>HÌNH ẢNH</th>
+                  <th style={{ width: '80px', padding: '8px 4px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>TRẠNG THÁI</th>
+                  <th style={{ width: '150px', padding: '8px 4px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>THAO TÁC</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
                   <tr>
                     <td 
-                      colSpan={activeTab === 'Hàng sắp hết' ? "9" : "18"} 
+                      colSpan="11" 
                       style={{ 
                         padding: '30px', 
                         textAlign: 'center', 
@@ -656,7 +790,7 @@ const ProductStaff = () => {
                 ) : error ? (
                   <tr>
                     <td 
-                      colSpan={activeTab === 'Hàng sắp hết' ? "9" : "18"} 
+                      colSpan="11" 
                       style={{ 
                         padding: '30px', 
                         textAlign: 'center', 
@@ -679,106 +813,57 @@ const ProductStaff = () => {
                         ':hover': { backgroundColor: '#f1f3f5' }
                       }}
                     >
-                      <td style={{ overflow: 'auto', maxHeight: '100px', padding: '8px', borderBottom: '1px solid #dee2e6', fontSize: '14px', textAlign: 'center' }}>{product.ProductID}</td>
-                      <td style={{ overflow: 'auto', maxHeight: '100px', padding: '8px', borderBottom: '1px solid #dee2e6', fontSize: '14px', textAlign: 'center' }}>{product.ProductCode}</td>
-                      <td style={{ overflow: 'auto', maxHeight: '100px', padding: '8px', borderBottom: '1px solid #dee2e6', fontSize: '14px', textAlign: 'left' }}>{product.categoryDisplay}</td>
-                      <td style={{ overflow: 'auto', maxHeight: '100px', padding: '8px', borderBottom: '1px solid #dee2e6', fontSize: '14px', textAlign: 'left', fontWeight: '500' }}>{product.ProductName}</td>
-                      <td style={{ overflow: 'auto', maxHeight: '100px', padding: '8px', borderBottom: '1px solid #dee2e6', fontSize: '14px', textAlign: 'center' }}>{product.Quantity}</td>
-                      {activeTab === 'Hàng sắp hết' && (
-                        <>
-                          <td style={{ overflow: 'auto', maxHeight: '100px', padding: '8px', borderBottom: '1px solid #dee2e6', fontSize: '14px', textAlign: 'center' }}>{product.Capacity}</td>
-                          <td style={{ overflow: 'auto', maxHeight: '100px', padding: '8px', borderBottom: '1px solid #dee2e6', fontSize: '14px', textAlign: 'right', fontWeight: '500' }}>{product.Price ? `${product.Price.toLocaleString()}đ` : ''}</td>
-                          <td style={{ overflow: 'auto', maxHeight: '100px', padding: '8px', borderBottom: '1px solid #dee2e6', fontSize: '14px', textAlign: 'left' }}>{product.Brand}</td>
-                          <td style={{ whiteSpace: 'nowrap', overflow: 'auto', maxHeight: '100px', padding: '8px', borderBottom: '1px solid #dee2e6', textAlign: 'center' }}>
-                            <button
-                              onClick={() => handleEdit(product.ProductID)}
-                              style={{
-                                padding: '5px 10px',
-                                backgroundColor: '#007bff',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '3px',
-                                cursor: 'pointer',
-                                marginRight: '5px',
-                                transition: 'background-color 0.2s',
-                                ':hover': { backgroundColor: '#0069d9' }
-                              }}
-                            >
-                              Sửa
-                            </button>
-                            <button
-                              onClick={() => handleDelete(product.ProductID)}
-                              style={{
-                                padding: '5px 10px',
-                                backgroundColor: '#dc3545',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '3px',
-                                cursor: 'pointer',
-                                transition: 'background-color 0.2s',
-                                ':hover': { backgroundColor: '#c82333' }
-                              }}
-                            >
-                              Xóa
-                            </button>
-                          </td>
-                        </>
-                      )}
-                      {activeTab !== 'Hàng sắp hết' && (
-                        <>
-                          <td style={{ overflow: 'auto', maxHeight: '100px', padding: '8px', borderBottom: '1px solid #dee2e6', fontSize: '14px', textAlign: 'center' }}>{product.Capacity}</td>
-                          <td style={{ overflow: 'auto', maxHeight: '100px', padding: '8px', borderBottom: '1px solid #dee2e6', fontSize: '14px', textAlign: 'right', fontWeight: '500' }}>{product.Price ? `${product.Price.toLocaleString()}đ` : ''}</td>
-                          <td style={{ overflow: 'auto', maxHeight: '100px', padding: '8px', borderBottom: '1px solid #dee2e6', fontSize: '14px', textAlign: 'left' }}>{product.Brand}</td>
-                          <td style={{ overflow: 'auto', maxHeight: '100px', padding: '8px', borderBottom: '1px solid #dee2e6', fontSize: '14px', textAlign: 'center' }}>{product.Origin}</td>
-                          <td style={{ overflow: 'auto', maxHeight: '100px', padding: '8px', borderBottom: '1px solid #dee2e6', fontSize: '14px', textAlign: 'center' }}>{product.Status}</td>
-                          <td style={{ overflow: 'auto', maxHeight: '100px', padding: '8px', borderBottom: '1px solid #dee2e6', fontSize: '14px', textAlign: 'center' }}>{product.ImgURL}</td>
-                          <td style={{ overflow: 'auto', maxHeight: '100px', padding: '8px', borderBottom: '1px solid #dee2e6', fontSize: '14px', textAlign: 'center' }}>{product.SkinType}</td>
-                          <td style={{ overflow: 'auto', maxHeight: '20px', overflowY: 'auto', maxWidth: '120px', width: '120px', whiteSpace: 'normal', textOverflow: 'ellipsis', padding: '8px 8px', borderBottom: '1px solid #dee2e6', fontSize: '14px', textAlign: 'left' }}>{product.Description}</td>
-                          <td style={{ overflow: 'auto', maxHeight: '20px', overflowY: 'auto', maxWidth: '120px', width: '120px', whiteSpace: 'normal', textOverflow: 'ellipsis', padding: '8px 8px', borderBottom: '1px solid #dee2e6', fontSize: '14px', textAlign: 'left' }}>{product.Ingredients}</td>
-                          <td style={{ overflow: 'auto', maxHeight: '20px', overflowY: 'auto', maxWidth: '120px', width: '120px', whiteSpace: 'normal', textOverflow: 'ellipsis', padding: '8px 8px', borderBottom: '1px solid #dee2e6', fontSize: '14px', textAlign: 'left' }}>{product.UsageInstructions}</td>
-                          <td style={{ overflow: 'auto', maxHeight: '100px', padding: '8px', borderBottom: '1px solid #dee2e6', fontSize: '14px', textAlign: 'center' }}>{product.ManufactureDate}</td>
-                          <td style={{ overflow: 'auto', maxHeight: '100px', padding: '8px', borderBottom: '1px solid #dee2e6', fontSize: '14px', textAlign: 'center' }}>{product.ngayNhapKho}</td>
-                          <td style={{ whiteSpace: 'nowrap', overflow: 'auto', maxHeight: '100px', padding: '8px', borderBottom: '1px solid #dee2e6', textAlign: 'center' }}>
-                            <button
-                              onClick={() => handleEdit(product.ProductID)}
-                              style={{
-                                padding: '5px 10px',
-                                backgroundColor: '#007bff',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '3px',
-                                cursor: 'pointer',
-                                marginRight: '5px',
-                                transition: 'background-color 0.2s',
-                                ':hover': { backgroundColor: '#0069d9' }
-                              }}
-                            >
-                              Sửa
-                            </button>
-                            <button
-                              onClick={() => handleDelete(product.ProductID)}
-                              style={{
-                                padding: '5px 10px',
-                                backgroundColor: '#dc3545',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '3px',
-                                cursor: 'pointer',
-                                transition: 'background-color 0.2s',
-                                ':hover': { backgroundColor: '#c82333' }
-                              }}
-                            >
-                              Xóa
-                            </button>
-                          </td>
-                        </>
-                      )}
+                      <td style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxHeight: '100px', padding: '8px 4px', borderBottom: '1px solid #dee2e6', fontSize: '13px', textAlign: 'center' }}>{product.ProductID}</td>
+                      <td style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxHeight: '100px', padding: '8px 4px', borderBottom: '1px solid #dee2e6', fontSize: '13px', textAlign: 'center' }}>{product.ProductCode}</td>
+                      <td style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxHeight: '100px', padding: '8px 4px', borderBottom: '1px solid #dee2e6', fontSize: '13px', textAlign: 'left' }}>{product.categoryDisplay}</td>
+                      <td style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxHeight: '100px', padding: '8px 4px', borderBottom: '1px solid #dee2e6', fontSize: '13px', textAlign: 'left', fontWeight: '500' }}>{product.ProductName}</td>
+                      <td style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxHeight: '100px', padding: '8px 4px', borderBottom: '1px solid #dee2e6', fontSize: '13px', textAlign: 'center' }}>{product.Quantity}</td>
+                      <td style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxHeight: '100px', padding: '8px 4px', borderBottom: '1px solid #dee2e6', fontSize: '13px', textAlign: 'center' }}>{product.Capacity}</td>
+                      <td style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxHeight: '100px', padding: '8px 4px', borderBottom: '1px solid #dee2e6', fontSize: '13px', textAlign: 'right', fontWeight: '500' }}>{product.Price ? `${product.Price.toLocaleString()}đ` : ''}</td>
+                      <td style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxHeight: '100px', padding: '8px 4px', borderBottom: '1px solid #dee2e6', fontSize: '13px', textAlign: 'left' }}>{product.Brand}</td>
+                      <td style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxHeight: '100px', padding: '8px 4px', borderBottom: '1px solid #dee2e6', fontSize: '13px', textAlign: 'center' }}>{product.ImgURL}</td>
+                      <td style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxHeight: '100px', padding: '8px 4px', borderBottom: '1px solid #dee2e6', fontSize: '13px', textAlign: 'center' }}>{product.Status}</td>
+                      <td style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxHeight: '100px', padding: '8px 4px', borderBottom: '1px solid #dee2e6', textAlign: 'center' }}>
+                        <button
+                          onClick={() => handleViewDetail(product)}
+                          style={{
+                            padding: '4px 8px',
+                            backgroundColor: '#17a2b8',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '3px',
+                            cursor: 'pointer',
+                            marginRight: '4px',
+                            fontSize: '12px',
+                            transition: 'background-color 0.2s',
+                            ':hover': { backgroundColor: '#138496' }
+                          }}
+                        >
+                          Chi tiết
+                        </button>
+                        <button
+                          onClick={() => handleDelete(product.ProductID)}
+                          style={{
+                            padding: '4px 8px',
+                            backgroundColor: '#dc3545',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '3px',
+                            cursor: 'pointer',
+                            fontSize: '12px',
+                            transition: 'background-color 0.2s',
+                            ':hover': { backgroundColor: '#c82333' }
+                          }}
+                        >
+                          Xóa
+                        </button>
+                      </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
                     <td 
-                      colSpan={activeTab === 'Hàng sắp hết' ? "9" : "18"} 
+                      colSpan="11" 
                       className="empty-data-message"
                       style={{ 
                         padding: '30px', 
@@ -810,6 +895,8 @@ const ProductStaff = () => {
           </div>
         </div>
       </div>
+
+      {/* Dialog lọc sản phẩm */}
       <Dialog open={openFilterDialog} onClose={() => setOpenFilterDialog(false)}>
         <DialogTitle>Lọc sản phẩm</DialogTitle>
         <DialogContent>
@@ -845,7 +932,195 @@ const ProductStaff = () => {
           <Button onClick={handleFilterApply} color="primary">Áp dụng</Button>
         </DialogActions>
       </Dialog>
-      {/* Thêm Dialog để thêm sản phẩm */}
+
+      {/* Dialog chi tiết sản phẩm */}
+      <Dialog open={openDetailDialog} onClose={handleCloseDetail} maxWidth="md" fullWidth>
+        {selectedProduct && (
+          <>
+            <DialogTitle>
+              Chi tiết sản phẩm: {selectedProduct.ProductName}
+            </DialogTitle>
+            <DialogContent>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '10px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div>
+                    <strong>ID:</strong> {selectedProduct.ProductID}
+                  </div>
+                  <div>
+                    <strong>Mã sản phẩm:</strong> {selectedProduct.ProductCode}
+                  </div>
+                  <div>
+                    <strong>Tên sản phẩm:</strong> {selectedProduct.ProductName}
+                  </div>
+                  <div>
+                    <strong>Danh mục:</strong> {selectedProduct.categoryDisplay}
+                  </div>
+                  <div>
+                    <strong>Số lượng:</strong> {selectedProduct.Quantity}
+                  </div>
+                  <div>
+                    <strong>Dung tích:</strong> {selectedProduct.Capacity}
+                  </div>
+                  <div>
+                    <strong>Giá:</strong> {selectedProduct.Price ? `${selectedProduct.Price.toLocaleString()}đ` : ''}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div>
+                    <strong>Thương hiệu:</strong> {selectedProduct.Brand}
+                  </div>
+                  <div>
+                    <strong>Xuất xứ:</strong> {selectedProduct.Origin}
+                  </div>
+                  <div>
+                    <strong>Trạng thái:</strong> {selectedProduct.Status}
+                  </div>
+                  <div>
+                    <strong>Hình ảnh:</strong>
+                    <div style={{ marginTop: '8px' }}>
+                      <div style={{ marginBottom: '8px', color: '#666', fontSize: '14px' }}>
+                        Ảnh đại diện:
+                      </div>
+                      <div style={{ width: '200px', height: '200px', border: '2px solid #4CAF50', borderRadius: '4px', overflow: 'hidden', marginBottom: '16px' }}>
+                        <img
+                          src={getImageUrl(selectedProduct.ImgURL)}
+                          alt={`${selectedProduct.ProductName} - Ảnh đại diện`}
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover'
+                          }}
+                          onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.src = '/images/default-product.png';
+                          }}
+                        />
+                      </div>
+                      
+                      {productImages && productImages.length > 1 && (
+                        <>
+                          <div style={{ marginBottom: '8px', color: '#666', fontSize: '14px' }}>
+                            Ảnh khác ({productImages.length - 1}):
+                          </div>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                            {productImages.slice(1, 4).map((image, index) => (
+                              <div key={index} style={{ width: '60px', height: '60px', border: '1px solid #ddd', borderRadius: '4px', overflow: 'hidden' }}>
+                                <img
+                                  src={getImageUrl(image)}
+                                  alt={`${selectedProduct.ProductName} - Ảnh ${index + 2}`}
+                                  style={{
+                                    width: '100%',
+                                    height: '100%',
+                                    objectFit: 'cover'
+                                  }}
+                                  onError={(e) => {
+                                    e.target.onerror = null;
+                                    e.target.src = '/images/default-product.png';
+                                  }}
+                                />
+                              </div>
+                            ))}
+                            {productImages.length > 4 && (
+                              <div style={{ 
+                                width: '60px', 
+                                height: '60px', 
+                                border: '1px solid #ddd', 
+                                borderRadius: '4px', 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                justifyContent: 'center',
+                                backgroundColor: 'rgba(0,0,0,0.1)',
+                                fontSize: '12px',
+                                fontWeight: 'bold'
+                              }}>
+                                +{productImages.length - 4}
+                              </div>
+                            )}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  <div>
+                    <strong>Loại da:</strong> {selectedProduct.SkinType}
+                  </div>
+                  <div>
+                    <strong>Ngày sản xuất:</strong> {selectedProduct.ManufactureDate}
+                  </div>
+                  <div>
+                    <strong>Ngày nhập kho:</strong> {selectedProduct.ngayNhapKho}
+                  </div>
+                </div>
+              </div>
+              <div style={{ marginTop: '20px' }}>
+                <div style={{ marginBottom: '16px' }}>
+                  <strong>Mô tả sản phẩm:</strong>
+                  <div style={{ 
+                    padding: '8px', 
+                    backgroundColor: '#f8f9fa', 
+                    borderRadius: '4px', 
+                    marginTop: '4px',
+                    minHeight: '60px'
+                  }}>
+                    {selectedProduct.Description || 'Không có mô tả'}
+                  </div>
+                </div>
+                <div style={{ marginBottom: '16px' }}>
+                  <strong>Thành phần:</strong>
+                  <div style={{ 
+                    padding: '8px', 
+                    backgroundColor: '#f8f9fa', 
+                    borderRadius: '4px', 
+                    marginTop: '4px',
+                    minHeight: '60px'
+                  }}>
+                    {selectedProduct.Ingredients || 'Không có thông tin thành phần'}
+                  </div>
+                </div>
+                <div>
+                  <strong>Hướng dẫn sử dụng:</strong>
+                  <div style={{ 
+                    padding: '8px', 
+                    backgroundColor: '#f8f9fa', 
+                    borderRadius: '4px', 
+                    marginTop: '4px',
+                    minHeight: '60px'
+                  }}>
+                    {selectedProduct.UsageInstructions || 'Không có hướng dẫn sử dụng'}
+                  </div>
+                </div>
+              </div>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={handleCloseDetail} color="primary">
+                Đóng
+              </Button>
+              <Button 
+                onClick={() => {
+                  // Mở dialog xem tất cả ảnh
+                  setOpenImageGallery(true);
+                }}
+                color="info"
+                style={{ marginRight: '8px' }}
+              >
+                Xem tất cả ảnh
+              </Button>
+              <Button 
+                onClick={() => {
+                  handleCloseDetail();
+                  handleEdit(selectedProduct.ProductID);
+                }} 
+                color="primary" 
+                variant="contained"
+              >
+                Chỉnh sửa
+              </Button>
+            </DialogActions>
+          </>
+        )}
+      </Dialog>
+
+      {/* Dialog thêm sản phẩm */}
       <Dialog open={openAddDialog} onClose={handleDialogClose} maxWidth="md" fullWidth>
         <DialogTitle>Thêm Sản Phẩm Mới</DialogTitle>
         <DialogContent>
@@ -1020,6 +1295,90 @@ const ProductStaff = () => {
             Thêm Sản Phẩm
           </Button>
         </DialogActions>
+      </Dialog>
+
+      {/* Dialog xem tất cả ảnh */}
+      <Dialog open={openImageGallery} onClose={() => setOpenImageGallery(false)} maxWidth="md" fullWidth>
+        {selectedProduct && (
+          <>
+            <DialogTitle>
+              Thư viện ảnh: {selectedProduct.ProductName}
+            </DialogTitle>
+            <DialogContent>
+              <div style={{ marginBottom: '20px' }}>
+                <div style={{ marginBottom: '16px', fontWeight: 'bold', fontSize: '18px', color: '#4CAF50' }}>
+                  Ảnh đại diện
+                </div>
+                <div style={{ width: '100%', maxWidth: '400px', height: '300px', margin: '0 auto', border: '2px solid #4CAF50', borderRadius: '4px', overflow: 'hidden' }}>
+                  <img
+                    src={getImageUrl(selectedProduct.ImgURL)}
+                    alt={`${selectedProduct.ProductName} - Ảnh đại diện`}
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'contain'
+                    }}
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src = '/images/default-product.png';
+                    }}
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <div style={{ marginBottom: '16px', fontWeight: 'bold', fontSize: '18px' }}>
+                  Ảnh chi tiết sản phẩm
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '16px' }}>
+                  {productImages && productImages.length > 0 ? (
+                    productImages.map((image, index) => (
+                      <div key={index} style={{ width: '100%', height: '200px', border: '1px solid #ddd', borderRadius: '4px', overflow: 'hidden' }}>
+                        <img
+                          src={getImageUrl(image)}
+                          alt={`${selectedProduct.ProductName} - Ảnh ${index + 1}`}
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'contain'
+                          }}
+                          onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.src = '/images/default-product.png';
+                          }}
+                        />
+                        <div style={{ padding: '8px', backgroundColor: '#f8f9fa', textAlign: 'center', borderTop: '1px solid #ddd' }}>
+                          {image.displayOrder ? `Thứ tự hiển thị: ${image.displayOrder}` : `Ảnh ${index + 1}`}
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div style={{ gridColumn: '1 / -1', padding: '20px', textAlign: 'center', color: '#6c757d', backgroundColor: '#f8f9fa', borderRadius: '4px' }}>
+                      Không có ảnh chi tiết nào
+                    </div>
+                  )}
+                </div>
+              </div>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => setOpenImageGallery(false)} color="primary">
+                Đóng
+              </Button>
+              <Button 
+                onClick={() => {
+                  // Đóng dialog xem ảnh và chuẩn bị cho chức năng sửa ảnh (sẽ được triển khai sau)
+                  setOpenImageGallery(false);
+                  // Hiển thị thông báo tạm thời
+                  alert("Chức năng sửa ảnh sẽ được triển khai sau");
+                }} 
+                color="primary" 
+                variant="contained"
+              >
+                Sửa ảnh
+              </Button>
+            </DialogActions>
+          </>
+        )}
       </Dialog>
     </Box>
   );

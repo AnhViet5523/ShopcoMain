@@ -54,9 +54,34 @@ const userService = {
                 password
             });
             
+            console.log('Login API response:', response);
+            
             // Lưu thông tin người dùng vào localStorage
             if (response) {
+                // Đảm bảo response có đủ thông tin cần thiết
+                if (!response.userId) {
+                    console.warn('Warning: User ID is missing in login response');
+                }
+                
+                if (!response.role) {
+                    console.warn('Warning: User role is missing in login response');
+                } else {
+                    console.log('User role from login:', response.role);
+                    
+                    // Đảm bảo role được lưu đúng cách
+                    const normalizedRole = String(response.role).trim();
+                    response.role = normalizedRole;
+                    console.log('Normalized role:', normalizedRole);
+                }
+                
+                // Lưu thông tin người dùng vào localStorage
                 localStorage.setItem('user', JSON.stringify(response));
+                console.log('User data saved to localStorage:', response);
+                
+                // Lưu role riêng để dễ debug
+                if (response.role) {
+                    localStorage.setItem('user_role', response.role);
+                }
             }
             
             return response; 
@@ -98,6 +123,59 @@ const userService = {
             return !!user; // Trả về true nếu user tồn tại, false nếu không
         } catch (error) {
             console.error('Error checking authentication:', error);
+            return false;
+        }
+    },
+    // Lấy vai trò của người dùng hiện tại
+    getUserRole: () => {
+        try {
+            // Thử lấy role từ localStorage riêng trước
+            const debugRole = localStorage.getItem('user_role');
+            if (debugRole) {
+                console.log('Getting role from user_role in localStorage:', debugRole);
+                return debugRole.toLowerCase();
+            }
+            
+            // Nếu không có, lấy từ user object
+            const user = userService.getCurrentUser();
+            if (!user) {
+                console.log('No user found in localStorage');
+                return null;
+            }
+            
+            if (!user.role) {
+                console.log('User exists but role is missing');
+                return null;
+            }
+            
+            const normalizedRole = String(user.role).trim().toLowerCase();
+            console.log('Getting role from user object:', normalizedRole);
+            return normalizedRole;
+        } catch (error) {
+            console.error('Error getting user role:', error);
+            return null;
+        }
+    },
+    // Kiểm tra xem người dùng có vai trò cụ thể hay không
+    hasRole: (requiredRole) => {
+        try {
+            if (!requiredRole) {
+                console.log('No required role specified, allowing access');
+                return true; // Nếu không yêu cầu vai trò cụ thể, trả về true
+            }
+            
+            const userRole = userService.getUserRole();
+            if (!userRole) {
+                console.log('User has no role, denying access');
+                return false;
+            }
+            
+            const normalizedRequiredRole = String(requiredRole).trim().toLowerCase();
+            const result = userRole === normalizedRequiredRole;
+            console.log(`Checking if user role "${userRole}" matches required role "${normalizedRequiredRole}": ${result}`);
+            return result;
+        } catch (error) {
+            console.error('Error checking user role:', error);
             return false;
         }
     },

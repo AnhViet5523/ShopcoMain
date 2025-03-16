@@ -1,6 +1,6 @@
 import { 
   AccountCircle, ShoppingCart, Search, Edit, Phone, 
-  Person, ShoppingBag, HeadsetMic, ExitToApp 
+  Person, ShoppingBag, HeadsetMic, ExitToApp, Dashboard as DashboardIcon
 } from "@mui/icons-material";
 import {
   AppBar, IconButton, InputBase, Toolbar, Typography, 
@@ -21,6 +21,7 @@ const Header = () => {
   const [cartItemCount, setCartItemCount] = useState(0);
   const [open, setOpen] = useState(false);
   const isMounted = useRef(true);
+  const [userRole, setUserRole] = useState(null);
 
   // Update cart count from orderService
   useEffect(() => {
@@ -95,6 +96,32 @@ const Header = () => {
     const user = localStorage.getItem("user");
     setIsAuthenticated(!!user);
 
+  }, []);
+
+  // Thêm useEffect để lấy vai trò người dùng từ localStorage
+  useEffect(() => {
+    const checkUserRole = () => {
+      try {
+        const user = JSON.parse(localStorage.getItem('user'));
+        const role = localStorage.getItem('user_role');
+        if (user && (role === 'manager' || role === 'staff' || role === 'Manager' || role === 'Staff')) {
+          setUserRole(role.toLowerCase());
+        } else {
+          setUserRole(null);
+        }
+      } catch (error) {
+        console.error('Error checking user role:', error);
+        setUserRole(null);
+      }
+    };
+
+    checkUserRole();
+    // Kiểm tra lại vai trò khi component được mount
+    window.addEventListener('storage', checkUserRole);
+    
+    return () => {
+      window.removeEventListener('storage', checkUserRole);
+    };
   }, []);
 
   const handleSearchSubmit = async (event) => {
@@ -191,6 +218,22 @@ const Header = () => {
     }
   };
 
+  // Thêm hàm xử lý khi bấm vào nút Dashboard
+  const handleDashboardClick = () => {
+    if (!userRole) {
+      // Nếu không có vai trò, hiển thị dialog yêu cầu đăng nhập
+      showAuthRequiredDialog('dashboard');
+      return;
+    }
+
+    // Chuyển hướng dựa vào vai trò
+    if (userRole === 'manager') {
+      navigate('/product'); // Chuyển đến trang quản lý sản phẩm của Manager
+    } else if (userRole === 'staff') {
+      navigate('/productStaff'); // Chuyển đến trang quản lý sản phẩm của Staff
+    }
+  };
+
   return (
     <>
       <Box sx={{ bgcolor: "black", color: "white", py: 1 }}>
@@ -241,6 +284,20 @@ const Header = () => {
             </Paper>
 
             <Box sx={{ display: "flex", alignItems: "center", gap: 3 }}>
+              {/* Thêm nút Dashboard nếu người dùng là manager hoặc staff */}
+              {userRole && (
+                <Button
+                  startIcon={<DashboardIcon />}
+                  sx={{
+                    color: "text.primary",
+                    "&:hover": { bgcolor: "action.hover" }
+                  }}
+                  onClick={handleDashboardClick}
+                >
+                  Dashboard
+                </Button>
+              )}
+
               <Button
                 startIcon={<Edit />}
                 sx={{
