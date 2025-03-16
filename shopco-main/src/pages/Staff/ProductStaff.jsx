@@ -52,6 +52,12 @@ const ProductStaff = () => {
   const [openDetailDialog, setOpenDetailDialog] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
 
+  // Thêm state cho dialog xem tất cả ảnh
+  const [openImageGallery, setOpenImageGallery] = useState(false);
+
+  // Thêm state cho lưu trữ ảnh sản phẩm
+  const [productImages, setProductImages] = useState([]);
+
   const sidebarItems = [
     { id: 'orderStaff', name: 'Đơn hàng', icon: '📋' },
     { id: 'productStaff', name: 'Sản phẩm', icon: '📦' },
@@ -524,10 +530,60 @@ const ProductStaff = () => {
     setSearchTerm('');
   };
 
-  // Thêm hàm để mở dialog chi tiết
-  const handleViewDetail = (product) => {
+  // Cập nhật hàm để mở dialog chi tiết và lấy ảnh sản phẩm
+  const handleViewDetail = async (product) => {
     setSelectedProduct(product);
     setOpenDetailDialog(true);
+    
+    try {
+      // Lấy thông tin chi tiết sản phẩm từ API để có thông tin ảnh đầy đủ
+      const productDetail = await productService.getProductById(product.ProductID);
+      console.log('Chi tiết sản phẩm:', productDetail);
+      
+      // Xử lý hình ảnh sản phẩm
+      let images = [];
+      if (productDetail.images && productDetail.images.length > 0) {
+        images = productDetail.images;
+        console.log('Ảnh sản phẩm từ API:', images);
+      } else if (productDetail.imgURL) {
+        images = [{ imgUrl: productDetail.imgURL }];
+      } else if (product.ImgURL) {
+        images = [{ imgUrl: product.ImgURL }];
+      } else {
+        images = [{ imgUrl: '/images/default-product.jpg' }];
+      }
+      
+      setProductImages(images);
+    } catch (error) {
+      console.error('Lỗi khi lấy chi tiết sản phẩm:', error);
+      // Nếu có lỗi, vẫn hiển thị ảnh đại diện
+      setProductImages([{ imgUrl: product.ImgURL || '/images/default-product.jpg' }]);
+    }
+  };
+
+  // Hàm để lấy URL ảnh
+  const getImageUrl = (image) => {
+    if (!image) return '/images/default-product.jpg';
+    
+    // Nếu là đường dẫn đầy đủ (bắt đầu bằng http hoặc https)
+    if (typeof image === 'string') {
+      if (image.startsWith('http')) return image;
+      return image;
+    }
+    
+    // Nếu là object có thuộc tính imgUrl
+    if (image.imgUrl) {
+      if (image.imgUrl.startsWith('http')) return image.imgUrl;
+      return image.imgUrl;
+    }
+    
+    // Nếu là object có thuộc tính imageUrl
+    if (image.imageUrl) {
+      if (image.imageUrl.startsWith('http')) return image.imageUrl;
+      return image.imageUrl;
+    }
+    
+    return '/images/default-product.jpg';
   };
 
   // Thêm hàm để đóng dialog chi tiết
@@ -920,7 +976,70 @@ const ProductStaff = () => {
                     <strong>Trạng thái:</strong> {selectedProduct.Status}
                   </div>
                   <div>
-                    <strong>Hình ảnh:</strong> {selectedProduct.ImgURL}
+                    <strong>Hình ảnh:</strong>
+                    <div style={{ marginTop: '8px' }}>
+                      <div style={{ marginBottom: '8px', color: '#666', fontSize: '14px' }}>
+                        Ảnh đại diện:
+                      </div>
+                      <div style={{ width: '200px', height: '200px', border: '2px solid #4CAF50', borderRadius: '4px', overflow: 'hidden', marginBottom: '16px' }}>
+                        <img
+                          src={getImageUrl(selectedProduct.ImgURL)}
+                          alt={`${selectedProduct.ProductName} - Ảnh đại diện`}
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover'
+                          }}
+                          onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.src = '/images/default-product.png';
+                          }}
+                        />
+                      </div>
+                      
+                      {productImages && productImages.length > 1 && (
+                        <>
+                          <div style={{ marginBottom: '8px', color: '#666', fontSize: '14px' }}>
+                            Ảnh khác ({productImages.length - 1}):
+                          </div>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                            {productImages.slice(1, 4).map((image, index) => (
+                              <div key={index} style={{ width: '60px', height: '60px', border: '1px solid #ddd', borderRadius: '4px', overflow: 'hidden' }}>
+                                <img
+                                  src={getImageUrl(image)}
+                                  alt={`${selectedProduct.ProductName} - Ảnh ${index + 2}`}
+                                  style={{
+                                    width: '100%',
+                                    height: '100%',
+                                    objectFit: 'cover'
+                                  }}
+                                  onError={(e) => {
+                                    e.target.onerror = null;
+                                    e.target.src = '/images/default-product.png';
+                                  }}
+                                />
+                              </div>
+                            ))}
+                            {productImages.length > 4 && (
+                              <div style={{ 
+                                width: '60px', 
+                                height: '60px', 
+                                border: '1px solid #ddd', 
+                                borderRadius: '4px', 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                justifyContent: 'center',
+                                backgroundColor: 'rgba(0,0,0,0.1)',
+                                fontSize: '12px',
+                                fontWeight: 'bold'
+                              }}>
+                                +{productImages.length - 4}
+                              </div>
+                            )}
+                          </div>
+                        </>
+                      )}
+                    </div>
                   </div>
                   <div>
                     <strong>Loại da:</strong> {selectedProduct.SkinType}
@@ -975,6 +1094,16 @@ const ProductStaff = () => {
             <DialogActions>
               <Button onClick={handleCloseDetail} color="primary">
                 Đóng
+              </Button>
+              <Button 
+                onClick={() => {
+                  // Mở dialog xem tất cả ảnh
+                  setOpenImageGallery(true);
+                }}
+                color="info"
+                style={{ marginRight: '8px' }}
+              >
+                Xem tất cả ảnh
               </Button>
               <Button 
                 onClick={() => {
@@ -1166,6 +1295,90 @@ const ProductStaff = () => {
             Thêm Sản Phẩm
           </Button>
         </DialogActions>
+      </Dialog>
+
+      {/* Dialog xem tất cả ảnh */}
+      <Dialog open={openImageGallery} onClose={() => setOpenImageGallery(false)} maxWidth="md" fullWidth>
+        {selectedProduct && (
+          <>
+            <DialogTitle>
+              Thư viện ảnh: {selectedProduct.ProductName}
+            </DialogTitle>
+            <DialogContent>
+              <div style={{ marginBottom: '20px' }}>
+                <div style={{ marginBottom: '16px', fontWeight: 'bold', fontSize: '18px', color: '#4CAF50' }}>
+                  Ảnh đại diện
+                </div>
+                <div style={{ width: '100%', maxWidth: '400px', height: '300px', margin: '0 auto', border: '2px solid #4CAF50', borderRadius: '4px', overflow: 'hidden' }}>
+                  <img
+                    src={getImageUrl(selectedProduct.ImgURL)}
+                    alt={`${selectedProduct.ProductName} - Ảnh đại diện`}
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'contain'
+                    }}
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src = '/images/default-product.png';
+                    }}
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <div style={{ marginBottom: '16px', fontWeight: 'bold', fontSize: '18px' }}>
+                  Ảnh chi tiết sản phẩm
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '16px' }}>
+                  {productImages && productImages.length > 0 ? (
+                    productImages.map((image, index) => (
+                      <div key={index} style={{ width: '100%', height: '200px', border: '1px solid #ddd', borderRadius: '4px', overflow: 'hidden' }}>
+                        <img
+                          src={getImageUrl(image)}
+                          alt={`${selectedProduct.ProductName} - Ảnh ${index + 1}`}
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'contain'
+                          }}
+                          onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.src = '/images/default-product.png';
+                          }}
+                        />
+                        <div style={{ padding: '8px', backgroundColor: '#f8f9fa', textAlign: 'center', borderTop: '1px solid #ddd' }}>
+                          {image.displayOrder ? `Thứ tự hiển thị: ${image.displayOrder}` : `Ảnh ${index + 1}`}
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div style={{ gridColumn: '1 / -1', padding: '20px', textAlign: 'center', color: '#6c757d', backgroundColor: '#f8f9fa', borderRadius: '4px' }}>
+                      Không có ảnh chi tiết nào
+                    </div>
+                  )}
+                </div>
+              </div>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => setOpenImageGallery(false)} color="primary">
+                Đóng
+              </Button>
+              <Button 
+                onClick={() => {
+                  // Đóng dialog xem ảnh và chuẩn bị cho chức năng sửa ảnh (sẽ được triển khai sau)
+                  setOpenImageGallery(false);
+                  // Hiển thị thông báo tạm thời
+                  alert("Chức năng sửa ảnh sẽ được triển khai sau");
+                }} 
+                color="primary" 
+                variant="contained"
+              >
+                Sửa ảnh
+              </Button>
+            </DialogActions>
+          </>
+        )}
       </Dialog>
     </Box>
   );
