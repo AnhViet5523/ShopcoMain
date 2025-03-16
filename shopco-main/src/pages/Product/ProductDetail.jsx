@@ -126,6 +126,21 @@ export default function ProductDetail() {
         setProductImages(images);
         console.log('Product images:', images);
         
+        // Xác định trạng thái sản phẩm dựa trên số lượng tồn kho và trạng thái
+        let productStatus = 'Available';
+        // Kiểm tra trạng thái từ API
+        if (fetchedProduct.status && 
+            (fetchedProduct.status === 'Hết hàng' || 
+             fetchedProduct.status.toLowerCase().includes('hết') ||
+             fetchedProduct.status === 'Out of Stock')) {
+          productStatus = 'Out of Stock';
+        }
+        
+        // Kiểm tra số lượng tồn kho
+        if (fetchedProduct.inventory === 0 || fetchedProduct.stock === 0 || fetchedProduct.quantity === 0) {
+          productStatus = 'Out of Stock';
+        }
+        
         setProduct({
           ...fetchedProduct,
           discountedPrice: fetchedProduct.price - (fetchedProduct.price * 15 / 100),
@@ -141,13 +156,24 @@ export default function ProductDetail() {
               soldCount: 657,
               image: "/path/to/image.jpg"
             }
-          ]
+          ],
+          status: productStatus,
+          inventory: fetchedProduct.inventory || fetchedProduct.stock || fetchedProduct.quantity || 0
         });
         setReviews(fetchedReviews || []);
         if (totalSold) {
           setTotalSold(totalSold.totalSold);
         }
       }
+      console.log("Total Sold:", totalSold);
+      console.log("Product Status:", product?.status);
+      
+      // Log sau khi state đã được cập nhật
+      setTimeout(() => {
+        console.log("Product sau khi cập nhật:", product);
+        console.log("Status sau khi cập nhật:", product?.status);
+      }, 100);
+      
     } catch (error) {
       console.error("Error fetching product or reviews:", error);
     } finally {
@@ -178,6 +204,12 @@ export default function ProductDetail() {
 
   const addToCart = async () => {
     if (!product) return;
+
+    // Kiểm tra số lượng và trạng thái sản phẩm
+    if (totalSold === 0 && product.status === 'Out of Stock') {
+        alert('Sản phẩm hiện đã hết, shop đang cập nhật.');
+        return;
+    }
     
     try {
       // Get user ID from localStorage
@@ -202,6 +234,12 @@ export default function ProductDetail() {
   };
 
   const handleBuyNow = async () => {
+    // Kiểm tra số lượng và trạng thái sản phẩm
+    if (totalSold === 0 && product.status === 'Out of Stock') {
+        alert('Sản phẩm hiện đã hết, shop đang cập nhật.');
+        return;
+    }
+    
     // Logic để thêm sản phẩm vào giỏ hàng nếu cần
     await addToCart();
     // Chuyển hướng đến trang checkout
@@ -556,34 +594,43 @@ export default function ProductDetail() {
                 
                 {/* Action Buttons */}
                 <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
-                <Button 
+                  <Button 
                     variant="contained" 
-                    color="success" 
+                    color={product?.status !== 'Out of Stock' && product?.inventory > 0 ? "success" : "default"} 
                     sx={{ 
                       flex: 1,
                       py: 1.5,
                       textTransform: 'none',
-                      fontWeight: 'bold'
+                      fontWeight: 'bold',
+                      opacity: product?.status !== 'Out of Stock' && product?.inventory > 0 ? 1 : 0.5
                     }}
-                    onClick={addToCart}
+                    onClick={product?.status !== 'Out of Stock' && product?.inventory > 0 ? addToCart : undefined}
+                    disabled={product?.status === 'Out of Stock' || product?.inventory <= 0}
                   >
                     Thêm vào giỏ
                   </Button>
                   <Button 
                     variant="outlined" 
-                    color="success" 
+                    color={product?.status !== 'Out of Stock' && product?.inventory > 0 ? "success" : "default"} 
                     sx={{ 
                       flex: 1,
                       py: 1.5,
                       textTransform: 'none',
-                      fontWeight: 'bold'
+                      fontWeight: 'bold',
+                      opacity: product?.status !== 'Out of Stock' && product?.inventory > 0 ? 1 : 0.5
                     }}
-                    onClick={handleBuyNow}
+                    onClick={product?.status !== 'Out of Stock' && product?.inventory > 0 ? handleBuyNow : undefined}
+                    disabled={product?.status === 'Out of Stock' || product?.inventory <= 0}
                   >
                     Mua Ngay
                   </Button>
-                  
                 </Box>
+                {console.log("Điều kiện hiển thị:", product?.inventory <= 0, product?.status === 'Out of Stock')}
+                {(product?.inventory <= 0 || product?.status === 'Out of Stock') && (
+                  <Typography color="error" sx={{ mt: 1, fontWeight: 'bold', display: 'block', fontSize: '1rem' }}>
+                    Sản phẩm hiện đã hết, shop đang cập nhật.
+                  </Typography>
+                )}
               </>
             )}
           </Grid>
