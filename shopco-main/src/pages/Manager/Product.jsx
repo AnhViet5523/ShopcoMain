@@ -555,7 +555,7 @@ const Product = () => {
         {/* Sidebar */}
         <div className="sidebar">
           <div className="logo-container">
-            <div className="logo" style={{ marginRight: '15px' }}>
+            <div className="logo" style={{ marginRight: '15px', cursor: 'pointer' }} onClick={() => navigate('/')}>
               <img 
                 src="/images/logo.png" 
                 alt="Beauty Cosmetics"
@@ -567,7 +567,7 @@ const Product = () => {
                 }}
               />
             </div>
-            <div className="brand">
+            <div className="brand" style={{ cursor: 'pointer' }} onClick={() => navigate('/')}>
               <div>BEAUTY</div>
               <div>COSMETICS</div>
             </div>
