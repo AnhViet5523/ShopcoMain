@@ -724,4 +724,9 @@ export default function ProductDetail() {
       </Container>
     </>
   );
+<<<<<<< Updated upstream
 }
+=======
+}
+//sua 
+>>>>>>> Stashed changes
