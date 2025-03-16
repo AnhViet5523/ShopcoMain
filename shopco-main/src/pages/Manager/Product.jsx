@@ -555,7 +555,7 @@ const Product = () => {
         {/* Sidebar */}
         <div className="sidebar">
           <div className="logo-container">
-            <div className="logo" style={{ marginRight: '15px' }}>
+            <div className="logo" style={{ marginRight: '15px', cursor: 'pointer' }} onClick={() => navigate('/')}>
               <img 
                 src="/images/logo.png" 
                 alt="Beauty Cosmetics"
@@ -567,7 +567,7 @@ const Product = () => {
                 }}
               />
             </div>
-            <div className="brand">
+            <div className="brand" style={{ cursor: 'pointer' }} onClick={() => navigate('/')}>
               <div>BEAUTY</div>
               <div>COSMETICS</div>
             </div>
@@ -797,23 +797,6 @@ const Product = () => {
                           }}
                         >
                           Chi tiết
-                        </button>
-                        <button
-                          onClick={() => handleEdit(product.ProductID)}
-                          style={{
-                            padding: '4px 8px',
-                            backgroundColor: '#007bff',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '3px',
-                            cursor: 'pointer',
-                            marginRight: '4px',
-                            fontSize: '12px',
-                            transition: 'background-color 0.2s',
-                            ':hover': { backgroundColor: '#0069d9' }
-                          }}
-                        >
-                          Sửa
                         </button>
                         <button
                           onClick={() => handleDelete(product.ProductID)}

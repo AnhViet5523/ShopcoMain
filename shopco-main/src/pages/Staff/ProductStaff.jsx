@@ -685,7 +685,7 @@ const ProductStaff = () => {
           </div>
           
           {/* Table */}
-          <div className="dashboard-table">
+          <div className="dashboard-table" style={{ overflowX: 'auto' }}>
             <table style={{ 
               tableLayout: 'fixed', 
               width: '100%', 
@@ -698,43 +698,24 @@ const ProductStaff = () => {
             }}>
               <thead>
                 <tr style={{ backgroundColor: '#f8f9fa', height: '50px' }}>
-                  <th style={{ width: '60px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>ID</th>
-                  <th style={{ width: '110px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>MÃ SẢN PHẨM</th>
-                  <th style={{ width: '120px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>PHÂN LOẠI</th>
-                  <th style={{ width: '150px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>TÊN SẢN PHẨM</th>
-                  <th style={{ width: '80px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>SỐ LƯỢNG</th>
-                  {activeTab === 'Hàng sắp hết' && (
-                    <>
-                      <th style={{ width: '100px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>DUNG TÍCH</th>
-                      <th style={{ width: '110px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>GIÁ TIỀN</th>
-                      <th style={{ width: '120px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>THƯƠNG HIỆU</th>
-                      <th style={{ width: '120px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>THAO TÁC</th>
-                    </>
-                  )}
-                  {activeTab !== 'Hàng sắp hết' && (
-                    <>
-                      <th style={{ width: '100px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>DUNG TÍCH</th>
-                      <th style={{ width: '110px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>GIÁ TIỀN</th>
-                      <th style={{ width: '110px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>THƯƠNG HIỆU</th>
-                      <th style={{ width: '100px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>XUẤT XỨ</th>
-                      <th style={{ width: '100px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>TRẠNG THÁI</th>
-                      <th style={{ width: '100px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>HÌNH ẢNH</th>
-                      <th style={{ width: '100px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>LOẠI DA</th>
-                      <th style={{ width: '120px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>THÔNG TIN</th>
-                      <th style={{ width: '120px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>THÀNH PHẦN</th>
-                      <th style={{ width: '120px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>CÁCH DÙNG</th>
-                      <th style={{ width: '110px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>NGÀY SẢN XUẤT</th>
-                      <th style={{ width: '110px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>NGÀY NHẬP KHO</th>
-                      <th style={{ width: '120px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>THAO TÁC</th>
-                    </>
-                  )}
+                  <th style={{ width: '50px', padding: '8px 4px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>ID</th>
+                  <th style={{ width: '80px', padding: '8px 4px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>MÃ SP</th>
+                  <th style={{ width: '100px', padding: '8px 4px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>PHÂN LOẠI</th>
+                  <th style={{ width: '120px', padding: '8px 4px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>TÊN SP</th>
+                  <th style={{ width: '60px', padding: '8px 4px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>SL</th>
+                  <th style={{ width: '70px', padding: '8px 4px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>DUNG TÍCH</th>
+                  <th style={{ width: '80px', padding: '8px 4px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>GIÁ</th>
+                  <th style={{ width: '90px', padding: '8px 4px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>THƯƠNG HIỆU</th>
+                  <th style={{ width: '70px', padding: '8px 4px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>HÌNH ẢNH</th>
+                  <th style={{ width: '80px', padding: '8px 4px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>TRẠNG THÁI</th>
+                  <th style={{ width: '150px', padding: '8px 4px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>THAO TÁC</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
                   <tr>
                     <td 
-                      colSpan={activeTab === 'Hàng sắp hết' ? "9" : "18"} 
+                      colSpan="11" 
                       style={{ 
                         padding: '30px', 
                         textAlign: 'center', 
@@ -753,7 +734,7 @@ const ProductStaff = () => {
                 ) : error ? (
                   <tr>
                     <td 
-                      colSpan={activeTab === 'Hàng sắp hết' ? "9" : "18"} 
+                      colSpan="11" 
                       style={{ 
                         padding: '30px', 
                         textAlign: 'center', 
@@ -776,144 +757,57 @@ const ProductStaff = () => {
                         ':hover': { backgroundColor: '#f1f3f5' }
                       }}
                     >
-                      <td style={{ overflow: 'auto', maxHeight: '100px', padding: '8px', borderBottom: '1px solid #dee2e6', fontSize: '14px', textAlign: 'center' }}>{product.ProductID}</td>
-                      <td style={{ overflow: 'auto', maxHeight: '100px', padding: '8px', borderBottom: '1px solid #dee2e6', fontSize: '14px', textAlign: 'center' }}>{product.ProductCode}</td>
-                      <td style={{ overflow: 'auto', maxHeight: '100px', padding: '8px', borderBottom: '1px solid #dee2e6', fontSize: '14px', textAlign: 'left' }}>{product.categoryDisplay}</td>
-                      <td style={{ overflow: 'auto', maxHeight: '100px', padding: '8px', borderBottom: '1px solid #dee2e6', fontSize: '14px', textAlign: 'left', fontWeight: '500' }}>{product.ProductName}</td>
-                      <td style={{ overflow: 'auto', maxHeight: '100px', padding: '8px', borderBottom: '1px solid #dee2e6', fontSize: '14px', textAlign: 'center' }}>{product.Quantity}</td>
-                      {activeTab === 'Hàng sắp hết' && (
-                        <>
-                          <td style={{ overflow: 'auto', maxHeight: '100px', padding: '8px', borderBottom: '1px solid #dee2e6', fontSize: '14px', textAlign: 'center' }}>{product.Capacity}</td>
-                          <td style={{ overflow: 'auto', maxHeight: '100px', padding: '8px', borderBottom: '1px solid #dee2e6', fontSize: '14px', textAlign: 'right', fontWeight: '500' }}>{product.Price ? `${product.Price.toLocaleString()}đ` : ''}</td>
-                          <td style={{ overflow: 'auto', maxHeight: '100px', padding: '8px', borderBottom: '1px solid #dee2e6', fontSize: '14px', textAlign: 'left' }}>{product.Brand}</td>
-                          <td style={{ whiteSpace: 'nowrap', overflow: 'auto', maxHeight: '100px', padding: '8px', borderBottom: '1px solid #dee2e6', textAlign: 'center' }}>
-                            <button
-                              onClick={() => handleViewDetail(product)}
-                              style={{
-                                padding: '4px 8px',
-                                backgroundColor: '#17a2b8',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '3px',
-                                cursor: 'pointer',
-                                marginRight: '4px',
-                                fontSize: '12px',
-                                transition: 'background-color 0.2s',
-                                ':hover': { backgroundColor: '#138496' }
-                              }}
-                            >
-                              Chi tiết
-                            </button>
-                            <button
-                              onClick={() => handleEdit(product.ProductID)}
-                              style={{
-                                padding: '4px 8px',
-                                backgroundColor: '#007bff',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '3px',
-                                cursor: 'pointer',
-                                marginRight: '4px',
-                                fontSize: '12px',
-                                transition: 'background-color 0.2s',
-                                ':hover': { backgroundColor: '#0069d9' }
-                              }}
-                            >
-                              Sửa
-                            </button>
-                            <button
-                              onClick={() => handleDelete(product.ProductID)}
-                              style={{
-                                padding: '4px 8px',
-                                backgroundColor: '#dc3545',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '3px',
-                                cursor: 'pointer',
-                                fontSize: '12px',
-                                transition: 'background-color 0.2s',
-                                ':hover': { backgroundColor: '#c82333' }
-                              }}
-                            >
-                              Xóa
-                            </button>
-                          </td>
-                        </>
-                      )}
-                      {activeTab !== 'Hàng sắp hết' && (
-                        <>
-                          <td style={{ overflow: 'auto', maxHeight: '100px', padding: '8px', borderBottom: '1px solid #dee2e6', fontSize: '14px', textAlign: 'center' }}>{product.Capacity}</td>
-                          <td style={{ overflow: 'auto', maxHeight: '100px', padding: '8px', borderBottom: '1px solid #dee2e6', fontSize: '14px', textAlign: 'right', fontWeight: '500' }}>{product.Price ? `${product.Price.toLocaleString()}đ` : ''}</td>
-                          <td style={{ overflow: 'auto', maxHeight: '100px', padding: '8px', borderBottom: '1px solid #dee2e6', fontSize: '14px', textAlign: 'left' }}>{product.Brand}</td>
-                          <td style={{ overflow: 'auto', maxHeight: '100px', padding: '8px', borderBottom: '1px solid #dee2e6', fontSize: '14px', textAlign: 'center' }}>{product.Origin}</td>
-                          <td style={{ overflow: 'auto', maxHeight: '100px', padding: '8px', borderBottom: '1px solid #dee2e6', fontSize: '14px', textAlign: 'center' }}>{product.Status}</td>
-                          <td style={{ overflow: 'auto', maxHeight: '100px', padding: '8px', borderBottom: '1px solid #dee2e6', fontSize: '14px', textAlign: 'center' }}>{product.ImgURL}</td>
-                          <td style={{ overflow: 'auto', maxHeight: '100px', padding: '8px', borderBottom: '1px solid #dee2e6', fontSize: '14px', textAlign: 'center' }}>{product.SkinType}</td>
-                          <td style={{ overflow: 'auto', maxHeight: '20px', overflowY: 'auto', maxWidth: '120px', width: '120px', whiteSpace: 'normal', textOverflow: 'ellipsis', padding: '8px 8px', borderBottom: '1px solid #dee2e6', fontSize: '14px', textAlign: 'left' }}>{product.Description}</td>
-                          <td style={{ overflow: 'auto', maxHeight: '20px', overflowY: 'auto', maxWidth: '120px', width: '120px', whiteSpace: 'normal', textOverflow: 'ellipsis', padding: '8px 8px', borderBottom: '1px solid #dee2e6', fontSize: '14px', textAlign: 'left' }}>{product.Ingredients}</td>
-                          <td style={{ overflow: 'auto', maxHeight: '20px', overflowY: 'auto', maxWidth: '120px', width: '120px', whiteSpace: 'normal', textOverflow: 'ellipsis', padding: '8px 8px', borderBottom: '1px solid #dee2e6', fontSize: '14px', textAlign: 'left' }}>{product.UsageInstructions}</td>
-                          <td style={{ overflow: 'auto', maxHeight: '100px', padding: '8px', borderBottom: '1px solid #dee2e6', fontSize: '14px', textAlign: 'center' }}>{product.ManufactureDate}</td>
-                          <td style={{ overflow: 'auto', maxHeight: '100px', padding: '8px', borderBottom: '1px solid #dee2e6', fontSize: '14px', textAlign: 'center' }}>{product.ngayNhapKho}</td>
-                          <td style={{ whiteSpace: 'nowrap', overflow: 'auto', maxHeight: '100px', padding: '8px', borderBottom: '1px solid #dee2e6', textAlign: 'center' }}>
-                            <button
-                              onClick={() => handleViewDetail(product)}
-                              style={{
-                                padding: '4px 8px',
-                                backgroundColor: '#17a2b8',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '3px',
-                                cursor: 'pointer',
-                                marginRight: '4px',
-                                fontSize: '12px',
-                                transition: 'background-color 0.2s',
-                                ':hover': { backgroundColor: '#138496' }
-                              }}
-                            >
-                              Chi tiết
-                            </button>
-                            <button
-                              onClick={() => handleEdit(product.ProductID)}
-                              style={{
-                                padding: '4px 8px',
-                                backgroundColor: '#007bff',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '3px',
-                                cursor: 'pointer',
-                                marginRight: '4px',
-                                fontSize: '12px',
-                                transition: 'background-color 0.2s',
-                                ':hover': { backgroundColor: '#0069d9' }
-                              }}
-                            >
-                              Sửa
-                            </button>
-                            <button
-                              onClick={() => handleDelete(product.ProductID)}
-                              style={{
-                                padding: '4px 8px',
-                                backgroundColor: '#dc3545',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '3px',
-                                cursor: 'pointer',
-                                fontSize: '12px',
-                                transition: 'background-color 0.2s',
-                                ':hover': { backgroundColor: '#c82333' }
-                              }}
-                            >
-                              Xóa
-                            </button>
-                          </td>
-                        </>
-                      )}
+                      <td style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxHeight: '100px', padding: '8px 4px', borderBottom: '1px solid #dee2e6', fontSize: '13px', textAlign: 'center' }}>{product.ProductID}</td>
+                      <td style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxHeight: '100px', padding: '8px 4px', borderBottom: '1px solid #dee2e6', fontSize: '13px', textAlign: 'center' }}>{product.ProductCode}</td>
+                      <td style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxHeight: '100px', padding: '8px 4px', borderBottom: '1px solid #dee2e6', fontSize: '13px', textAlign: 'left' }}>{product.categoryDisplay}</td>
+                      <td style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxHeight: '100px', padding: '8px 4px', borderBottom: '1px solid #dee2e6', fontSize: '13px', textAlign: 'left', fontWeight: '500' }}>{product.ProductName}</td>
+                      <td style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxHeight: '100px', padding: '8px 4px', borderBottom: '1px solid #dee2e6', fontSize: '13px', textAlign: 'center' }}>{product.Quantity}</td>
+                      <td style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxHeight: '100px', padding: '8px 4px', borderBottom: '1px solid #dee2e6', fontSize: '13px', textAlign: 'center' }}>{product.Capacity}</td>
+                      <td style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxHeight: '100px', padding: '8px 4px', borderBottom: '1px solid #dee2e6', fontSize: '13px', textAlign: 'right', fontWeight: '500' }}>{product.Price ? `${product.Price.toLocaleString()}đ` : ''}</td>
+                      <td style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxHeight: '100px', padding: '8px 4px', borderBottom: '1px solid #dee2e6', fontSize: '13px', textAlign: 'left' }}>{product.Brand}</td>
+                      <td style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxHeight: '100px', padding: '8px 4px', borderBottom: '1px solid #dee2e6', fontSize: '13px', textAlign: 'center' }}>{product.ImgURL}</td>
+                      <td style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxHeight: '100px', padding: '8px 4px', borderBottom: '1px solid #dee2e6', fontSize: '13px', textAlign: 'center' }}>{product.Status}</td>
+                      <td style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxHeight: '100px', padding: '8px 4px', borderBottom: '1px solid #dee2e6', textAlign: 'center' }}>
+                        <button
+                          onClick={() => handleViewDetail(product)}
+                          style={{
+                            padding: '4px 8px',
+                            backgroundColor: '#17a2b8',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '3px',
+                            cursor: 'pointer',
+                            marginRight: '4px',
+                            fontSize: '12px',
+                            transition: 'background-color 0.2s',
+                            ':hover': { backgroundColor: '#138496' }
+                          }}
+                        >
+                          Chi tiết
+                        </button>
+                        <button
+                          onClick={() => handleDelete(product.ProductID)}
+                          style={{
+                            padding: '4px 8px',
+                            backgroundColor: '#dc3545',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '3px',
+                            cursor: 'pointer',
+                            fontSize: '12px',
+                            transition: 'background-color 0.2s',
+                            ':hover': { backgroundColor: '#c82333' }
+                          }}
+                        >
+                          Xóa
+                        </button>
+                      </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
                     <td 
-                      colSpan={activeTab === 'Hàng sắp hết' ? "9" : "18"} 
+                      colSpan="11" 
                       className="empty-data-message"
                       style={{ 
                         padding: '30px', 
@@ -945,6 +839,8 @@ const ProductStaff = () => {
           </div>
         </div>
       </div>
+
+      {/* Dialog lọc sản phẩm */}
       <Dialog open={openFilterDialog} onClose={() => setOpenFilterDialog(false)}>
         <DialogTitle>Lọc sản phẩm</DialogTitle>
         <DialogContent>
@@ -980,7 +876,122 @@ const ProductStaff = () => {
           <Button onClick={handleFilterApply} color="primary">Áp dụng</Button>
         </DialogActions>
       </Dialog>
-      {/* Thêm Dialog để thêm sản phẩm */}
+
+      {/* Dialog chi tiết sản phẩm */}
+      <Dialog open={openDetailDialog} onClose={handleCloseDetail} maxWidth="md" fullWidth>
+        {selectedProduct && (
+          <>
+            <DialogTitle>
+              Chi tiết sản phẩm: {selectedProduct.ProductName}
+            </DialogTitle>
+            <DialogContent>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '10px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div>
+                    <strong>ID:</strong> {selectedProduct.ProductID}
+                  </div>
+                  <div>
+                    <strong>Mã sản phẩm:</strong> {selectedProduct.ProductCode}
+                  </div>
+                  <div>
+                    <strong>Tên sản phẩm:</strong> {selectedProduct.ProductName}
+                  </div>
+                  <div>
+                    <strong>Danh mục:</strong> {selectedProduct.categoryDisplay}
+                  </div>
+                  <div>
+                    <strong>Số lượng:</strong> {selectedProduct.Quantity}
+                  </div>
+                  <div>
+                    <strong>Dung tích:</strong> {selectedProduct.Capacity}
+                  </div>
+                  <div>
+                    <strong>Giá:</strong> {selectedProduct.Price ? `${selectedProduct.Price.toLocaleString()}đ` : ''}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div>
+                    <strong>Thương hiệu:</strong> {selectedProduct.Brand}
+                  </div>
+                  <div>
+                    <strong>Xuất xứ:</strong> {selectedProduct.Origin}
+                  </div>
+                  <div>
+                    <strong>Trạng thái:</strong> {selectedProduct.Status}
+                  </div>
+                  <div>
+                    <strong>Hình ảnh:</strong> {selectedProduct.ImgURL}
+                  </div>
+                  <div>
+                    <strong>Loại da:</strong> {selectedProduct.SkinType}
+                  </div>
+                  <div>
+                    <strong>Ngày sản xuất:</strong> {selectedProduct.ManufactureDate}
+                  </div>
+                  <div>
+                    <strong>Ngày nhập kho:</strong> {selectedProduct.ngayNhapKho}
+                  </div>
+                </div>
+              </div>
+              <div style={{ marginTop: '20px' }}>
+                <div style={{ marginBottom: '16px' }}>
+                  <strong>Mô tả sản phẩm:</strong>
+                  <div style={{ 
+                    padding: '8px', 
+                    backgroundColor: '#f8f9fa', 
+                    borderRadius: '4px', 
+                    marginTop: '4px',
+                    minHeight: '60px'
+                  }}>
+                    {selectedProduct.Description || 'Không có mô tả'}
+                  </div>
+                </div>
+                <div style={{ marginBottom: '16px' }}>
+                  <strong>Thành phần:</strong>
+                  <div style={{ 
+                    padding: '8px', 
+                    backgroundColor: '#f8f9fa', 
+                    borderRadius: '4px', 
+                    marginTop: '4px',
+                    minHeight: '60px'
+                  }}>
+                    {selectedProduct.Ingredients || 'Không có thông tin thành phần'}
+                  </div>
+                </div>
+                <div>
+                  <strong>Hướng dẫn sử dụng:</strong>
+                  <div style={{ 
+                    padding: '8px', 
+                    backgroundColor: '#f8f9fa', 
+                    borderRadius: '4px', 
+                    marginTop: '4px',
+                    minHeight: '60px'
+                  }}>
+                    {selectedProduct.UsageInstructions || 'Không có hướng dẫn sử dụng'}
+                  </div>
+                </div>
+              </div>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={handleCloseDetail} color="primary">
+                Đóng
+              </Button>
+              <Button 
+                onClick={() => {
+                  handleCloseDetail();
+                  handleEdit(selectedProduct.ProductID);
+                }} 
+                color="primary" 
+                variant="contained"
+              >
+                Chỉnh sửa
+              </Button>
+            </DialogActions>
+          </>
+        )}
+      </Dialog>
+
+      {/* Dialog thêm sản phẩm */}
       <Dialog open={openAddDialog} onClose={handleDialogClose} maxWidth="md" fullWidth>
         <DialogTitle>Thêm Sản Phẩm Mới</DialogTitle>
         <DialogContent>
@@ -1155,119 +1166,6 @@ const ProductStaff = () => {
             Thêm Sản Phẩm
           </Button>
         </DialogActions>
-      </Dialog>
-      {/* Dialog chi tiết sản phẩm */}
-      <Dialog open={openDetailDialog} onClose={handleCloseDetail} maxWidth="md" fullWidth>
-        {selectedProduct && (
-          <>
-            <DialogTitle>
-              Chi tiết sản phẩm: {selectedProduct.ProductName}
-            </DialogTitle>
-            <DialogContent>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '10px' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <div>
-                    <strong>ID:</strong> {selectedProduct.ProductID}
-                  </div>
-                  <div>
-                    <strong>Mã sản phẩm:</strong> {selectedProduct.ProductCode}
-                  </div>
-                  <div>
-                    <strong>Tên sản phẩm:</strong> {selectedProduct.ProductName}
-                  </div>
-                  <div>
-                    <strong>Danh mục:</strong> {selectedProduct.categoryDisplay}
-                  </div>
-                  <div>
-                    <strong>Số lượng:</strong> {selectedProduct.Quantity}
-                  </div>
-                  <div>
-                    <strong>Dung tích:</strong> {selectedProduct.Capacity}
-                  </div>
-                  <div>
-                    <strong>Giá:</strong> {selectedProduct.Price ? `${selectedProduct.Price.toLocaleString()}đ` : ''}
-                  </div>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <div>
-                    <strong>Thương hiệu:</strong> {selectedProduct.Brand}
-                  </div>
-                  <div>
-                    <strong>Xuất xứ:</strong> {selectedProduct.Origin}
-                  </div>
-                  <div>
-                    <strong>Trạng thái:</strong> {selectedProduct.Status}
-                  </div>
-                  <div>
-                    <strong>Hình ảnh:</strong> {selectedProduct.ImgURL}
-                  </div>
-                  <div>
-                    <strong>Loại da:</strong> {selectedProduct.SkinType}
-                  </div>
-                  <div>
-                    <strong>Ngày sản xuất:</strong> {selectedProduct.ManufactureDate}
-                  </div>
-                  <div>
-                    <strong>Ngày nhập kho:</strong> {selectedProduct.ngayNhapKho}
-                  </div>
-                </div>
-              </div>
-              <div style={{ marginTop: '20px' }}>
-                <div style={{ marginBottom: '16px' }}>
-                  <strong>Mô tả sản phẩm:</strong>
-                  <div style={{ 
-                    padding: '8px', 
-                    backgroundColor: '#f8f9fa', 
-                    borderRadius: '4px', 
-                    marginTop: '4px',
-                    minHeight: '60px'
-                  }}>
-                    {selectedProduct.Description || 'Không có mô tả'}
-                  </div>
-                </div>
-                <div style={{ marginBottom: '16px' }}>
-                  <strong>Thành phần:</strong>
-                  <div style={{ 
-                    padding: '8px', 
-                    backgroundColor: '#f8f9fa', 
-                    borderRadius: '4px', 
-                    marginTop: '4px',
-                    minHeight: '60px'
-                  }}>
-                    {selectedProduct.Ingredients || 'Không có thông tin thành phần'}
-                  </div>
-                </div>
-                <div>
-                  <strong>Hướng dẫn sử dụng:</strong>
-                  <div style={{ 
-                    padding: '8px', 
-                    backgroundColor: '#f8f9fa', 
-                    borderRadius: '4px', 
-                    marginTop: '4px',
-                    minHeight: '60px'
-                  }}>
-                    {selectedProduct.UsageInstructions || 'Không có hướng dẫn sử dụng'}
-                  </div>
-                </div>
-              </div>
-            </DialogContent>
-            <DialogActions>
-              <Button onClick={handleCloseDetail} color="primary">
-                Đóng
-              </Button>
-              <Button 
-                onClick={() => {
-                  handleCloseDetail();
-                  handleEdit(selectedProduct.ProductID);
-                }} 
-                color="primary" 
-                variant="contained"
-              >
-                Chỉnh sửa
-              </Button>
-            </DialogActions>
-          </>
-        )}
       </Dialog>
     </Box>
   );
