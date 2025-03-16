@@ -24,6 +24,7 @@ import './checkout.css';
 import Header from '../../components/Header';
 import orderService from '../../apis/orderService';
 import voucherService from '../../apis/voucherService';
+import paymentService from '../../apis/paymentService';
 
 const Checkout = () => {
   const [open, setOpen] = useState(false);
@@ -55,10 +56,16 @@ const Checkout = () => {
   const userPhone = searchParams.get('phone');
   const userAddress = searchParams.get('address');
   const [note, setNote] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [sentToVnpay, setSentToVnpay] = useState(false);
+  const [paymentPending, setPaymentPending] = useState(false);
 
   useEffect(() => {
     // Mark component as mounted
     isMounted.current = true;
+    
+    // Đặt lại requestInProgress về false khi component được mount
+    requestInProgress.current = false;
     
     // Kiểm tra user đã login chưa
     const user = JSON.parse(localStorage.getItem('user'));
@@ -67,12 +74,21 @@ const Checkout = () => {
       return;
     }
 
-    // Only fetch data if no request is in progress and orderId exists
-    if (!requestInProgress.current && orderId) {
-      fetchOrderById(orderId);
-    } else if (!orderId) {
-      setLoading(false);
-    }
+    // Tạo một timeout để tránh fetch ngay lập tức sau khi redirect
+    const timer = setTimeout(() => {
+      // Only fetch data if orderId exists
+      if (orderId) {
+        fetchOrderById(orderId);
+      } else if (!orderId) {
+        setLoading(false);
+        // Kiểm tra xem có pendingOrderId không (người dùng quay lại từ VNPAY)
+        const pendingOrderId = localStorage.getItem('pendingOrderId');
+        if (pendingOrderId) {
+          // Nếu có, thay thế orderId từ URL bằng pendingOrderId
+          navigate(`/checkout?orderId=${pendingOrderId}`);
+        }
+      }
+    }, 300); // Đợi 300ms
     
     // Get note from URL params
     const noteFromUrl = searchParams.get('note');
@@ -80,10 +96,41 @@ const Checkout = () => {
       setNote(noteFromUrl);
     }
     
+    // Kiểm tra xem có pendingOrderId không (người dùng quay lại từ VNPAY)
+    const pendingOrderId = localStorage.getItem('pendingOrderId');
+    if (pendingOrderId && pendingOrderId === orderId) {
+      // Đánh dấu đơn hàng đang chờ thanh toán
+      setPaymentPending(true);
+    }
+    
     // Cleanup function
     return () => {
       isMounted.current = false;
+      clearTimeout(timer);
     };
+  }, [orderId, navigate, searchParams]);
+
+  useEffect(() => {
+    if (orderId) {
+      // Nếu có pendingOrderId trong localStorage và trùng với orderId hiện tại
+      const pendingOrderId = localStorage.getItem('pendingOrderId');
+      if (pendingOrderId && pendingOrderId === orderId) {
+        // Kiểm tra lại trạng thái đơn hàng để cập nhật chính xác
+        orderService.getOrderById(orderId).then(response => {
+          if (response) {
+            // Nếu đơn hàng chưa thanh toán, cập nhật lại trạng thái
+            if (response.orderStatus === 'Paid') {
+              setSentToVnpay(true);
+            } else {
+              setSentToVnpay(false);
+            }
+            setOrder(response);
+          }
+        }).catch(error => {
+          console.error('Error re-fetching order status:', error);
+        });
+      }
+    }
   }, [orderId]);
 
   const fetchOrderById = async (id) => {
@@ -92,11 +139,44 @@ const Checkout = () => {
     
     try {
       setLoading(true);
+      setError(null); // Reset error
+      
       const user = JSON.parse(localStorage.getItem('user'));
-      const response = await orderService.getOrderById(id);
+      
+      // Thêm retry logic với thời gian chờ
+      let retries = 3;
+      let response = null;
+      
+      while (retries > 0 && !response) {
+        try {
+          response = await orderService.getOrderById(id);
+        } catch (err) {
+          retries--;
+          if (retries === 0) throw err;
+          // Đợi 500ms trước khi thử lại
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+      }
       
       if (response) {
         setOrder(response);
+        
+        // Kiểm tra nếu đơn hàng có pendingOrderId và không ở trạng thái Paid
+        const pendingOrderId = localStorage.getItem('pendingOrderId');
+        if (pendingOrderId && pendingOrderId === id && 
+            response.orderStatus !== 'Paid') {
+          // Đánh dấu đơn hàng đang chờ thanh toán
+          setPaymentPending(true);
+          
+          // Nếu payment method trong đơn hàng là VNPAY, cho phép chọn lại
+          if (response.payments && response.payments.$values && 
+              response.payments.$values.some(p => p.paymentMethod === 'Thanh toán ví VNPAY')) {
+            // Đặt lại paymentMethod để người dùng có thể chọn lại
+            setPaymentMethod('Thanh toán khi nhận hàng (COD)');
+          }
+        } else if (response.orderStatus === 'Paid') {
+          setSentToVnpay(true);
+        }
         
         // Set delivery address từ thông tin user đã login
         if (user && user.address) {
@@ -127,15 +207,20 @@ const Checkout = () => {
           setSelectedVoucher(response.voucher);
           setVoucherApplied(true);
         }
+      } else {
+        throw new Error('Không thể tải thông tin đơn hàng');
       }
     } catch (error) {
       console.error('Error fetching order:', error);
-      setError('Failed to load order details. Please try again later.');
+      setError('Không thể tải thông tin đơn hàng. Vui lòng thử lại sau.');
     } finally {
       if (isMounted.current) {
         setLoading(false);
       }
-      requestInProgress.current = false;
+      // Đợi một khoảng thời gian trước khi đặt requestInProgress về false
+      setTimeout(() => {
+        requestInProgress.current = false;
+      }, 300);
     }
   };
 
@@ -266,33 +351,94 @@ const Checkout = () => {
 
   const handlePlaceOrder = async () => {
     try {
-      if (order && order.orderId) {
-        // Đảm bảo dữ liệu đúng format và kiểu dữ liệu
-        const paymentData = {
-          orderId: order.orderId,
-          deliveryAddress: deliveryAddress?.trim() || "", // Đảm bảo không null/undefined
-          paymentMethod: paymentMethod?.trim() || "Thanh toán khi nhận hàng (COD)", // Giá trị mặc định
-          note: note?.trim() || "" // Đảm bảo không null/undefined
-        };
+      if (!order || !order.orderId) return;
+      
+      setIsProcessing(true);
+      console.log('Bắt đầu xử lý thanh toán:', paymentMethod);
+      
+      // Validate thông tin giao hàng
+      if (!deliveryAddress?.trim()) {
+        setError('Vui lòng nhập địa chỉ giao hàng');
+        setIsProcessing(false);
+        return;
+      }
 
-        console.log('Payment Data:', paymentData); // Log để debug
+      // Luôn thêm phương thức thanh toán vào dữ liệu
+      const paymentData = {
+        orderId: order.orderId,
+        deliveryAddress: deliveryAddress?.trim() || "",
+        paymentMethod: paymentMethod?.trim(), // Luôn lưu phương thức thanh toán
+        note: note?.trim() || ""
+      };
 
-        // Gọi API
-        const response = await orderService.confirmpayment(paymentData);
-        console.log('API Response:', response); // Log response
-
+      // Lưu thông tin giao hàng
+      try {
+        await orderService.confirmpayment(paymentData);
+        console.log('Đã lưu thông tin giao hàng thành công');
+      } catch (error) {
+        console.error('Lỗi khi lưu thông tin giao hàng:', error);
+        setError('Không thể lưu thông tin giao hàng. Vui lòng thử lại.');
+        setIsProcessing(false);
+        return;
+      }
+      
+      // Xử lý theo phương thức thanh toán
+      if (paymentMethod === 'Thanh toán ví VNPAY') {
+        try {
+          const amount = Math.round(calculateFinalAmount());
+          const response = await paymentService.createVnpPayment(
+            order.orderId,
+            amount
+          );
+          
+          if (response && response.paymentUrl) {
+            // Lưu orderId vào localStorage để có thể quay lại checkout
+            localStorage.setItem('pendingOrderId', order.orderId);
+            // Đặt trạng thái đã gửi đến VNPAY
+            setSentToVnpay(true);
+            window.location.href = response.paymentUrl;
+            return;
+          } else {
+            throw new Error('Không nhận được URL thanh toán từ VNPAY');
+          }
+        } catch (error) {
+          console.error('VNPAY Error:', error);
+          setError('Không thể khởi tạo thanh toán VNPAY. Vui lòng thử lại sau.');
+          setIsProcessing(false);
+        }
+      } else {
+        // Thanh toán COD - hiển thị dialog cảm ơn ngay lập tức, không cần kiểm tra gì thêm
         setThankYouDialogOpen(true);
+        setIsProcessing(false);
       }
     } catch (error) {
-      console.error('Error details:', error.response?.data); // Log chi tiết lỗi
+      console.error('Error details:', error.response?.data);
       setError('Không thể xác nhận thanh toán. Vui lòng thử lại sau.');
+      setIsProcessing(false);
     }
   };
 
   const handleThankYouDialogClose = () => {
     setThankYouDialogOpen(false);
+    // Xóa pendingOrderId khi thanh toán COD thành công
+    localStorage.removeItem('pendingOrderId');
     // Redirect to home page
     navigate('/');
+  };
+
+  // Thêm một hàm retry để người dùng có thể thử lại khi gặp lỗi
+  const handleRetryFetchOrder = () => {
+    if (orderId) {
+      // Reset các state
+      setLoading(true);
+      setError(null);
+      requestInProgress.current = false;
+      
+      // Fetch lại sau một khoảng thời gian ngắn
+      setTimeout(() => {
+        fetchOrderById(orderId);
+      }, 500);
+    }
   };
 
   // Calculate discount amount
@@ -317,6 +463,48 @@ const Checkout = () => {
     
     return order.totalAmount + shippingFee - discount;
   };
+
+  // Cập nhật useEffect xử lý callback từ VNPAY
+  useEffect(() => {
+    const handleVnpayReturn = async () => {
+      // Lấy toàn bộ query string từ URL
+      const queryString = window.location.search;
+      
+      // Kiểm tra xem có phải là callback từ VNPAY không
+      if (queryString.includes('vnp_')) {
+        try {
+          setLoading(true);
+          
+          // Lấy các tham số từ URL
+          const urlParams = new URLSearchParams(queryString);
+          const vnp_ResponseCode = urlParams.get('vnp_ResponseCode');
+          const vnp_TransactionStatus = urlParams.get('vnp_TransactionStatus');
+          
+          if (vnp_ResponseCode === '00' && vnp_TransactionStatus === '00') {
+            // Thanh toán thành công - chuyển về trang chính
+            navigate('/');
+          } else {
+            // Thanh toán thất bại - chuyển về trang chính với thông báo lỗi
+            navigate('/', { 
+              state: { 
+                error: 'Thanh toán không thành công hoặc đã bị hủy. Vui lòng thử lại hoặc chọn phương thức thanh toán khác.' 
+              } 
+            });
+          }
+        } catch (error) {
+          console.error('Error handling VNPAY return:', error);
+          // Trong trường hợp lỗi, vẫn chuyển về trang chính
+          navigate('/', { 
+            state: { 
+              error: 'Có lỗi xảy ra khi xử lý kết quả thanh toán. Vui lòng liên hệ hỗ trợ.' 
+            } 
+          });
+        }
+      }
+    };
+
+    handleVnpayReturn();
+  }, [navigate]);
 
   if (!order && !loading && !orderId) {
     return (
@@ -364,8 +552,24 @@ const Checkout = () => {
 
   if (error) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', bgcolor: "#fff176" }}>
-        <Typography variant="h6" color="error">{error}</Typography>
+      <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100vh', bgcolor: "#fff176" }}>
+        <Typography variant="h6" color="error" sx={{ mb: 3 }}>{error}</Typography>
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          <Button 
+            variant="contained" 
+            onClick={handleRetryFetchOrder}
+            sx={{ backgroundColor: 'darkgreen', color: 'white' }}
+          >
+            Thử lại
+          </Button>
+          <Button 
+            variant="outlined" 
+            onClick={() => navigate('/cart')}
+            sx={{ borderColor: 'darkgreen', color: 'darkgreen' }}
+          >
+            Quay lại giỏ hàng
+          </Button>
+        </Box>
       </Box>
     );
   }
@@ -506,9 +710,20 @@ const Checkout = () => {
                   }
                 }}
                 onClick={handlePlaceOrder}
-                disabled={order.orderStatus === 'Paid'}
+                disabled={order.orderStatus === 'Paid' && !paymentPending || isProcessing}
               >
-                {order.orderStatus === 'Paid' ? 'Đã thanh toán' : 'Đặt hàng'}
+                {isProcessing ? (
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <CircularProgress size={20} sx={{ color: 'white', mr: 1 }} />
+                    Đang xử lý...
+                  </Box>
+                ) : order.orderStatus === 'Paid' && !paymentPending ? (
+                  'Đã thanh toán'
+                ) : paymentPending && paymentMethod === 'Thanh toán ví VNPAY' ? (
+                  'Tiếp tục thanh toán VNPAY'
+                ) : (
+                  'Đặt hàng'
+                )}
               </Button>
             </Paper>
           </div>
