@@ -49,14 +49,9 @@ const paymentService = {
         }
       }
       
-      // Sau khi nhận response, chuyển hướng về trang chính
-      window.location.href = '/';
-      
       return response;
     } catch (error) {
       console.error('VNPAY Return Error:', error.response?.data || error.message);
-      // Trong trường hợp lỗi, vẫn chuyển về trang chính
-      window.location.href = '/';
       throw error;
     }
   }
