@@ -113,6 +113,83 @@ const productService = {
         }
     },
 
+    // Lấy sản phẩm theo thương hiệu
+    getProductsByBrand: async (brandName) => {
+        try {
+            console.log(`Fetching products by brand: ${brandName}`);
+            
+            try {
+                // Thử gọi API endpoint chuyên biệt nếu có
+                console.log(`Calling API: GET ${API_ENDPOINTS.PRODUCTS.BY_BRAND(brandName)}`);
+                const response = await axiosClient.get(API_ENDPOINTS.PRODUCTS.BY_BRAND(brandName));
+                console.log('Brand Products API Response:', response);
+                
+                const products = Array.isArray(response) ? response : 
+                               (response && response.$values ? response.$values : []);
+                
+                // Lấy ảnh cho các sản phẩm
+                let imagesResponse;
+                try {
+                    imagesResponse = await productImageService.getAllProductImages();
+                } catch (imageError) {
+                    console.error('Error fetching product images:', imageError.message);
+                    imagesResponse = { $values: [] };
+                }
+                
+                let images = [];
+                if (imagesResponse && imagesResponse.$values) {
+                    images = imagesResponse.$values;
+                } else if (Array.isArray(imagesResponse)) {
+                    images = imagesResponse;
+                }
+                
+                const productImagesMap = {};
+                images.forEach(image => {
+                    const productId = image.productId || image.productID;
+                    if (productId) {
+                        if (!productImagesMap[productId]) {
+                            productImagesMap[productId] = [];
+                        }
+                        productImagesMap[productId].push(image);
+                    }
+                });
+                
+                return products.map(product => {
+                    const productId = product.productId || product.productID;
+                    const productImages = productImagesMap[productId] || [];
+                    return {
+                        ...product,
+                        images: productImages,
+                        imgUrl: productImages.length > 0 ? productImages[0].imgUrl : (product.imgURL || '/images/default-product.jpg')
+                    };
+                });
+            } catch (apiError) {
+                console.error(`API endpoint for brand ${brandName} failed:`, apiError.message);
+                console.log('Falling back to filtering all products...');
+                
+                // Fallback: Lấy tất cả sản phẩm và lọc theo thương hiệu
+                const allProducts = await productService.getAllProducts();
+                
+                // Lọc sản phẩm theo thương hiệu
+                const filteredProducts = allProducts.filter(product => {
+                    // So sánh không phân biệt hoa thường
+                    const productBrand = (product.brand || '').toLowerCase();
+                    const searchBrand = brandName.toLowerCase();
+                    return productBrand.includes(searchBrand);
+                });
+                
+                console.log(`Found ${filteredProducts.length} products for brand "${brandName}" (fallback method)`);
+                return filteredProducts;
+            }
+        } catch (error) {
+            console.error(`Error fetching products by brand ${brandName}:`, error.message);
+            console.error('Error stack:', error.stack);
+            
+            // Trả về mảng rỗng nếu có lỗi
+            return [];
+        }
+    },
+
     // Thêm phương thức mới để lấy dữ liệu sản phẩm mẫu khi API không hoạt động
     getMockProducts: () => {
         console.log('Trả về dữ liệu sản phẩm mẫu');
