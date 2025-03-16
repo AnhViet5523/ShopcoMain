@@ -799,23 +799,6 @@ const Product = () => {
                           Chi tiết
                         </button>
                         <button
-                          onClick={() => handleEdit(product.ProductID)}
-                          style={{
-                            padding: '4px 8px',
-                            backgroundColor: '#007bff',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '3px',
-                            cursor: 'pointer',
-                            marginRight: '4px',
-                            fontSize: '12px',
-                            transition: 'background-color 0.2s',
-                            ':hover': { backgroundColor: '#0069d9' }
-                          }}
-                        >
-                          Sửa
-                        </button>
-                        <button
                           onClick={() => handleDelete(product.ProductID)}
                           style={{
                             padding: '4px 8px',
