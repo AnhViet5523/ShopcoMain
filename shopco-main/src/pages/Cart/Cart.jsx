@@ -15,9 +15,7 @@ const Cart = () => {
   const isMounted = useRef(true);
   const requestInProgress = useRef(false);
   const [currentOrderId, setCurrentOrderId] = useState(null);
-
-
-
+  const [note, setNote] = useState('');
 
   useEffect(() => {
     // Đánh dấu component đã mount
@@ -213,6 +211,23 @@ const Cart = () => {
   // Tổng cộng sau khi giảm giá
   const finalAmount = totalAmount - discount;
 
+  const handleCheckoutClick = () => {
+    if (currentOrderId) {
+      const user = JSON.parse(localStorage.getItem('user'));
+      const queryParams = new URLSearchParams({
+        orderId: currentOrderId,
+        name: user?.name || '',
+        email: user?.email || '',
+        phone: user?.phone || '',
+        address: user?.address || '',
+        note: note
+      }).toString();
+      navigate(`/checkout?${queryParams}`);
+    } else {
+      navigate('/checkout');
+    }
+  };
+
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
@@ -403,6 +418,8 @@ const Cart = () => {
                 rows={3}
                 placeholder="Ghi chú"
                 variant="outlined"
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
                 sx={{ 
                   mb: 3,
                   bgcolor: '#333',
@@ -429,21 +446,7 @@ const Cart = () => {
                   fontWeight: 'bold',
                   '&:hover': { bgcolor: '#ff5252' }
                 }}
-                onClick={() => {
-                  if (currentOrderId) {
-                    const user = JSON.parse(localStorage.getItem('user'));
-                    const queryParams = new URLSearchParams({
-                      orderId: currentOrderId,
-                      name: user?.name || '',
-                      email: user?.email || '',
-                      phone: user?.phone || '',
-                      address: user?.address || ''
-                    }).toString();
-                    navigate(`/checkout?${queryParams}`);
-                  } else {
-                    navigate('/checkout');
-                  }
-                }}
+                onClick={handleCheckoutClick}
               >
                 THANH TOÁN NGAY
               </Button>
