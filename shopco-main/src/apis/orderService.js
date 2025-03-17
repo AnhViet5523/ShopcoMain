@@ -250,14 +250,47 @@ const orderService = {
     },
     buyNow: async (userId, productId, quantity) => {
         try {
+            // Ghi log thông tin trước khi gọi API
+            console.log(`Đang gọi API mua ngay với: userId=${userId}, productId=${productId}, quantity=${quantity}`);
+            
+            // Gửi request với cấu trúc JSON theo yêu cầu
             const response = await axiosClient.post('/api/Orders/buy-now', {
                 userId,
                 productId,
                 quantity
             });
-            return response.data || response;
+            
+            // Ghi log kết quả nhận được
+            console.log("Phản hồi từ API mua ngay:", response);
+            
+            // Kiểm tra phản hồi
+            if (!response) {
+                throw new Error("Không nhận được phản hồi từ server");
+            }
+            
+            // Trả về orderId trong cấu trúc chuẩn, dù phản hồi có cấu trúc thế nào
+            if (typeof response === 'number') {
+                return { orderId: response };
+            } else if (typeof response === 'object') {
+                // Kiểm tra cấu trúc phản hồi mới (orderId trong order)
+                if (response.order && response.order.orderId) {
+                    return { orderId: response.order.orderId };
+                }
+                
+                // Kiểm tra các cấu trúc khác
+                const orderId = response.orderId || response.OrderId || 
+                              (response.data && response.data.orderId) || 
+                              (response.data && response.data.OrderId);
+                              
+                if (orderId) {
+                    return { orderId: orderId };
+                }
+            }
+            
+            // Nếu không tìm thấy orderId, trả về toàn bộ response để xử lý ở UI
+            return response;
         } catch (error) {
-            console.error('Error with buy now:', error);
+            console.error('Lỗi khi thực hiện mua ngay:', error);
             throw error;
         }
     },
