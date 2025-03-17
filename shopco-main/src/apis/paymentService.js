@@ -4,21 +4,31 @@ const paymentService = {
   // Tạo URL thanh toán VNPAY
   createVnpPayment: async (orderId, amount) => {
     try {
-      const currentUrl = window.location.origin; // Lấy domain hiện tại
-      
-      // Thêm tham số redirect vào URL để backend biết phải chuyển hướng về đâu
+      const currentUrl = window.location.origin;
       const data = {
         orderId: orderId.toString(),
         amount: Math.round(amount),
-        returnUrl: `${currentUrl}/api/Payments/vnpay-return?redirect=${encodeURIComponent(`${currentUrl}/payment-result`)}`
+        returnUrl: `${currentUrl}/payment-result` // URL frontend để nhận kết quả
       };
-      console.log('VNPAY Request Data:', data);
+      
+      // Thêm log chi tiết để debug
+      console.log('Sending payment data:', data);
       
       const response = await axiosClient.post('/api/Payments/createVnpPayment', data);
       console.log('VNPAY Response:', response);
+      
+      if (response.paymentUrl) {
+        window.location.href = response.paymentUrl;
+      }
+      
       return response;
     } catch (error) {
-      console.error('VNPAY Error:', error.response?.data || error.message);
+      // Log chi tiết lỗi
+      console.error('VNPAY Error:', {
+        status: error.response?.status,
+        data: error.response?.data,
+        message: error.message
+      });
       throw error;
     }
   },
@@ -34,24 +44,38 @@ const paymentService = {
     }
   },
 
-  // Sửa lại hàm xử lý vnpay-return
   handleVnpayReturn: async (queryString) => {
     try {
-      const response = await axiosClient.get(`/api/Payments/vnpay-return${queryString}`);
+      // Loại bỏ các ký tự không hợp lệ
+      const sanitizedQueryString = queryString
+        .replace(/[^\x20-\x7E]/g, '') // Chỉ giữ các ký tự ASCII có thể in được
+        .replace(/\+/g, '%20'); // Thay thế dấu + bằng mã hóa URL
+
+      console.log('Sanitized Query String:', sanitizedQueryString);
       
-      // Kiểm tra nếu thanh toán thành công
-      if (response && response.status === 'success') {
-        // Lấy orderId từ localStorage
-        const pendingOrderId = localStorage.getItem('pendingOrderId');
-        if (pendingOrderId) {
-          // Xóa pendingOrderId khỏi localStorage
-          localStorage.removeItem('pendingOrderId');
+      const fullUrl = `/api/Payments/vnpay-return?${sanitizedQueryString}`;
+      console.log('Full API URL:', fullUrl);
+      
+      const response = await axiosClient.get(fullUrl, {
+        // Thêm cấu hình để xử lý các ký tự đặc biệt
+        paramsSerializer: params => {
+          return Object.entries(params)
+            .map(([key, value]) => 
+              `${encodeURIComponent(key)}=${encodeURIComponent(value)}`
+            )
+            .join('&');
         }
-      }
+      });
+      
+      console.log('VNPAY Return Response:', response);
       
       return response;
     } catch (error) {
-      console.error('VNPAY Return Error:', error.response?.data || error.message);
+      console.error('Detailed VNPAY Return Error:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
       throw error;
     }
   }

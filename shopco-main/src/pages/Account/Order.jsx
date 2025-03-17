@@ -158,7 +158,6 @@ const Order = () => {
                 <Grid item xs={12} md={3}>
                   <Paper elevation={0} sx={{ p: 2, bgcolor: "#f5f5f5", textAlign: "center" }}>
                     <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", mb: 2 }}>
-                      <Avatar src="/path-to-avatar.jpg" sx={{ width: 50, height: 50, mb: 1 }} />
                       <Typography variant="subtitle1" fontWeight="bold">
                         {userName ? `Chào ${userName}!` : 'Chào bạn!'}
                       </Typography>
@@ -268,7 +267,7 @@ const Order = () => {
                                 </Typography>
                                 <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                                   {order.deliveryStatus && (
-                                    <><strong>Trạng thái:</strong> {order.deliveryStatus === 'Not Delivered' ? 'Chưa giao' : order.deliveryStatus}</>
+                                    <><strong>Trạng thái:</strong> {order.deliveryStatus === 'Not Delivered' ? 'Chưa giao' : order.deliveryStatus === 'Delivered' ? 'Đã giao' : order.deliveryStatus}</>
                                   )}
                                 </Typography>
                               </Box>

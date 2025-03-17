@@ -16,6 +16,9 @@ const Cart = () => {
   const requestInProgress = useRef(false);
   const [currentOrderId, setCurrentOrderId] = useState(null);
   const [note, setNote] = useState('');
+  // Thêm state để theo dõi items đang loading và lỗi của từng item
+  const [loadingItems, setLoadingItems] = useState({});
+  const [itemErrors, setItemErrors] = useState({});
 
   useEffect(() => {
     // Đánh dấu component đã mount
@@ -124,19 +127,53 @@ const Cart = () => {
     }
   };
 
-  // Hàm tăng số lượng
+  // Cập nhật hàm tăng số lượng để kiểm tra số lượng trong kho
   const increaseQuantity = async (id) => {
     try {
+      // Xóa lỗi cũ nếu có
+      setItemErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[id];
+        return newErrors;
+      });
+      
+      // Đánh dấu item đang thay đổi là loading
+      setLoadingItems(prev => ({ ...prev, [id]: true }));
+      
       const user = JSON.parse(localStorage.getItem('user'));
       const item = cartItems.find(item => item.id === id);
       
       if (user && user.userId) {
         // For authenticated users, update via API
-        await orderService.updatecartitem(id, item.quantity + 1);
-      }
-      
-      // Update local state only if component is still mounted
-      if (isMounted.current) {
+        try {
+          await orderService.updatecartitem(id, item.quantity + 1);
+          
+          // Update local state only if component is still mounted
+          if (isMounted.current) {
+            const updatedItems = cartItems.map(item => 
+              item.id === id ? { ...item, quantity: item.quantity + 1 } : item
+            );
+            updateCartItems(updatedItems);
+          }
+        } catch (error) {
+          console.error('Error increasing quantity:', error);
+          // Kiểm tra nếu là lỗi do số lượng vượt quá tồn kho
+          if (error.response && error.response.status === 400) {
+            // Hiển thị thông báo lỗi chỉ cho sản phẩm này
+            setItemErrors(prev => ({ 
+              ...prev, 
+              [id]: 'Số lượng vượt quá số lượng trong kho. Vui lòng liên hệ chúng tôi để biết thêm thông tin.'
+            }));
+          } else {
+            // Lỗi khác
+            setItemErrors(prev => ({ 
+              ...prev, 
+              [id]: 'Không thể cập nhật số lượng. Vui lòng thử lại sau.'
+            }));
+          }
+        }
+      } else {
+        // For non-authenticated users, just update local state
         const updatedItems = cartItems.map(item => 
           item.id === id ? { ...item, quantity: item.quantity + 1 } : item
         );
@@ -145,28 +182,61 @@ const Cart = () => {
     } catch (error) {
       if (isMounted.current) {
         console.error('Error increasing quantity:', error);
-        setError('Failed to update quantity. Please try again.');
+        setItemErrors(prev => ({ 
+          ...prev, 
+          [id]: 'Không thể cập nhật số lượng. Vui lòng thử lại sau.'
+        }));
       }
+    } finally {
+      // Xóa trạng thái loading của item này
+      setLoadingItems(prev => {
+        const newState = { ...prev };
+        delete newState[id];
+        return newState;
+      });
     }
   };
 
-
-  // Hàm giảm số lượng
+  // Cập nhật hàm giảm số lượng tương tự
   const decreaseQuantity = async (id) => {
     try {
+      // Xóa lỗi cũ nếu có
+      setItemErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[id];
+        return newErrors;
+      });
+      
+      // Đánh dấu item đang thay đổi là loading
+      setLoadingItems(prev => ({ ...prev, [id]: true }));
+      
       const user = JSON.parse(localStorage.getItem('user'));
       const item = cartItems.find(item => item.id === id);
       
       if (item.quantity > 1) {
         if (user && user.userId) {
           // For authenticated users, update via API
-          await orderService.updatecartitem(id, item.quantity - 1);
-        }
-        
-        // Update local state only if component is still mounted
-        if (isMounted.current) {
+          try {
+            await orderService.updatecartitem(id, item.quantity - 1);
+            
+            // Update local state only if component is still mounted
+            if (isMounted.current) {
+              const updatedItems = cartItems.map(item => 
+                item.id === id ? { ...item, quantity: item.quantity - 1 } : item
+              );
+              updateCartItems(updatedItems);
+            }
+          } catch (error) {
+            console.error('Error decreasing quantity:', error);
+            setItemErrors(prev => ({ 
+              ...prev, 
+              [id]: 'Không thể cập nhật số lượng. Vui lòng thử lại sau.'
+            }));
+          }
+        } else {
+          // For non-authenticated users, just update local state
           const updatedItems = cartItems.map(item => 
-            item.id === id && item.quantity > 1 ? { ...item, quantity: item.quantity - 1 } : item
+            item.id === id ? { ...item, quantity: item.quantity - 1 } : item
           );
           updateCartItems(updatedItems);
         }
@@ -174,8 +244,18 @@ const Cart = () => {
     } catch (error) {
       if (isMounted.current) {
         console.error('Error decreasing quantity:', error);
-        setError('Failed to update quantity. Please try again.');
+        setItemErrors(prev => ({ 
+          ...prev, 
+          [id]: 'Không thể cập nhật số lượng. Vui lòng thử lại sau.'
+        }));
       }
+    } finally {
+      // Xóa trạng thái loading của item này
+      setLoadingItems(prev => {
+        const newState = { ...prev };
+        delete newState[id];
+        return newState;
+      });
     }
   };
 
@@ -301,6 +381,7 @@ const Cart = () => {
                     <Box sx={{ display: 'flex', alignItems: 'center', mr: 3 }}>
                       <Button 
                         onClick={() => decreaseQuantity(item.id)}
+                        disabled={item.quantity <= 1 || loadingItems[item.id]}
                         sx={{ 
                           minWidth: 30, 
                           width: 30, 
@@ -310,11 +391,14 @@ const Cart = () => {
                           borderRadius: '4px'
                         }}
                       >
-                        -
+                        {loadingItems[item.id] ? 
+                          <CircularProgress size={16} thickness={5} /> : 
+                          '-'}
                       </Button>
                       <Typography sx={{ mx: 2 }}>{item.quantity}</Typography>
                       <Button 
                         onClick={() => increaseQuantity(item.id)}
+                        disabled={loadingItems[item.id]}
                         sx={{ 
                           minWidth: 30, 
                           width: 30, 
@@ -324,9 +408,27 @@ const Cart = () => {
                           borderRadius: '4px'
                         }}
                       >
-                        +
+                        {loadingItems[item.id] ? 
+                          <CircularProgress size={16} thickness={5} /> : 
+                          '+'}
                       </Button>
                     </Box>
+                    
+                    {/* Thêm phần hiển thị lỗi */}
+                    {itemErrors && itemErrors[item.id] && (
+                      <Typography 
+                        variant="caption" 
+                        sx={{ 
+                          color: 'error.main', 
+                          display: 'block',
+                          mt: 1,
+                          fontSize: '0.75rem',
+                          fontWeight: 'medium'
+                        }}
+                      >
+                        {itemErrors[item.id]}
+                      </Typography>
+                    )}
                     
                     <Box sx={{ textAlign: 'right', minWidth: 100 }}>
                       <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
