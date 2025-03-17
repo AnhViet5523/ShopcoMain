@@ -1,17 +1,21 @@
-import { Box, Button, Container, Typography, Tabs, Tab, Grid, Paper, Avatar, List, ListItem, ListItemIcon, ListItemText } from "@mui/material";
+import { Box, Button, Container, Typography, Tabs, Tab, Grid, Paper, Avatar, List, ListItem, ListItemIcon, ListItemText, CircularProgress, Divider, Chip } from "@mui/material";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Home, Person, Phone, Email, ExitToApp } from "@mui/icons-material";
+import { Home, Person, Phone, Email, ExitToApp, ShoppingBag } from "@mui/icons-material";
 import {Link, Breadcrumbs} from '@mui/material'
 import Banner from "../../components/Banner";
 import Footer from "../../components/Footer/Footer";
 import Header from "../../components/Header";
 import userService from "../../apis/userService";
+import orderService from "../../apis/orderService";
 
 const Order = () => {
   const [tabIndex, setTabIndex] = useState(0);  
   const navigate = useNavigate();
   const [userName, setUserName] = useState('');
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     const fetchUserName = () => {
@@ -26,6 +30,33 @@ const Order = () => {
     };
 
     fetchUserName();
+  }, []);
+
+  useEffect(() => {
+    const fetchOrderHistory = async () => {
+      try {
+        setLoading(true);
+        const currentUser = userService.getCurrentUser();
+        
+        if (!currentUser || !currentUser.userId) {
+          setError('Vui lòng đăng nhập để xem lịch sử đơn hàng');
+          setLoading(false);
+          return;
+        }
+        
+        const userId = currentUser.userId;
+        const orderHistory = await orderService.getOrderHistory(userId);
+        
+        setOrders(orderHistory);
+        setLoading(false);
+      } catch (error) {
+        console.error('Lỗi khi lấy lịch sử đơn hàng:', error);
+        setError('Không thể tải lịch sử đơn hàng. Vui lòng thử lại sau.');
+        setLoading(false);
+      }
+    };
+
+    fetchOrderHistory();
   }, []);
 
   const handleTabChange = (event, newIndex) => {
@@ -43,6 +74,73 @@ const Order = () => {
     { text: "Hỏi đáp", icon: <Email /> },
     { text: "Đăng xuất", icon: <ExitToApp />, action: handleLogout },
   ];
+
+  // Hàm định dạng ngày giờ
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('vi-VN', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  // Hàm định dạng số tiền
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('vi-VN', {
+      style: 'currency',
+      currency: 'VND'
+    }).format(amount);
+  };
+
+  // Hàm render trạng thái đơn hàng
+  const renderOrderStatus = (status) => {
+    let color = '';
+    switch (status) {
+      case 'Pending':
+        color = 'warning';
+        status = 'Đang xử lý';
+        break;
+      case 'Paid':
+        color = 'success';
+        status = 'Đã thanh toán';
+        break;
+      case 'Completed':
+        color = 'info';
+        status = 'Đã giao hàng';
+        break;
+      case 'Cancelled':
+        color = 'error';
+        status = 'Đã hủy';
+        break;
+      default:
+        color = 'default';
+    }
+    return <Chip label={status} color={color} size="small" />;
+  };
+
+  // Hàm lọc đơn hàng theo tab đang chọn
+  const getFilteredOrders = () => {
+    if (tabIndex === 0) {
+      // Tab "Tất cả" - hiển thị toàn bộ đơn hàng
+      return orders;
+    } else if (tabIndex === 1) {
+      // Tab "Đang xử lý" - chỉ hiển thị đơn hàng trạng thái Pending
+      return orders.filter(order => order.orderStatus === 'Pending');
+    } else if (tabIndex === 2) {
+      // Tab "Đang vận chuyển" - hiển thị đơn hàng có trạng thái Paid
+      return orders.filter(order => order.orderStatus === 'Paid');
+    } else if (tabIndex === 3) {
+      // Tab "Đã giao" - hiển thị đơn hàng có trạng thái Completed
+      return orders.filter(order => order.orderStatus === 'Completed');
+    } else if (tabIndex === 4) {
+      // Tab "Đã hủy" - hiển thị đơn hàng có trạng thái Cancelled
+      return orders.filter(order => order.orderStatus === 'Cancelled');
+    }
+    return orders;
+  };
 
   return (
     <Box sx={{ bgcolor: "#f0f0f0", minHeight: "100vh", width:'99vw' }}>
@@ -106,14 +204,165 @@ const Order = () => {
                   <Tab label="Đã hủy" sx={{ color: "black" }} />
                 </Tabs>
               </Box>
-              <Box sx={{ bgcolor: "#f5f5f5", p: 4, borderRadius: 2, display: "flex", flexDirection: "column", alignItems: "center" }}>
-                <Typography color="black" variant="h6" sx={{ mb: 2 }}>
-                  Bạn chưa có đơn hàng nào
-                </Typography>
-                <Button variant="contained" color="success" size="large">
-                  Tiếp tục mua sắm
-                </Button>
-              </Box>
+              
+              {loading ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
+                  <CircularProgress />
+                </Box>
+              ) : error ? (
+                <Box sx={{ bgcolor: "#f5f5f5", p: 4, borderRadius: 2, display: "flex", flexDirection: "column", alignItems: "center" }}>
+                  <Typography color="error" variant="h6" sx={{ mb: 2 }}>
+                    {error}
+                  </Typography>
+                  <Button variant="contained" color="success" size="large" onClick={() => navigate('/')}>
+                    Tiếp tục mua sắm
+                  </Button>
+                </Box>
+              ) : orders.length === 0 ? (
+                <Box sx={{ bgcolor: "#f5f5f5", p: 4, borderRadius: 2, display: "flex", flexDirection: "column", alignItems: "center" }}>
+                  <Typography color="black" variant="h6" sx={{ mb: 2 }}>
+                    Bạn chưa có đơn hàng nào
+                  </Typography>
+                  <Button variant="contained" color="success" size="large" onClick={() => navigate('/')}>
+                    Tiếp tục mua sắm
+                  </Button>
+                </Box>
+              ) : (
+                // Hiển thị danh sách đơn hàng đã được lọc
+                <Box>
+                  {getFilteredOrders().length > 0 ? (
+                    getFilteredOrders().map((order) => (
+                      <Paper 
+                        key={order.orderId} 
+                        sx={{ 
+                          mb: 3, 
+                          borderRadius: 2, 
+                          overflow: 'hidden',
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.08)',
+                          transition: 'all 0.3s ease',
+                          '&:hover': {
+                            boxShadow: '0 3px 6px rgba(0,0,0,0.16), 0 3px 6px rgba(0,0,0,0.13)'
+                          }
+                        }}
+                      >
+                        <Box sx={{ 
+                          display: 'flex', 
+                          justifyContent: 'space-between', 
+                          alignItems: 'center',
+                          bgcolor: '#f8f8f8',
+                          p: 2,
+                          borderBottom: '1px solid #eee'
+                        }}>
+                          <Typography variant="subtitle1" fontWeight="bold">
+                            Đơn hàng #{order.orderId}
+                          </Typography>
+                          {renderOrderStatus(order.orderStatus)}
+                        </Box>
+                        
+                        <Box sx={{ p: 2.5 }}>
+                          <Grid container spacing={1}>
+                            <Grid item xs={12}>
+                              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1.5 }}>
+                                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                                  <strong>Ngày đặt:</strong> {formatDate(order.orderDate)}
+                                </Typography>
+                                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                                  {order.deliveryStatus && (
+                                    <><strong>Trạng thái:</strong> {order.deliveryStatus === 'Not Delivered' ? 'Chưa giao' : order.deliveryStatus}</>
+                                  )}
+                                </Typography>
+                              </Box>
+                              
+                              <Divider sx={{ my: 1.5 }} />
+                              
+                              <Box sx={{ my: 1.5 }}>
+                                {order.orderItems && order.orderItems.$values && order.orderItems.$values.length > 0 ? (
+                                  order.orderItems.$values.map((item, index) => (
+                                    <Box 
+                                      key={index} 
+                                      sx={{ 
+                                        display: 'flex', 
+                                        alignItems: 'center', 
+                                        py: 1.5, 
+                                        borderBottom: index < order.orderItems.$values.length - 1 ? '1px dashed #f0f0f0' : 'none',
+                                        '&:hover': {
+                                          bgcolor: '#fafafa'
+                                        }
+                                      }}
+                                    >
+                                      <Box 
+                                        sx={{ 
+                                          width: 40, 
+                                          height: 40, 
+                                          bgcolor: '#f5f5f5', 
+                                          display: 'flex', 
+                                          alignItems: 'center', 
+                                          justifyContent: 'center',
+                                          borderRadius: 1,
+                                          mr: 2
+                                        }}
+                                      >
+                                        <ShoppingBag fontSize="small" sx={{ color: '#FF6600', opacity: 0.7 }} />
+                                      </Box>
+                                      <Typography 
+                                        variant="body2" 
+                                        sx={{ 
+                                          flexGrow: 1,
+                                          mr: 2,
+                                          fontWeight: 500,
+                                          color: '#333'
+                                        }}
+                                      >
+                                        {item.productName}
+                                      </Typography>
+                                      <Typography 
+                                        variant="body2" 
+                                        sx={{ 
+                                          color: '#FF6600', 
+                                          fontWeight: 500, 
+                                          whiteSpace: 'nowrap'
+                                        }}
+                                      >
+                                        x{item.quantity}
+                                      </Typography>
+                                    </Box>
+                                  ))
+                                ) : (
+                                  <Typography variant="body2" color="text.secondary" sx={{ py: 2, textAlign: 'center' }}>
+                                    Không có thông tin sản phẩm
+                                  </Typography>
+                                )}
+                              </Box>
+                              
+                              <Divider sx={{ my: 1.5 }} />
+                              
+                              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 1.5 }}>
+                                {order.voucherId && (
+                                  <Typography variant="body2" sx={{ color: '#388e3c', fontWeight: 500 }}>
+                                    <strong>Mã voucher:</strong> #{order.voucherId}
+                                  </Typography>
+                                )}
+                                <Typography variant="subtitle1" sx={{ color: '#FF6600', fontWeight: 'bold', ml: 'auto' }}>
+                                  {formatCurrency(order.totalAmount)}
+                                </Typography>
+                              </Box>
+                            </Grid>
+                          </Grid>
+                        </Box>
+                      </Paper>
+                    ))
+                  ) : (
+                    <Box sx={{ bgcolor: "#f5f5f5", p: 4, borderRadius: 2, display: "flex", flexDirection: "column", alignItems: "center" }}>
+                      <Typography color="text.secondary" variant="h6" sx={{ mb: 2 }}>
+                        Không có đơn hàng nào trong danh mục này
+                      </Typography>
+                      <Button variant="contained" color="success" size="large" onClick={() => navigate('/')}>
+                        Tiếp tục mua sắm
+                      </Button>
+                    </Box>
+                  )}
+                </Box>
+              )}
             </Paper>
           </Grid>
         </Grid >

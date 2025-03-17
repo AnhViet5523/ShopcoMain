@@ -277,6 +277,27 @@ const orderService = {
             console.error('Error fetching order items:', error);
             throw error;
         }
+    },
+    getOrderHistory: async (userId) => {
+        try {
+            console.log(`Fetching order history for user: ${userId}`);
+            const response = await axiosClient.get(`/api/Orders/history?userId=${userId}`);
+            console.log('Order history response:', response);
+            
+            // Xử lý dữ liệu trả về
+            let orders = [];
+            if (response && response.$values) {
+                orders = response.$values;
+            } else if (Array.isArray(response)) {
+                orders = response;
+            }
+            
+            return orders;
+        } catch (error) {
+            console.error('Error fetching order history:', error);
+            console.error('Error details:', error.response?.data || error);
+            return [];
+        }
     }
 };
 
