@@ -331,6 +331,24 @@ const orderService = {
             console.error('Error details:', error.response?.data || error);
             return [];
         }
+    },
+    removeItemFromCheckout: async (orderId, orderItemId) => {
+        try {
+            console.log(`Removing item ${orderItemId} from checkout order ${orderId} without removing from cart`);
+            
+            // Gọi API để xóa sản phẩm khỏi đơn hàng đang thanh toán
+            const response = await axiosClient.post('/api/Orders/remove-from-checkout', {
+                orderId,
+                orderItemId
+            });
+            
+            console.log('Remove from checkout response:', response);
+            return response;
+        } catch (error) {
+            console.error('Error removing item from checkout:', error);
+            console.error('Error details:', error.response?.data || error);
+            throw error;
+        }
     }
 };
 

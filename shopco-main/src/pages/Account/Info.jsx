@@ -268,8 +268,7 @@ const Info = () => {
         <Grid container spacing={3}>
           <Grid item xs={12} md={3}>
             <Paper elevation={0} sx={{ p: 2, bgcolor: "#f5f5f5", textAlign: "center" }}>
-              <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", mb: 2 }}>
-                <Avatar src="/path-to-avatar.jpg" sx={{ width: 50, height: 50, mb: 1 }} />
+              <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", mb: 2 }}>                
                 <Typography variant="subtitle1" fontWeight="bold">
                   {userInfo.name ? `Chào ${userInfo.name}!` : 'Chào bạn!'}
                 </Typography>
@@ -357,9 +356,6 @@ const Info = () => {
                   <Typography variant="subtitle2" color="text.secondary" gutterBottom>
                     Liên kết mạng xã hội
                   </Typography>
-                  <Button startIcon={<Facebook />} variant="outlined" sx={{ mr: 2, mb: 2 }}>
-                    Facebook
-                  </Button>
                   <Button startIcon={<Google />} variant="outlined" sx={{ mb: 2 }}>
                     Google
                   </Button>

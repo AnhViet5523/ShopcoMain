@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import './Manager.css';
 import productService from '../../apis/productService';
 import categoryService from '../../apis/categoryService';
-import adminService from '../../apis/adminService';
+
 
 const Product = () => {
   const [activeTab, setActiveTab] = useState('Tất cả');

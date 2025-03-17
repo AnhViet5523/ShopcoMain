@@ -25,6 +25,7 @@ import Header from '../../components/Header';
 import orderService from '../../apis/orderService';
 import voucherService from '../../apis/voucherService';
 import paymentService from '../../apis/paymentService';
+import userService from '../../apis/userService';
 
 const Checkout = () => {
   const [open, setOpen] = useState(false);
@@ -59,6 +60,15 @@ const Checkout = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [sentToVnpay, setSentToVnpay] = useState(false);
   const [paymentPending, setPaymentPending] = useState(false);
+  const [userProfileLoaded, setUserProfileLoaded] = useState(false);
+  const [userProfile, setUserProfile] = useState(null);
+  const [loadingItems, setLoadingItems] = useState({});
+  const [itemErrors, setItemErrors] = useState({});
+  const [formErrors, setFormErrors] = useState({
+    recipientName: '',
+    phoneNumber: '',
+    deliveryAddress: ''
+  });
 
   useEffect(() => {
     // Mark component as mounted
@@ -73,6 +83,32 @@ const Checkout = () => {
       navigate('/login'); // Chuyển về trang login nếu chưa đăng nhập
       return;
     }
+    
+    // Lấy thông tin người dùng từ API
+    const fetchUserProfile = async () => {
+      try {
+        const userProfileData = await userService.getUserProfile(user.userId);
+        if (userProfileData) {
+          setUserProfile(userProfileData);
+          // Cập nhật thông tin người dùng từ database
+          setRecipientName(userProfileData.fullName || userProfileData.name || '');
+          setPhoneNumber(userProfileData.phone || '');
+          setDeliveryAddress(userProfileData.address || '');
+          setTempRecipientName(userProfileData.fullName || userProfileData.name || '');
+          setTempPhoneNumber(userProfileData.phone || '');
+          setTempDeliveryAddress(userProfileData.address || '');
+          setUserProfileLoaded(true);
+          console.log("Đã tải thông tin người dùng từ database:", userProfileData);
+        } else {
+          console.error("Không tìm thấy thông tin người dùng.");
+        }
+      } catch (error) {
+        console.error("Lỗi khi tải thông tin người dùng:", error);
+      }
+    };
+    
+    // Gọi API lấy thông tin người dùng ngay khi component được mount
+    fetchUserProfile();
 
     // Tạo một timeout để tránh fetch ngay lập tức sau khi redirect
     const timer = setTimeout(() => {
@@ -164,11 +200,8 @@ const Checkout = () => {
         let phone = '';
         let address = '';
         
-        if (user) {
-          fullName = `${user.firstName || ''} ${user.lastName || ''}`.trim();
-          phone = user.phoneNumber || '';
-          address = user.address || '';
-        } else if (response.deliveryAddress) {
+        // Ưu tiên lấy thông tin từ đơn hàng nếu có
+        if (response.deliveryAddress) {
           // Nếu đơn hàng có sẵn địa chỉ giao hàng, thử phân tích nó
           const parts = response.deliveryAddress.split('-').map(part => part.trim());
           if (parts.length >= 3) {
@@ -180,27 +213,44 @@ const Checkout = () => {
             // Nếu không, sử dụng toàn bộ làm địa chỉ
             address = response.deliveryAddress;
           }
-        } else {
-          fullName = userName || '';
-          phone = userPhone || '';
-          address = userAddress || '';
+          
+          // Cập nhật các trường riêng lẻ
+          setRecipientName(fullName);
+          setPhoneNumber(phone);
+          
+          // Tạo chuỗi địa chỉ đầy đủ
+          const fullDeliveryAddress = response.deliveryAddress;
+          setDeliveryAddress(fullDeliveryAddress);
+        } 
+        // Nếu đơn hàng không có thông tin giao hàng và chưa tải userProfile, dùng thông tin từ URL params hoặc localStorage
+        else if (!userProfileLoaded) {
+          const user = JSON.parse(localStorage.getItem('user'));
+          
+          if (user) {
+            fullName = `${user.firstName || ''} ${user.lastName || ''}`.trim();
+            phone = user.phoneNumber || '';
+            address = user.address || '';
+          } else {
+            fullName = userName || '';
+            phone = userPhone || '';
+            address = userAddress || '';
+          }
+          
+          // Cập nhật các trường riêng lẻ
+          setRecipientName(fullName);
+          setPhoneNumber(phone);
+          
+          // Tạo chuỗi địa chỉ đầy đủ
+          const parts = [];
+          if (fullName) parts.push(fullName);
+          if (phone) parts.push(phone);
+          if (address) parts.push(address);
+          
+          const fullDeliveryAddress = parts.join(' - ');
+          console.log("Địa chỉ đầy đủ:", fullDeliveryAddress); // Debug
+          
+          setDeliveryAddress(fullDeliveryAddress);
         }
-        
-        // Cập nhật các trường riêng lẻ
-        setRecipientName(fullName);
-        setPhoneNumber(phone);
-        
-        // Tạo chuỗi địa chỉ đầy đủ
-        // Đảm bảo không có các phần rỗng
-        const parts = [];
-        if (fullName) parts.push(fullName);
-        if (phone) parts.push(phone);
-        if (address) parts.push(address);
-        
-        const fullDeliveryAddress = parts.join(' - ');
-        console.log("Địa chỉ đầy đủ:", fullDeliveryAddress); // Debug
-        
-        setDeliveryAddress(fullDeliveryAddress);
         
         // Các phần còn lại của hàm giữ nguyên...
         const pendingOrderId = localStorage.getItem('pendingOrderId');
@@ -279,8 +329,23 @@ const Checkout = () => {
   };
 
   const handleAddressDialogOpen = () => {
-    // Chỉ đặt giá trị hiện tại vào biến temporary
-    setTempDeliveryAddress(deliveryAddress || '');
+    // Lấy thông tin hiện tại và đảm bảo nó không phải giá trị undefined hoặc null
+    const currentName = recipientName || userProfile?.fullName || userProfile?.name || '';
+    const currentPhone = phoneNumber || userProfile?.phone || '';
+    const currentAddress = deliveryAddress || userProfile?.address || '';
+    
+    console.log("Thông tin hiện tại trước khi mở dialog:", {
+      tên: currentName,
+      sđt: currentPhone,
+      địaChỉ: currentAddress
+    });
+    
+    // Thiết lập giá trị cho các biến tạm thời với thông tin hiện tại
+    setTempRecipientName(currentName);
+    setTempPhoneNumber(currentPhone);
+    setTempDeliveryAddress(currentAddress);
+    
+    // Mở dialog
     setAddressDialogOpen(true);
   };
 
@@ -313,18 +378,61 @@ const Checkout = () => {
     return parts.join(' - ');
   };
 
+  // Thêm hàm kiểm tra số điện thoại Việt Nam
+  const isValidVietnamesePhone = (phone) => {
+    // Kiểm tra định dạng số điện thoại Việt Nam
+    // Bắt đầu bằng 0 và có 10 số: 0xxxxxxxxx
+    // Hoặc bắt đầu bằng +84 và theo sau là 9 số: +84xxxxxxxxx
+    const regex = /^(0[0-9]{9}|\+84[0-9]{9})$/;
+    return regex.test(phone);
+  };
+
+  // Cập nhật hàm xử lý khi xác nhận địa chỉ
   const handleConfirmAddressChange = async () => {
-    // Sử dụng giá trị người dùng nhập trực tiếp
-    if (tempDeliveryAddress && tempDeliveryAddress.trim() !== '') {
-      // Chỉ định dạng nếu người dùng chưa nhập đủ thông tin
-      const formattedAddress = tempDeliveryAddress.includes('-') && tempDeliveryAddress.split('-').length >= 3
-        ? tempDeliveryAddress.trim()
-        : ensureFullAddressFormat(tempDeliveryAddress);
-      
-      // Đặt địa chỉ mới
-      setDeliveryAddress(formattedAddress);
-      console.log("Địa chỉ đã được cập nhật:", formattedAddress);
+    // Tạo object để lưu các lỗi mới
+    const newErrors = {};
+    let hasError = false;
+    
+    // Kiểm tra dữ liệu nhập
+    if (!tempRecipientName) {
+      newErrors.recipientName = 'Vui lòng nhập tên người nhận';
+      hasError = true;
     }
+    
+    if (!tempPhoneNumber) {
+      newErrors.phoneNumber = 'Vui lòng nhập số điện thoại';
+      hasError = true;
+    }
+    
+    // Kiểm tra số điện thoại có đúng định dạng Việt Nam không
+    if (tempPhoneNumber && !isValidVietnamesePhone(tempPhoneNumber.trim())) {
+      newErrors.phoneNumber = 'Số điện thoại không hợp lệ. Vui lòng nhập số điện thoại Việt Nam (10 số bắt đầu bằng 0 hoặc +84)';
+      hasError = true;
+    }
+    
+    if (!tempDeliveryAddress) {
+      newErrors.deliveryAddress = 'Vui lòng nhập địa chỉ giao hàng';
+      hasError = true;
+    }
+    
+    // Cập nhật state lỗi
+    setFormErrors(newErrors);
+    
+    // Nếu có lỗi, dừng xử lý và không đóng dialog
+    if (hasError) {
+      return;
+    }
+    
+    // Cập nhật thông tin
+    setRecipientName(tempRecipientName.trim());
+    setPhoneNumber(tempPhoneNumber.trim());
+    setDeliveryAddress(tempDeliveryAddress.trim());
+    
+    console.log("Thông tin đã được cập nhật:", {
+      tên: tempRecipientName.trim(),
+      sđt: tempPhoneNumber.trim(),
+      địaChỉ: tempDeliveryAddress.trim()
+    });
     
     // Đóng dialog
     handleAddressDialogClose();
@@ -463,40 +571,48 @@ const Checkout = () => {
       setIsProcessing(true);
       console.log('Bắt đầu xử lý thanh toán:', paymentMethod);
       
+      // Kiểm tra và tạo object lỗi mới
+      const newErrors = {};
+      let hasError = false;
+      
       // Validate thông tin giao hàng
+      if (!recipientName?.trim()) {
+        newErrors.recipientName = 'Vui lòng nhập tên người nhận';
+        hasError = true;
+      }
+      
+      if (!phoneNumber?.trim()) {
+        newErrors.phoneNumber = 'Vui lòng nhập số điện thoại';
+        hasError = true;
+      }
+      
+      // Kiểm tra số điện thoại có đúng định dạng Việt Nam không
+      if (phoneNumber?.trim() && !isValidVietnamesePhone(phoneNumber.trim())) {
+        newErrors.phoneNumber = 'Số điện thoại không hợp lệ. Vui lòng nhập số điện thoại Việt Nam hợp lệ';
+        hasError = true;
+      }
+      
       if (!deliveryAddress?.trim()) {
-        setError('Vui lòng nhập địa chỉ giao hàng');
+        newErrors.deliveryAddress = 'Vui lòng nhập địa chỉ giao hàng';
+        hasError = true;
+      }
+      
+      // Cập nhật state lỗi
+      setFormErrors(newErrors);
+      
+      // Nếu có lỗi, dừng xử lý nhưng vẫn hiển thị thông báo trên form
+      if (hasError) {
         setIsProcessing(false);
         return;
       }
-
-      // Nếu đơn hàng đã từng được gửi đến VNPAY và giờ chuyển sang COD
-      if (paymentPending && paymentMethod === 'Thanh toán khi nhận hàng (COD)') {
-        try {
-          // Reset trạng thái đơn hàng trước khi tiếp tục
-          console.log("Đang reset trạng thái đơn hàng từ VNPAY sang COD...");
-          await orderService.resetOrderPaymentState(order.orderId);
-          
-          // Cập nhật lại đơn hàng sau khi reset
-          const updatedOrder = await orderService.getOrderById(order.orderId);
-          setOrder(updatedOrder);
-          
-          // Reset các trạng thái
-          setSentToVnpay(false);
-          setPaymentPending(false);
-          localStorage.removeItem('pendingOrderId');
-        } catch (resetError) {
-          console.error("Lỗi khi reset trạng thái đơn hàng:", resetError);
-          setError('Không thể chuyển đổi phương thức thanh toán. Vui lòng tải lại trang và thử lại.');
-          setIsProcessing(false);
-          return;
-        }
-      }
-
-      // Luôn thêm phương thức thanh toán vào dữ liệu
+      
+      // Tiếp tục xử lý thanh toán nếu không có lỗi
+      // THAY ĐỔI Ở ĐÂY: Tách thành 3 trường riêng biệt thay vì gom vào deliveryAddress
       const paymentData = {
         orderId: order.orderId,
-        deliveryAddress: deliveryAddress?.trim() || "",
+        name: recipientName.trim(),
+        phoneNumber: phoneNumber.trim(),
+        deliveryAddress: deliveryAddress.trim(), // Chỉ lưu phần địa chỉ thực sự
         paymentMethod: paymentMethod?.trim(), 
         note: note?.trim() || ""
       };
@@ -596,6 +712,142 @@ const Checkout = () => {
     return order.totalAmount + shippingFee - discount;
   };
 
+  // Thêm các hàm xử lý tăng/giảm số lượng ngay sau hàm calculateFinalAmount
+  const handleIncreaseQuantity = async (orderItemId, currentQuantity) => {
+    try {
+      // Xóa lỗi cũ nếu có
+      setItemErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[orderItemId];
+        return newErrors;
+      });
+      
+      // Chỉ đánh dấu item đang thay đổi là loading
+      setLoadingItems(prev => ({ ...prev, [orderItemId]: true }));
+      
+      // Tăng số lượng lên 1
+      const newQuantity = currentQuantity + 1;
+      await orderService.updatecartitem(orderItemId, newQuantity);
+      
+      // Cập nhật lại thông tin đơn hàng, nhưng không set loading cho cả trang
+      const updatedOrder = await orderService.getOrderById(order.orderId);
+      setOrder(updatedOrder);
+      
+      // Nếu có voucher đã áp dụng, có thể cần áp dụng lại
+      if (order.voucher || (selectedVoucher && voucherApplied)) {
+        const voucherId = order.voucher ? order.voucher.voucherId : selectedVoucher.voucherId;
+        await orderService.applyvoucher(order.orderId, voucherId);
+        // Tải lại đơn hàng để cập nhật giảm giá
+        const refreshedOrder = await orderService.getOrderById(order.orderId);
+        setOrder(refreshedOrder);
+      }
+    } catch (error) {
+      console.error('Lỗi khi tăng số lượng:', error);
+      // Đặt lỗi cho sản phẩm cụ thể thay vì hiển thị popup
+      setItemErrors(prev => ({ 
+        ...prev, 
+        [orderItemId]: 'Không thể cập nhật số lượng. Vui lòng thử lại sau.'
+      }));
+    } finally {
+      // Chỉ xóa trạng thái loading của item này
+      setLoadingItems(prev => {
+        const newState = { ...prev };
+        delete newState[orderItemId];
+        return newState;
+      });
+    }
+  };
+
+  const handleDecreaseQuantity = async (orderItemId, currentQuantity) => {
+    // Không giảm được nữa nếu số lượng là 1
+    if (currentQuantity <= 1) return;
+    
+    try {
+      // Xóa lỗi cũ nếu có
+      setItemErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[orderItemId];
+        return newErrors;
+      });
+      
+      // Chỉ đánh dấu item đang thay đổi là loading
+      setLoadingItems(prev => ({ ...prev, [orderItemId]: true }));
+      
+      // Giảm số lượng đi 1
+      const newQuantity = currentQuantity - 1;
+      await orderService.updatecartitem(orderItemId, newQuantity);
+      
+      // Cập nhật lại thông tin đơn hàng, nhưng không set loading cho cả trang
+      const updatedOrder = await orderService.getOrderById(order.orderId);
+      setOrder(updatedOrder);
+      
+      // Nếu có voucher đã áp dụng, có thể cần áp dụng lại
+      if (order.voucher || (selectedVoucher && voucherApplied)) {
+        const voucherId = order.voucher ? order.voucher.voucherId : selectedVoucher.voucherId;
+        await orderService.applyvoucher(order.orderId, voucherId);
+        // Tải lại đơn hàng để cập nhật giảm giá
+        const refreshedOrder = await orderService.getOrderById(order.orderId);
+        setOrder(refreshedOrder);
+      }
+    } catch (error) {
+      console.error('Lỗi khi giảm số lượng:', error);
+      // Đặt lỗi cho sản phẩm cụ thể thay vì hiển thị popup
+      setItemErrors(prev => ({ 
+        ...prev, 
+        [orderItemId]: 'Không thể cập nhật số lượng. Vui lòng thử lại sau.'
+      }));
+    } finally {
+      // Chỉ xóa trạng thái loading của item này
+      setLoadingItems(prev => {
+        const newState = { ...prev };
+        delete newState[orderItemId];
+        return newState;
+      });
+    }
+  };
+
+  const handleRemoveItem = async (orderItemId) => {
+    try {
+      // Chỉ đánh dấu item đang xóa là loading
+      setLoadingItems(prev => ({ ...prev, [orderItemId]: true }));
+      
+      await orderService.removefromcart(orderItemId);
+      
+      // Cập nhật lại thông tin đơn hàng
+      const updatedOrder = await orderService.getOrderById(order.orderId);
+      
+      // Kiểm tra nếu không còn sản phẩm nào trong đơn hàng
+      if (!updatedOrder.items || !updatedOrder.items.$values || updatedOrder.items.$values.length === 0) {
+        // Quay về trang giỏ hàng nếu không còn sản phẩm
+        navigate('/cart');
+        return;
+      }
+      
+      setOrder(updatedOrder);
+      
+      // Nếu có voucher đã áp dụng, có thể cần áp dụng lại
+      if (order.voucher || (selectedVoucher && voucherApplied)) {
+        const voucherId = order.voucher ? order.voucher.voucherId : selectedVoucher.voucherId;
+        await orderService.applyvoucher(order.orderId, voucherId);
+        // Tải lại đơn hàng để cập nhật giảm giá
+        const refreshedOrder = await orderService.getOrderById(order.orderId);
+        setOrder(refreshedOrder);
+      }
+    } catch (error) {
+      console.error('Lỗi khi xóa sản phẩm:', error);
+      setError('Không thể xóa sản phẩm. Vui lòng thử lại sau.');
+    } finally {
+      // Chỉ xóa trạng thái loading của item này nếu chưa navigate
+      if (isMounted.current) {
+        setLoadingItems(prev => {
+          const newState = { ...prev };
+          delete newState[orderItemId];
+          return newState;
+        });
+      }
+    }
+  };
+
   // Cập nhật useEffect xử lý callback từ VNPAY
   useEffect(() => {
     const handleVnpayReturn = async () => {
@@ -648,6 +900,117 @@ const Checkout = () => {
     }
     
     return address;
+  };
+
+  // Thêm hàm getImageUrl tương tự như trong ProductDetail.jsx
+  const getImageUrl = (product) => {
+    if (!product) return '/images/default-product.jpg';
+    
+    // Kiểm tra nếu product có images
+    if (product.images && product.images.length > 0) {
+      const image = product.images[0];
+      if (typeof image === 'string') return image;
+      return image.imgUrl || '/images/default-product.jpg';
+    }
+    
+    // Kiểm tra imgUrl
+    if (product.imgUrl) {
+      if (product.imgUrl.startsWith('http')) return product.imgUrl;
+      return product.imgUrl;
+    }
+    
+    // Kiểm tra imgURL (viết hoa)
+    if (product.imgURL) {
+      if (product.imgURL.startsWith('http')) return product.imgURL;
+      return product.imgURL;
+    }
+    
+    // Trả về ảnh mặc định nếu không có ảnh
+    return '/images/default-product.jpg';
+  };
+
+  // Thêm useEffect mới để xử lý việc tách thông tin từ deliveryAddress khi dữ liệu thay đổi
+  useEffect(() => {
+    if (order && order.deliveryAddress) {
+      // Phân tích địa chỉ giao hàng và cập nhật các trường riêng lẻ
+      const parts = order.deliveryAddress.split('-').map(part => part.trim());
+      if (parts.length >= 3) {
+        // Nếu có đủ 3 phần (tên, SĐT, địa chỉ)
+        setRecipientName(parts[0]);
+        setPhoneNumber(parts[1]);
+        // Địa chỉ là tất cả phần còn lại
+        setDeliveryAddress(parts.slice(2).join(' - '));
+      } else {
+        // Nếu không đủ 3 phần, giữ nguyên cả chuỗi làm địa chỉ
+        // và sử dụng thông tin từ profile nếu có
+        if (order.name) setRecipientName(order.name);
+        if (order.phoneNumber) setPhoneNumber(order.phoneNumber);
+        
+        // Nếu không có name và phoneNumber trong order, để nguyên deliveryAddress
+        if (!order.name && !order.phoneNumber) {
+          setDeliveryAddress(order.deliveryAddress);
+        }
+      }
+    }
+  }, [order]);
+
+  // Thêm hàm mới để xóa sản phẩm khỏi checkout (không xóa khỏi cart)
+  const handleRemoveItemFromCheckout = async (orderItemId) => {
+    try {
+      // Kiểm tra xem có ít nhất 2 sản phẩm để có thể xóa
+      if (!order.items.$values || order.items.$values.length <= 1) {
+        setError('Đơn hàng cần ít nhất 1 sản phẩm để thanh toán');
+        return;
+      }
+      
+      // Đánh dấu item đang xóa là loading
+      setLoadingItems(prev => ({ ...prev, [orderItemId]: true }));
+      
+      // Xóa lỗi cũ nếu có
+      setItemErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[orderItemId];
+        return newErrors;
+      });
+      
+      // Gọi API để xóa sản phẩm khỏi đơn hàng hiện tại, nhưng không xóa khỏi giỏ hàng
+      await orderService.removeItemFromCheckout(order.orderId, orderItemId);
+      
+      // Cập nhật lại thông tin đơn hàng
+      const updatedOrder = await orderService.getOrderById(order.orderId);
+      setOrder(updatedOrder);
+      
+      // Nếu có voucher đã áp dụng, có thể cần áp dụng lại sau khi xóa sản phẩm
+      if (order.voucher || (selectedVoucher && voucherApplied)) {
+        try {
+          const voucherId = order.voucher ? order.voucher.voucherId : selectedVoucher.voucherId;
+          await orderService.applyvoucher(order.orderId, voucherId);
+          // Tải lại đơn hàng để cập nhật giảm giá
+          const refreshedOrder = await orderService.getOrderById(order.orderId);
+          setOrder(refreshedOrder);
+        } catch (voucherError) {
+          console.error('Lỗi khi áp dụng lại voucher:', voucherError);
+          // Voucher có thể không còn phù hợp sau khi xóa sản phẩm
+          if (voucherError.response && voucherError.response.status === 400) {
+            setVoucherApplied(false);
+            setSelectedVoucher(null);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Lỗi khi xóa sản phẩm khỏi đơn hàng:', error);
+      setItemErrors(prev => ({ 
+        ...prev, 
+        [orderItemId]: 'Không thể xóa sản phẩm. Vui lòng thử lại sau.'
+      }));
+    } finally {
+      // Xóa trạng thái loading của item này
+      setLoadingItems(prev => {
+        const newState = { ...prev };
+        delete newState[orderItemId];
+        return newState;
+      });
+    }
   };
 
   if (!order && !loading && !orderId) {
@@ -725,24 +1088,76 @@ const Checkout = () => {
         <div className="grid-container">
           <div className="left-column">
             <div className="address-section">
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                 <Typography variant="h6" sx={{ color: 'darkgreen', fontWeight: 'bold', fontSize: '1.2rem' }}>
-                  Địa chỉ nhận hàng
+                  Thông tin nhận hàng
                 </Typography>
                 <Button 
                   variant="text" 
-                  size="large" 
+                  size="medium" 
                   sx={{ 
                     textTransform: 'none', 
                     color: 'green', 
-                    fontWeight: 'bold' 
+                    fontWeight: 'bold',
+                    fontSize: '0.9rem',
+                    '&:hover': {
+                      backgroundColor: 'rgba(0, 100, 0, 0.08)'
+                    }
                   }}
                   onClick={handleAddressDialogOpen}
                 >
                   Thay đổi
                 </Button>
               </Box>
-              <p>{deliveryAddress || 'Vui lòng nhập địa chỉ giao hàng'}</p>
+              
+              {/* Hiển thị thông báo nếu có lỗi */}
+              {(formErrors.recipientName || formErrors.phoneNumber || formErrors.deliveryAddress) && (
+                <Alert severity="warning" sx={{ mb: 2, fontSize: '0.95rem', fontWeight: 'medium' }}>
+                  Xác minh địa chỉ nhận hàng của bạn
+                </Alert>
+              )}
+              
+              <Box sx={{ 
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 1.5,
+                backgroundColor: '#f8f9fa',
+                borderRadius: '8px',
+                border: '1px solid #e0e0e0',
+                padding: '16px',
+                mb: 3
+              }}>
+                <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
+                  <Typography variant="body1" sx={{ fontWeight: 'bold', minWidth: '150px', color: '#424242' }}>
+                    Tên người nhận:
+                  </Typography>
+                  <Typography variant="body1" sx={{ flex: 1, color: '#212121' }}>
+                    {recipientName || (userProfile?.fullName || userProfile?.name) || 'Chưa có thông tin'}
+                  </Typography>
+                </Box>
+                
+                <Divider sx={{ my: 0.5 }} />
+                
+                <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
+                  <Typography variant="body1" sx={{ fontWeight: 'bold', minWidth: '150px', color: '#424242' }}>
+                    Số điện thoại:
+                  </Typography>
+                  <Typography variant="body1" sx={{ flex: 1, color: '#212121' }}>
+                    {phoneNumber || userProfile?.phone || 'Chưa có thông tin'}
+                  </Typography>
+                </Box>
+                
+                <Divider sx={{ my: 0.5 }} />
+                
+                <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
+                  <Typography variant="body1" sx={{ fontWeight: 'bold', minWidth: '150px', color: '#424242' }}>
+                    Địa chỉ giao hàng:
+                  </Typography>
+                  <Typography variant="body1" sx={{ flex: 1, color: '#212121' }}>
+                    {deliveryAddress || userProfile?.address || 'Vui lòng nhập địa chỉ giao hàng'}
+                  </Typography>
+                </Box>
+              </Box>
             </div>
             
             <div className="payment-method">
@@ -875,16 +1290,15 @@ const Checkout = () => {
           <Typography variant="h6" sx={{ mb: 2, color: 'darkgreen', fontWeight: 'bold', fontSize: '1.2rem' }}>
             Thông tin kiện hàng
           </Typography>
-          <Typography sx={{ mb: 2 }}>Giao trong 48 giờ</Typography>
+          <Typography sx={{ mb: 2 }}>Giao trong 72 giờ</Typography>
           
           {order?.items?.$values && order.items.$values && order.items.$values.map((item) => (
             <Box key={item.orderItemId} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-              {/* Product Image */}
+              {/* Product Image - đã cập nhật */}
               <Box sx={{ width: '70px', height: '70px', mr: 2 }}>
                 <img 
-                  src={item.product?.imgUrl ? `https://klairscosmetics.com/wp-content/uploads/2017/04/${item.product.imgUrl}.jpg` : "https://klairscosmetics.com/wp-content/uploads/2017/04/supple-toner-1.jpg"} 
-                  // alt={item.product?.productName || "Product"} 
-                  alt="Product"
+                  src={getImageUrl(item.product)}
+                  alt={item.productName || "Sản phẩm"}
                   style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '4px' }} 
                 />
                 <Box 
@@ -917,16 +1331,120 @@ const Checkout = () => {
                 </Typography>
               </Box>
               
-              {/* Price & Quantity */}
-              <Box sx={{ display: 'flex', flexDirection: 'row', alignItems: 'center', ml: 2 }}>
-                <Typography sx={{ mr: 1 }}>{item?.quantity}</Typography>
-                <Typography sx={{ fontWeight: 'bold', mr: 1 }}>×</Typography>
-                <Typography sx={{ fontWeight: 'bold', color: '#ff6b6b' }}>
+              {/* Price & Quantity với nút tăng/giảm */}
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', ml: 2 }}>
+                {/* Giá sản phẩm */}
+                <Typography sx={{ fontWeight: 'bold', color: '#ff6b6b', mb: 1 }}>
                   {item?.price?.toLocaleString()} ₫
                 </Typography>
+                
+                {/* Nút tăng/giảm số lượng */}
+                <Box 
+                  sx={{ 
+                    display: 'flex', 
+                    flexDirection: 'column',
+                    alignItems: 'center'
+                  }}
+                >
+                  <Box 
+                    sx={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      border: '1px solid #e0e0e0', 
+                      borderRadius: '4px', 
+                      overflow: 'hidden'
+                    }}
+                  >
+                    <Button 
+                      onClick={() => handleDecreaseQuantity(item.orderItemId, item.quantity)}
+                      disabled={item.quantity <= 1 || loadingItems[item.orderItemId]}
+                      sx={{ 
+                        minWidth: '36px', 
+                        height: '32px', 
+                        p: 0,
+                        '&:hover': { bgcolor: '#f5f5f5' },
+                        color: 'darkgreen'
+                      }}
+                    >
+                      {loadingItems[item.orderItemId] ? 
+                        <CircularProgress size={16} thickness={5} sx={{ color: 'darkgreen' }} /> : 
+                        '-'}
+                    </Button>
+                    
+                    <Typography 
+                      sx={{ 
+                        minWidth: '36px', 
+                        textAlign: 'center', 
+                        bgcolor: 'white', 
+                        fontSize: '0.875rem',
+                        userSelect: 'none'
+                      }}
+                    >
+                      {item.quantity}
+                    </Typography>
+                    
+                    <Button 
+                      onClick={() => handleIncreaseQuantity(item.orderItemId, item.quantity)}
+                      disabled={loadingItems[item.orderItemId]}
+                      sx={{ 
+                        minWidth: '36px', 
+                        height: '32px', 
+                        p: 0,
+                        '&:hover': { bgcolor: '#f5f5f5' },
+                        color: 'darkgreen'
+                      }}
+                    >
+                      {loadingItems[item.orderItemId] ? 
+                        <CircularProgress size={16} thickness={5} sx={{ color: 'darkgreen' }} /> : 
+                        '+'}
+                    </Button>
+                  </Box>
+                  
+                  {/* Thêm nút xóa sản phẩm */}
+                  <Button 
+                    onClick={() => handleRemoveItemFromCheckout(item.orderItemId)}
+                    disabled={order.items.$values.length <= 1 || loadingItems[item.orderItemId]}
+                    sx={{ 
+                      minWidth: 'auto', 
+                      fontSize: '0.75rem',
+                      mt: 1,
+                      p: '2px 8px',
+                      color: 'error.main',
+                      '&.Mui-disabled': {
+                        color: 'rgba(211, 47, 47, 0.3)'
+                      }
+                    }}
+                  >
+                    {loadingItems[item.orderItemId] ? 
+                      <CircularProgress size={16} thickness={5} sx={{ color: 'darkgreen' }} /> : 
+                      'Xóa sản phẩm'}
+                  </Button>
+                  
+                  {/* Hiển thị thông báo lỗi nếu có */}
+                  {itemErrors && itemErrors[item.orderItemId] && (
+                    <Typography 
+                      variant="caption" 
+                      sx={{ 
+                        color: 'error.main', 
+                        mt: 1, 
+                        textAlign: 'center',
+                        fontWeight: 'medium'
+                      }}
+                    >
+                      {itemErrors[item.orderItemId]}
+                    </Typography>
+                  )}
+                </Box>
               </Box>
             </Box>
           ))}
+          
+          {/* Hiển thị trạng thái loading khi đang cập nhật số lượng */}
+          {Object.keys(loadingItems).length > 0 && (
+            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
+              <CircularProgress size={24} sx={{ color: 'darkgreen' }} />
+            </Box>
+          )}
         </Paper>
       </div>
 
@@ -966,29 +1484,54 @@ const Checkout = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Address Change Dialog */}
+      {/* Address Change Dialog - Thay đổi toàn bộ dialog này */}
       <Dialog 
         open={addressDialogOpen} 
         onClose={handleAddressDialogClose}
         fullWidth
         maxWidth="sm"
       >
-        <DialogTitle sx={{ color: 'darkgreen', fontWeight: 'bold' }}>
-          Thay đổi địa chỉ nhận hàng
+        <DialogTitle sx={{ color: 'green', fontWeight: 'bold', fontSize: '18px' }}>
+          Thông tin người nhận hàng
         </DialogTitle>
         <DialogContent>
-          <Box sx={{ mt: 2 }}>
+          <Box sx={{ mt: 1 }}>
             <TextField
-              label="Địa chỉ nhận hàng"
+              label="Tên người nhận *"
+              fullWidth
+              margin="normal"
+              value={tempRecipientName}
+              onChange={(e) => setTempRecipientName(e.target.value)}
+              placeholder="Vui lòng nhập tên người nhận"
+              required
+              error={Boolean(formErrors.recipientName)}
+              helperText={formErrors.recipientName || ""}
+            />
+            
+            <TextField
+              label="Số điện thoại"
+              fullWidth
+              margin="normal"
+              value={tempPhoneNumber}
+              onChange={(e) => setTempPhoneNumber(e.target.value)}
+              placeholder="Nhập số điện thoại Việt Nam (VD: 0912345678 hoặc +84912345678)"
+              required
+              error={Boolean(formErrors.phoneNumber)}
+              helperText={formErrors.phoneNumber || ""}
+            />
+            
+            <TextField
+              label="Địa chỉ giao hàng"
               fullWidth
               multiline
-              rows={4}
+              rows={3}
               margin="normal"
               value={tempDeliveryAddress}
               onChange={(e) => setTempDeliveryAddress(e.target.value)}
-              placeholder="Nhập địa chỉ đầy đủ (tên người nhận - số điện thoại - địa chỉ chi tiết)"
-              helperText="Ví dụ: Nguyễn Văn A - 0912345678 - 123 Đường ABC, Phường XYZ, Quận/Huyện, Tỉnh/Thành phố"
-              sx={{ mt: 1 }}
+              placeholder="Nhập địa chỉ chi tiết"
+              required
+              error={Boolean(formErrors.deliveryAddress)}
+              helperText={formErrors.deliveryAddress || ""}
             />
           </Box>
         </DialogContent>
@@ -996,7 +1539,10 @@ const Checkout = () => {
           <Button onClick={handleAddressDialogClose} sx={{ color: 'gray' }}>
             Hủy
           </Button>
-          <Button onClick={handleConfirmAddressChange} sx={{ color: 'green', fontWeight: 'bold' }}>
+          <Button 
+            onClick={handleConfirmAddressChange} 
+            sx={{ color: 'green', fontWeight: 'bold' }}
+          >
             Xác nhận
           </Button>
         </DialogActions>
