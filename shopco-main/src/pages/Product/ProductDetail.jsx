@@ -22,6 +22,7 @@ import { Home as HomeIcon, Add as AddIcon, Remove as RemoveIcon } from '@mui/ico
 import productService from '../../apis/productService';
 import orderService from '../../apis/orderService';
 import reviewService from "../../apis/reviewService";
+import userService from '../../apis/userService';
 
 const FlashDealTimer = memo(({ initialHours = 0, initialMinutes = 0, initialSeconds = 45 }) => {
   const [time, setTime] = useState({
@@ -80,6 +81,7 @@ export default function ProductDetail() {
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [reviews, setReviews] = useState([]);
+  const [reviewsWithUsernames, setReviewsWithUsernames] = useState([]);
   const navigate = useNavigate();
   const isMounted = useRef(true);
   const requestInProgress = useRef(false);
@@ -99,6 +101,12 @@ export default function ProductDetail() {
       isMounted.current = false;
     };
   }, [id]);
+
+  useEffect(() => {
+    if (reviews && reviews.length > 0 && !loading) {
+      fetchUsernames();
+    }
+  }, [reviews, loading]);
 
   const fetchProduct = async () => {
     if (requestInProgress.current) return;
@@ -126,6 +134,21 @@ export default function ProductDetail() {
         setProductImages(images);
         console.log('Product images:', images);
         
+        // Xác định trạng thái sản phẩm dựa trên số lượng tồn kho và trạng thái
+        let productStatus = 'Available';
+        // Kiểm tra trạng thái từ API
+        if (fetchedProduct.status && 
+            (fetchedProduct.status === 'Hết hàng' || 
+             fetchedProduct.status.toLowerCase().includes('hết') ||
+             fetchedProduct.status === 'Out of Stock')) {
+          productStatus = 'Out of Stock';
+        }
+        
+        // Kiểm tra số lượng tồn kho
+        if (fetchedProduct.inventory === 0 || fetchedProduct.stock === 0 || fetchedProduct.quantity === 0) {
+          productStatus = 'Out of Stock';
+        }
+        
         setProduct({
           ...fetchedProduct,
           discountedPrice: fetchedProduct.price - (fetchedProduct.price * 15 / 100),
@@ -141,13 +164,24 @@ export default function ProductDetail() {
               soldCount: 657,
               image: "/path/to/image.jpg"
             }
-          ]
+          ],
+          status: productStatus,
+          inventory: fetchedProduct.inventory || fetchedProduct.stock || fetchedProduct.quantity || 0
         });
         setReviews(fetchedReviews || []);
         if (totalSold) {
           setTotalSold(totalSold.totalSold);
         }
       }
+      console.log("Total Sold:", totalSold);
+      console.log("Product Status:", product?.status);
+      
+      // Log sau khi state đã được cập nhật
+      setTimeout(() => {
+        console.log("Product sau khi cập nhật:", product);
+        console.log("Status sau khi cập nhật:", product?.status);
+      }, 100);
+      
     } catch (error) {
       console.error("Error fetching product or reviews:", error);
     } finally {
@@ -157,6 +191,29 @@ export default function ProductDetail() {
       requestInProgress.current = false;
     }
   };
+
+  const fetchUsernames = async () => {
+    try {
+      const reviewsWithNames = await Promise.all(
+        reviews.map(async (review) => {
+          try {
+            const userProfile = await userService.getUserProfile(review.userId);
+            return {
+              ...review,
+              userName: userProfile?.username || userProfile?.fullName || `Người dùng ${review.userId}`
+            };
+          } catch (error) {
+            console.error(`Error fetching user profile for ID ${review.userId}:`, error);
+            return { ...review, userName: `Người dùng ${review.userId}` };
+          }
+        })
+      );
+      setReviewsWithUsernames(reviewsWithNames);
+    } catch (error) {
+      console.error('Error fetching usernames:', error);
+    }
+  };
+
   console.log("review", reviews);
   console.log("product", product);
   console.log("productImages", productImages);
@@ -171,13 +228,19 @@ export default function ProductDetail() {
 
   const handleQuantityChange = (change) => {
     const newQuantity = quantity + change;
-    if (newQuantity >= 1) {
+    if (newQuantity >= 1 && newQuantity <= (product?.inventory || 0)) {
       setQuantity(newQuantity);
     }
   };
 
   const addToCart = async () => {
     if (!product) return;
+
+    // Kiểm tra số lượng và trạng thái sản phẩm
+    if (totalSold === 0 && product.status === 'Out of Stock') {
+        alert('Sản phẩm hiện đã hết, shop đang cập nhật.');
+        return;
+    }
     
     try {
       // Get user ID from localStorage
@@ -202,10 +265,63 @@ export default function ProductDetail() {
   };
 
   const handleBuyNow = async () => {
-    // Logic để thêm sản phẩm vào giỏ hàng nếu cần
-    await addToCart();
-    // Chuyển hướng đến trang checkout
-    navigate('/cart');
+    // Kiểm tra số lượng và trạng thái sản phẩm
+    if (totalSold === 0 && product.status === 'Out of Stock') {
+        alert('Sản phẩm hiện đã hết, shop đang cập nhật.');
+        return;
+    }
+    
+    try {
+        setLoading(true);
+        
+        // Lấy thông tin user và kiểm tra đăng nhập
+        const user = JSON.parse(localStorage.getItem('user'));
+        if (!user || !user.userId) {
+            alert('Vui lòng đăng nhập để mua hàng');
+            navigate('/login', { state: { returnUrl: `/product/${id}` } });
+            return;
+        }
+        
+        const userId = user.userId;
+        
+        // Gọi API buyNow
+        const response = await orderService.buyNow(userId, product.productId, quantity);
+        
+        // Log phản hồi để debug
+        console.log("Phản hồi từ API mua ngay:", response);
+        
+        // Xử lý phản hồi để tìm orderId
+        let orderId = null;
+        
+        if (response) {
+            // Kiểm tra cấu trúc mới - orderId nằm trong thuộc tính order
+            if (response.order && response.order.orderId) {
+                orderId = response.order.orderId;
+                console.log("Tìm thấy orderId trong response.order:", orderId);
+            }
+            // Giữ lại kiểm tra cũ để tương thích ngược
+            else if (typeof response === 'object') {
+                orderId = response.orderId || response.OrderId || 
+                         (response.data && response.data.orderId) || 
+                         (response.data && response.data.OrderId);
+            } else if (typeof response === 'number') {
+                orderId = response;
+            }
+        }
+        
+        if (orderId) {
+            console.log("Chuyển đến trang thanh toán với orderId:", orderId);
+            navigate(`/checkout?orderId=${orderId}`);
+        } else {
+            console.error("Không tìm thấy orderId trong phản hồi:", response);
+            alert('Có lỗi xảy ra khi tạo đơn hàng. Vui lòng thử lại sau.');
+        }
+    } catch (error) {
+        console.error('Lỗi khi thực hiện chức năng mua ngay:', error);
+        alert('Có lỗi xảy ra khi mua ngay. Vui lòng thử lại sau.');
+    } finally {
+        setLoading(false);
+    }
   };
 
   const handleOpenModal = () => setIsModalOpen(true);
@@ -527,6 +643,9 @@ export default function ProductDetail() {
                     <strong>Loại da:</strong> {product?.skinType || 'Chưa có thông tin'}
                   </Typography>
                   <Typography variant="body1" sx={{ mt: 1 }}>
+                    <strong>Số lượng tồn kho:</strong> {product?.inventory || product?.quantity || 0}
+                  </Typography>
+                  <Typography variant="body1" sx={{ mt: 1 }}>
                     <strong>Trạng thái:</strong> {product?.status === 'Available' ? 'Còn hàng' : 'Hết hàng'}
                   </Typography>
                 </Box>
@@ -548,6 +667,7 @@ export default function ProductDetail() {
                     <IconButton 
                       size="small" 
                       onClick={() => handleQuantityChange(1)}
+                      disabled={quantity >= (product?.inventory || 0)}
                     >
                       <AddIcon fontSize="small" />
                     </IconButton>
@@ -556,34 +676,43 @@ export default function ProductDetail() {
                 
                 {/* Action Buttons */}
                 <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
-                <Button 
+                  <Button 
                     variant="contained" 
-                    color="success" 
+                    color={product?.status !== 'Out of Stock' && product?.inventory > 0 ? "success" : "default"} 
                     sx={{ 
                       flex: 1,
                       py: 1.5,
                       textTransform: 'none',
-                      fontWeight: 'bold'
+                      fontWeight: 'bold',
+                      opacity: product?.status !== 'Out of Stock' && product?.inventory > 0 ? 1 : 0.5
                     }}
-                    onClick={addToCart}
+                    onClick={product?.status !== 'Out of Stock' && product?.inventory > 0 ? addToCart : undefined}
+                    disabled={product?.status === 'Out of Stock' || product?.inventory <= 0}
                   >
                     Thêm vào giỏ
                   </Button>
                   <Button 
                     variant="outlined" 
-                    color="success" 
+                    color={product?.status !== 'Out of Stock' && product?.inventory > 0 ? "success" : "default"} 
                     sx={{ 
                       flex: 1,
                       py: 1.5,
                       textTransform: 'none',
-                      fontWeight: 'bold'
+                      fontWeight: 'bold',
+                      opacity: product?.status !== 'Out of Stock' && product?.inventory > 0 ? 1 : 0.5
                     }}
-                    onClick={handleBuyNow}
+                    onClick={product?.status !== 'Out of Stock' && product?.inventory > 0 ? handleBuyNow : undefined}
+                    disabled={product?.status === 'Out of Stock' || product?.inventory <= 0}
                   >
                     Mua Ngay
                   </Button>
-                  
                 </Box>
+                {console.log("Điều kiện hiển thị:", product?.inventory <= 0, product?.status === 'Out of Stock')}
+                {(product?.inventory <= 0 || product?.status === 'Out of Stock') && (
+                  <Typography color="error" sx={{ mt: 1, fontWeight: 'bold', display: 'block', fontSize: '1rem' }}>
+                    Sản phẩm hiện đã hết, shop đang cập nhật.
+                  </Typography>
+                )}
               </>
             )}
           </Grid>
@@ -640,43 +769,42 @@ export default function ProductDetail() {
               
               {tabValue === 1 && (
                 <Box sx={{ p: 2 }}>
-                  {reviews?.map((review, index) => (
-                    <Paper key={index} sx={{ p: 2, mb: 2 }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                        <Box 
-                          component="img" 
-                          src="/images/avatar-placeholder.jpg" 
-                          alt={review.userName}
-                          sx={{ 
-                            width: 40, 
-                            height: 40, 
-                            borderRadius: '50%',
-                            backgroundColor: 'gray',
-                            mr: 2
-                          }}
-                          onError={(e) => {
-                            e.target.onerror = null;
-                            e.target.src = '/images/avatar-placeholder.jpg';
-                          }}
-                        />
-                        <Box>
+                  {reviewsWithUsernames.length > 0 ? 
+                    reviewsWithUsernames.map((review, index) => (
+                      <Paper key={index} sx={{ p: 2, mb: 2 }}>
+                        <Box sx={{ mb: 1 }}>
                           <Typography variant="body1" fontWeight="bold">
-                            {review.userName || "Người dùng"}
+                            {review.userName}
                           </Typography>
                           <Typography variant="body2" color="text.secondary">
                             {new Date(review.reviewDate).toLocaleDateString()}
                           </Typography>
                         </Box>
-                      </Box>
-                      <Rating value={review.rating} readOnly size="small" />
-                      <Typography variant="body1" sx={{ mt: 1 }}>
-                        {review?.reviewComment}
-                      </Typography>
-                    </Paper>
-                  ))}
-                  {reviews?.length === 0 && (
-                    <Typography>Chưa có đánh giá nào</Typography>
-                  )}
+                        <Rating value={review.rating} readOnly size="small" />
+                        <Typography variant="body1" sx={{ mt: 1 }}>
+                          {review?.reviewComment}
+                        </Typography>
+                      </Paper>
+                    )) : reviews.length > 0 ? (
+                      reviews.map((review, index) => (
+                        <Paper key={index} sx={{ p: 2, mb: 2 }}>
+                          <Box sx={{ mb: 1 }}>
+                            <Typography variant="body1" fontWeight="bold">
+                              Người dùng {review.userId || "không xác định"}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                              {new Date(review.reviewDate).toLocaleDateString()}
+                            </Typography>
+                          </Box>
+                          <Rating value={review.rating} readOnly size="small" />
+                          <Typography variant="body1" sx={{ mt: 1 }}>
+                            {review?.reviewComment}
+                          </Typography>
+                        </Paper>
+                      ))
+                    ) : (
+                      <Typography>Chưa có đánh giá nào</Typography>
+                    )}
                   <Button 
                     variant="contained" 
                     color="primary" 

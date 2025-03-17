@@ -219,6 +219,79 @@ const productService = {
         }
         
         return mockProducts;
+    },
+
+    // Thêm hàm searchProducts để tìm kiếm sản phẩm theo từ khóa
+    searchProducts: async (keyword) => {
+        try {
+            console.log(`Calling API: GET /api/Products/search?name=${keyword}`);
+            
+            let productsResponse;
+            let imagesResponse;
+            
+            try {
+                productsResponse = await axiosClient.get(`/api/Products/search?name=${encodeURIComponent(keyword)}`);
+                console.log('Search Products API Response:', productsResponse);
+            } catch (productError) {
+                console.error('Error searching products:', productError.message);
+                console.error('Error details:', productError.response?.data || productError);
+                console.log('Sử dụng dữ liệu mẫu đã lọc thay thế...');
+                // Fallback: lọc sản phẩm mẫu theo từ khóa
+                const mockProducts = productService.getMockProducts();
+                const filteredMockProducts = mockProducts.filter(product => 
+                    product.productName.toLowerCase().includes(keyword.toLowerCase())
+                );
+                return { $values: filteredMockProducts };
+            }
+            
+            try {
+                imagesResponse = await productImageService.getAllProductImages();
+                console.log('Images API Response:', imagesResponse);
+            } catch (imageError) {
+                console.error('Error fetching product images:', imageError.message);
+                console.error('Error details:', imageError.response?.data || imageError);
+                imagesResponse = { $values: [] };
+            }
+            
+            const products = Array.isArray(productsResponse) ? productsResponse : 
+                            (productsResponse && productsResponse.$values ? productsResponse.$values : []);
+            
+            let images = [];
+            if (imagesResponse && imagesResponse.$values) {
+                images = imagesResponse.$values;
+            } else if (Array.isArray(imagesResponse)) {
+                images = imagesResponse;
+            }
+            
+            console.log(`Processing ${products.length} search results and ${images.length} images`);
+            
+            const productImagesMap = {};
+            images.forEach(image => {
+                const productId = image.productId || image.productID;
+                if (productId) {
+                    if (!productImagesMap[productId]) {
+                        productImagesMap[productId] = [];
+                    }
+                    productImagesMap[productId].push(image);
+                }
+            });
+            
+            const productsWithImages = products.map(product => {
+                const productId = product.productId || product.productID;
+                const productImages = productImagesMap[productId] || [];
+                return {
+                    ...product,
+                    images: productImages,
+                    imgUrl: productImages.length > 0 ? productImages[0].imgUrl : (product.imgURL || '/images/default-product.jpg')
+                };
+            });
+            
+            return { $values: productsWithImages };
+        } catch (error) {
+            console.error(`Error searching products with keyword "${keyword}":`, error.message);
+            console.error('Error stack:', error.stack);
+            return { $values: [] };
+        }
     }
 };
 

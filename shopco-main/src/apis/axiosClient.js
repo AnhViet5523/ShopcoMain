@@ -16,17 +16,25 @@ const excludeFromCancellation = [
     '/api/Users/profile',
     '/api/Users/',
     '/api/Orders/current/',
+    '/api/Orders/', // Thêm Orders vào danh sách loại trừ
     '/api/Voucher',
     '/api/Products',
-    '/api/Photos/product'
+    '/api/Photos/product',
+    '/api/Payments/' // Thêm Payments vào danh sách loại trừ
 ];
 
 // Hàm kiểm tra xem một endpoint có nên được loại trừ khỏi cơ chế hủy không
 const shouldExcludeFromCancellation = (endpoint, method) => {
+    // Bổ sung thêm kiểm tra cho /api/Orders/id
+    if (endpoint.match(/\/api\/Orders\/\d+/)) {
+        return true;
+    }
+    
     // Không áp dụng hủy cho các method GET hoặc các endpoint trong danh sách loại trừ
     if (method.toLowerCase() === 'get') {
         return excludeFromCancellation.some(prefix => endpoint.startsWith(prefix));
     }
+    
     return false;
 };
 
@@ -69,6 +77,9 @@ axiosClient.interceptors.request.use(
             // Hủy request trước đó nếu có và lấy key
             const key = cancelPreviousRequest(endpoint, method, requestId);
             cancelTokens[key] = source;
+            
+            // Thêm requestId vào headers để debugging
+            config.headers['X-Request-Id'] = requestId;
         }
         
         // Lấy thông tin người dùng từ localStorage
@@ -104,11 +115,14 @@ axiosClient.interceptors.response.use(
         // Xóa cancel token sau khi request thành công
         const endpoint = response.config.url;
         const method = response.config.method || 'get';
-        const key = `${method}:${endpoint}`;
         
-        if (endpoint && cancelTokens[key]) {
-            delete cancelTokens[key];
-        }
+        // Tìm và xóa cancel token dựa trên prefix của key
+        const keyPrefix = `${method}:${endpoint}`;
+        Object.keys(cancelTokens).forEach(key => {
+            if (key.startsWith(keyPrefix)) {
+                delete cancelTokens[key];
+            }
+        });
         
         // Kiểm tra xem response có tồn tại không
         if (!response) {
@@ -138,11 +152,14 @@ axiosClient.interceptors.response.use(
         if (error.config && error.config.url) {
             const endpoint = error.config.url;
             const method = error.config.method || 'get';
-            const key = `${method}:${endpoint}`;
             
-            if (cancelTokens[key]) {
-                delete cancelTokens[key];
-            }
+            // Tìm và xóa cancel token dựa trên prefix của key
+            const keyPrefix = `${method}:${endpoint}`;
+            Object.keys(cancelTokens).forEach(key => {
+                if (key.startsWith(keyPrefix)) {
+                    delete cancelTokens[key];
+                }
+            });
         }
         
         // Xử lý lỗi hủy request
@@ -173,9 +190,14 @@ axiosClient.interceptors.response.use(
     }
 );
 
-// Thêm hàm hủy tất cả các request khi người dùng chuyển trang
-axiosClient.cancelAllRequests = () => {
+// Cải thiện hàm hủy tất cả các request, loại trừ các request quan trọng
+axiosClient.cancelAllRequests = (excludeImportant = true) => {
     Object.keys(cancelTokens).forEach(key => {
+        // Nếu excludeImportant=true, không hủy các request đến Orders/
+        if (excludeImportant && key.includes('/api/Orders/')) {
+            return;
+        }
+        
         cancelTokens[key].cancel('Navigation cancelled all requests');
         delete cancelTokens[key];
     });
