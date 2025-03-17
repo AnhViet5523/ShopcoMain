@@ -56,12 +56,27 @@ const QuizTest = () => {
 
             // Save quiz results and get skin type from backend
             const response = await quizService.saveQuizResult(requestData);
-            console.log('Quiz results saved successfully');
+            console.log('Quiz results saved successfully', response);
             
-            // Set results from backend response
-            setResults([response.skinType]);
+            // Kiểm tra xem kết quả trả về có skinType không
+            if (response && response.skinType) {
+                // Thêm bước này: Lưu loại da vào dữ liệu người dùng
+                try {
+                    await userService.saveSkinType(userId, response.skinType);
+                    console.log('SkinType saved to user profile:', response.skinType);
+                } catch (skinTypeError) {
+                    console.error('Error saving skin type to user profile:', skinTypeError);
+                    // Vẫn tiếp tục hiển thị kết quả ngay cả khi không lưu được vào profile
+                }
+                
+                // Set results from backend response
+                setResults([response.skinType]);
+            } else {
+                console.error('Invalid response format, skinType not found:', response);
+                alert('Có lỗi xảy ra khi phân tích kết quả. Vui lòng thử lại.');
+            }
         } catch (error) {
-            console.error('Error saving quiz results:', error);
+            console.error('Error processing quiz results:', error);
             alert('Có lỗi xảy ra khi lưu kết quả. Vui lòng thử lại.');
         }
     };
