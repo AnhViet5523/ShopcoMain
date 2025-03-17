@@ -405,7 +405,7 @@ const VoucherStaff = () => {
                             cursor: 'pointer'
                           }}
                         >
-                          Xóa
+                          Thay đổi trạng thái
                         </button>
                       </td>
                     </tr>

@@ -57,7 +57,31 @@ export default function NewArrivals() {
       _products = _products.map(product => {
         // Nếu sản phẩm đã có ảnh từ API
         if (product.images && product.images.length > 0) {
-          // Sắp xếp ảnh theo displayOrder (nếu có)
+          console.log(`Xử lý ảnh cho sản phẩm ID: ${product.productId}, tên: ${product.productName || 'Unknown'}`);
+          
+          // Kiểm tra xem có ảnh nào được đánh dấu là ảnh đại diện (isMainImage = true) không
+          let mainImage = product.images.find(img => img.isMainImage === true);
+          
+          // Nếu không tìm thấy ảnh đại diện bằng isMainImage, tìm ảnh có displayOrder = 0
+          if (!mainImage) {
+            mainImage = product.images.find(img => img.displayOrder === 0);
+            if (mainImage) {
+              console.log(`Product ${product.productId}: Không tìm thấy ảnh có isMainImage=true, nhưng tìm thấy ảnh với displayOrder=0, ID: ${mainImage.imageID}`);
+            }
+          } else {
+            console.log(`Product ${product.productId} (${product.productName || 'Unknown'}): Found main image with isMainImage=true, ID: ${mainImage.imageID}`);
+          }
+          
+          // Nếu tìm thấy ảnh đại diện, sử dụng ảnh đó
+          if (mainImage) {
+            return {
+              ...product,
+              mainImage: mainImage.imgUrl || mainImage.imageUrl || '/images/default-product.jpg',
+              images: product.images
+            };
+          }
+          
+          // Nếu không tìm thấy ảnh đại diện, sắp xếp theo displayOrder và lấy ảnh đầu tiên
           const sortedImages = [...product.images].sort((a, b) => {
             // Nếu cả hai ảnh đều có displayOrder, sắp xếp theo displayOrder
             if (a.displayOrder !== undefined && b.displayOrder !== undefined) {
@@ -73,9 +97,9 @@ export default function NewArrivals() {
           
           // Log thông tin về ảnh đã sắp xếp
           if (product.productId) {
-            console.log(`Product ${product.productId} (${product.productName || 'Unknown'}): Sorted ${sortedImages.length} images by displayOrder`);
+            console.log(`Product ${product.productId} (${product.productName || 'Unknown'}): No main image found. Sorted ${sortedImages.length} images by displayOrder`);
             if (sortedImages.length > 0) {
-              console.log(`Main image displayOrder: ${sortedImages[0].displayOrder !== undefined ? sortedImages[0].displayOrder : 'Not set'}`);
+              console.log(`Using image with displayOrder: ${sortedImages[0].displayOrder !== undefined ? sortedImages[0].displayOrder : 'Not set'} as main image`);
             }
           }
           
