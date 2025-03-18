@@ -6,6 +6,7 @@ import orderService from '../apis/orderService';
 export default function ProductCard({ product }) {
   const navigate = useNavigate();
   const [soldCount, setSoldCount] = useState(product.soldCount || 0);
+  const [imageError, setImageError] = useState(false);
 
   useEffect(() => {
     const fetchSoldCount = async () => {
@@ -37,6 +38,21 @@ export default function ProductCard({ product }) {
     navigate(`/product/${product.productId}`);
   };
 
+  // Xử lý lỗi khi hình ảnh không tải được
+  const handleImageError = () => {
+    setImageError(true);
+  };
+
+  // Chọn nguồn hình ảnh phù hợp
+  const getImageSource = () => {
+    if (imageError) {
+      return '/images/default-product.jpg'; // Ảnh mặc định khi có lỗi
+    }
+    
+    // Ưu tiên theo thứ tự: imgUrl, image, imgURL
+    return product.imgUrl || product.image || product.imgURL || '/images/default-product.jpg';
+  };
+
   return (
     <Card 
       onClick={handleClick}
@@ -52,12 +68,14 @@ export default function ProductCard({ product }) {
       <CardMedia
         component="img"
         height="200"
-        image={product.imgUrl}
-        alt={product.name}
+        image={getImageSource()}
+        alt={product.name || product.productName || "Sản phẩm"}
+        onError={handleImageError}
+        sx={{ objectFit: 'contain', padding: '10px' }}
       />
       <CardContent>
         <Typography gutterBottom variant="h6" component="div" noWrap>
-          {product.productName}
+          {product.productName || product.name}
         </Typography>
         
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
