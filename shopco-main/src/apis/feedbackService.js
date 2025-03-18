@@ -39,16 +39,6 @@ const feedbackService = {
         }
     },
 
-    // Trả lời feedback
-    replyToFeedback: async (replyData) => {
-        try {
-            const response = await axiosClient.post('/api/feedbacks/reply', replyData);
-            return response;
-        } catch (error) {
-            console.error('Error replying to feedback:', error);
-            throw error;
-        }
-    },
 
     // Lấy feedback của một người dùng cụ thể
     getUserFeedbacks: async (userId) => {
@@ -57,17 +47,6 @@ const feedbackService = {
             return response;
         } catch (error) {
             console.error('Error getting user feedbacks:', error);
-            throw error;
-        }
-    },
-
-    // Lấy các feedback đang chờ xử lý
-    getPendingFeedbacks: async () => {
-        try {
-            const response = await axiosClient.get('/api/feedbacks/pending');
-            return response;
-        } catch (error) {
-            console.error('Error getting pending feedbacks:', error);
             throw error;
         }
     },
@@ -107,6 +86,17 @@ const feedbackService = {
             return response;
         } catch (error) {
             console.error('Error uploading image:', error);
+            throw error;
+        }
+    },
+
+    // Thêm hàm để gửi phản hồi
+    replyFeedback: async (replyData) => {
+        try {
+            const response = await axiosClient.post('/api/feedbacks/reply', replyData);
+            return response;
+        } catch (error) {
+            console.error('Error replying to feedback:', error);
             throw error;
         }
     }

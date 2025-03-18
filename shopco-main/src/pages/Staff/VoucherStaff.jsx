@@ -9,7 +9,7 @@ import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import dayjs from 'dayjs';
 
-const VoucherStaff = () => {
+const VoucherStaff = () => {    
   const navigate = useNavigate();
   const [activeItem, setActiveItem] = useState('');
   const [vouchers, setVouchers] = useState([]);
@@ -516,3 +516,4 @@ const VoucherStaff = () => {
 };
 
 export default VoucherStaff;
+  

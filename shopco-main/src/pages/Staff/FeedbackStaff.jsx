@@ -33,13 +33,13 @@ const FeedbackStaff = () => {
     { id: 'voucherStaff', name: 'Vouchers', icon: '🎫' },
     { id: 'feedbackStaff', name: 'Feedback', icon: '📢' },
   ];
-
   // Lấy danh sách đánh giá
   const fetchReviews = async () => {
     setLoading(true);
     setError(null);
     
     try {
+      console.log('Bắt đầu lấy danh sách đánh giá...');
       const response = await reviewService.getAllReviews();
       console.log('Reviews response:', response);
       
@@ -54,14 +54,18 @@ const FeedbackStaff = () => {
       
       setReviews(processedReviews);
       setOriginalReviews(processedReviews);
+      
       // Fetch user names and product names
       await Promise.all([
         fetchUserNames(processedReviews),
         fetchProductNames(processedReviews)
       ]);
+      
       setLoading(false);
     } catch (error) {
       console.error('Error fetching reviews:', error);
+      console.error('Error details:', error.message);
+      console.error('Error stack:', error.stack);
       setError('Đã xảy ra lỗi khi tải dữ liệu đánh giá');
       setLoading(false);
     }
@@ -85,19 +89,35 @@ const FeedbackStaff = () => {
   // Thêm hàm fetchProductNames
   const fetchProductNames = async (reviews) => {
     try {
+      console.log('Bắt đầu lấy tên sản phẩm...');
       const response = await productService.getAllProducts();
+      console.log('Phản hồi API sản phẩm:', response);
+      
       const productNameMap = {};
       
       // Xử lý response để lấy tên sản phẩm
-      if (response && response.$values) {
+      if (Array.isArray(response)) {
+        console.log(`Xử lý ${response.length} sản phẩm từ mảng`);
+        response.forEach(product => {
+          if (product && product.productId !== undefined) {
+            productNameMap[product.productId] = product.productName || 'Không có tên';
+          }
+        });
+      } else if (response && response.$values) {
+        console.log(`Xử lý ${response.$values.length} sản phẩm từ $values`);
         response.$values.forEach(product => {
-          productNameMap[product.productId] = product.productName;
+          if (product && product.productId !== undefined) {
+            productNameMap[product.productId] = product.productName || 'Không có tên';
+          }
         });
       }
       
+      console.log('Product name mapping:', productNameMap);
       setProductNames(productNameMap);
     } catch (error) {
       console.error('Lỗi khi lấy tên sản phẩm:', error);
+      console.error('Error details:', error.message);
+      console.error('Error stack:', error.stack);
     }
   };
 

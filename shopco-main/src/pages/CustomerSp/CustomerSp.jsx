@@ -621,7 +621,7 @@ const CustomerSupport = () => {
         </DialogTitle>
         <DialogContent>
           <Box sx={{ my: 2 }}>
-            <Typography variant="subtitle1" fontWeight="bold">Họ và tên:</Typography>
+            <Typography variant="subtitle1" fontWeight="bold">Tên:</Typography>
             <Typography paragraph>{formData.name}</Typography>
             
             <Typography variant="subtitle1" fontWeight="bold">Email:</Typography>
