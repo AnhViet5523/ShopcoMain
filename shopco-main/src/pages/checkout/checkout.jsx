@@ -1321,13 +1321,13 @@ const Checkout = () => {
               {/* Product Info */}
               <Box sx={{ flex: 1, ml: 1 }}>
                 <Typography variant="subtitle1" sx={{ fontWeight: 'bold', fontSize: '0.9rem' }}>
-                  {item.product?.brand || "Klairs"}
+                  {item.product?.brand || "Chưa có thương hiệu"}
                 </Typography>
                 <Typography variant="body2">
-                  {item?.productName || "Nước Hoa Hồng Klairs Không Mùi Cho Da Nhạy Cảm 180ml"}
+                  {item.product?.productName || "Chưa có tên sản phẩm"}
                 </Typography>
                 <Typography variant="body2" sx={{ color: 'grey', fontSize: '0.8rem' }}>
-                  {item.product?.capacity?.split(',')[0] || "180ml"}
+                  {item.product?.capacity?.split(',')[0] || ""}
                 </Typography>
               </Box>
               
