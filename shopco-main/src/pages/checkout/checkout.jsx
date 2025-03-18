@@ -26,6 +26,7 @@ import orderService from '../../apis/orderService';
 import voucherService from '../../apis/voucherService';
 import paymentService from '../../apis/paymentService';
 import userService from '../../apis/userService';
+import productImageService from '../../apis/productImageService';
 
 const Checkout = () => {
   const [open, setOpen] = useState(false);
@@ -69,6 +70,8 @@ const Checkout = () => {
     phoneNumber: '',
     deliveryAddress: ''
   });
+  const [productImages, setProductImages] = useState([]);
+  const [imagesLoaded, setImagesLoaded] = useState(false);
 
   useEffect(() => {
     // Mark component as mounted
@@ -138,6 +141,29 @@ const Checkout = () => {
       // Đánh dấu đơn hàng đang chờ thanh toán
       setPaymentPending(true);
     }
+    
+    // Lấy tất cả ảnh sản phẩm
+    const fetchAllProductImages = async () => {
+      try {
+        const response = await productImageService.getAllProductImages();
+        console.log('Đã lấy danh sách ảnh sản phẩm:', response);
+        
+        let allImages = [];
+        if (response && response.$values) {
+          allImages = response.$values;
+        } else if (Array.isArray(response)) {
+          allImages = response;
+        }
+        
+        setProductImages(allImages);
+        setImagesLoaded(true);
+      } catch (error) {
+        console.error('Lỗi khi lấy ảnh sản phẩm:', error);
+      }
+    };
+    
+    // Gọi API lấy tất cả ảnh sản phẩm
+    fetchAllProductImages();
     
     // Cleanup function
     return () => {
@@ -906,26 +932,84 @@ const Checkout = () => {
   const getImageUrl = (product) => {
     if (!product) return '/images/default-product.jpg';
     
+    const productId = product.productId;
+    
+    // Tạo map để lưu trữ ảnh theo productId để truy xuất nhanh hơn
+    const productImagesMap = {};
+    if (imagesLoaded && productImages.length > 0) {
+      productImages.forEach(image => {
+        const imgProductId = image.productId || image.productID;
+        if (imgProductId) {
+          if (!productImagesMap[imgProductId]) {
+            productImagesMap[imgProductId] = [];
+          }
+          productImagesMap[imgProductId].push(image);
+        }
+      });
+    }
+    
+    // Nếu có product id và có ảnh trong map
+    if (productId && productImagesMap[productId] && productImagesMap[productId].length > 0) {
+      console.log(`Tìm thấy ${productImagesMap[productId].length} ảnh cho sản phẩm ID ${productId}`);
+      
+      // Tìm ảnh đại diện (isMainImage = true)
+      let mainImage = productImagesMap[productId].find(img => img.isMainImage === true);
+      
+      // Nếu không tìm thấy ảnh đại diện, tìm ảnh có displayOrder = 0
+      if (!mainImage) {
+        mainImage = productImagesMap[productId].find(img => img.displayOrder === 0);
+      }
+      
+      // Nếu tìm thấy ảnh đại diện, sử dụng ảnh đó
+      if (mainImage) {
+        return mainImage.imgUrl || mainImage.imageUrl || '/images/default-product.jpg';
+      }
+      
+      // Nếu không tìm thấy ảnh đại diện, sắp xếp theo displayOrder và lấy ảnh đầu tiên
+      const sortedImages = [...productImagesMap[productId]].sort((a, b) => {
+        if (a.displayOrder !== undefined && b.displayOrder !== undefined) {
+          return a.displayOrder - b.displayOrder;
+        }
+        if (a.displayOrder !== undefined) return -1;
+        if (b.displayOrder !== undefined) return 1;
+        return 0;
+      });
+      
+      // Lấy ảnh đầu tiên sau khi sắp xếp
+      const firstImage = sortedImages[0];
+      if (firstImage) {
+        return firstImage.imgUrl || firstImage.imageUrl || '/images/default-product.jpg';
+      }
+    }
+    
     // Kiểm tra nếu product có images
     if (product.images && product.images.length > 0) {
+      // Tìm ảnh đại diện (isMainImage = true)
+      let mainImage = product.images.find(img => img.isMainImage === true);
+      
+      // Nếu không tìm thấy ảnh đại diện, tìm ảnh có displayOrder = 0
+      if (!mainImage) {
+        mainImage = product.images.find(img => img.displayOrder === 0);
+      }
+      
+      // Nếu tìm thấy ảnh đại diện, sử dụng ảnh đó
+      if (mainImage) {
+        return mainImage.imgUrl || mainImage.imageUrl || '/images/default-product.jpg';
+      }
+      
+      // Nếu không, lấy ảnh đầu tiên
       const image = product.images[0];
       if (typeof image === 'string') return image;
-      return image.imgUrl || '/images/default-product.jpg';
+      return image.imgUrl || image.imageUrl || '/images/default-product.jpg';
     }
     
-    // Kiểm tra imgUrl
-    if (product.imgUrl) {
-      if (product.imgUrl.startsWith('http')) return product.imgUrl;
-      return product.imgUrl;
-    }
+    // Kiểm tra các trường hợp khác
+    if (product.imgUrl) return product.imgUrl;
+    if (product.imgURL) return product.imgURL;
+    if (product.image) return product.image;
+    if (product.mainImage) return product.mainImage;
     
-    // Kiểm tra imgURL (viết hoa)
-    if (product.imgURL) {
-      if (product.imgURL.startsWith('http')) return product.imgURL;
-      return product.imgURL;
-    }
-    
-    // Trả về ảnh mặc định nếu không có ảnh
+    // Trả về ảnh mặc định nếu không tìm thấy ảnh
     return '/images/default-product.jpg';
   };
 
@@ -1301,21 +1385,6 @@ const Checkout = () => {
                   alt={item.productName || "Sản phẩm"}
                   style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '4px' }} 
                 />
-                <Box 
-                  sx={{ 
-                    position: 'relative', 
-                    top: '-65px', 
-                    left: '0', 
-                    backgroundColor: '#ff6b6b', 
-                    color: 'white', 
-                    padding: '2px 4px', 
-                    borderRadius: '2px',
-                    fontSize: '10px',
-                    width: 'fit-content'
-                  }}
-                >
-                  -20%
-                </Box>
               </Box>
               
               {/* Product Info */}
