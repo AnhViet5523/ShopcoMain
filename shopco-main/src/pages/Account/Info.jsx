@@ -26,11 +26,12 @@ import {
   Person,
   Phone,
   Email,
-  Facebook,
   Google,
   LocationOn,
   Edit,
-  ExitToApp
+  ExitToApp,
+  Headset,
+  ShoppingBag
 } from '@mui/icons-material';
 import Banner from '../../components/Banner';
 import Footer from '../../components/Footer/Footer';
@@ -246,10 +247,30 @@ const Info = () => {
   };
 
   const menuItems = [
-    { text: 'Thông tin tài khoản', icon: <Person />, active: true, action: () => navigate('/account') },
-    { text: 'Đơn hàng của tôi', icon: <Phone />, active: false, action: () => navigate('/orders') },
-    { text: 'Hỏi đáp', icon: <Email /> },
-    { text: 'Đăng xuất', icon: <ExitToApp />, action: handleLogout },
+    { 
+      text: 'Thông tin tài khoản', 
+      icon: <Person />, 
+      active: true, 
+      action: () => navigate('/account') 
+    },
+    { 
+      text: 'Đơn hàng của tôi', 
+      icon: <ShoppingBag />,
+      active: false, 
+      action: () => navigate('/orders') 
+    },
+    { 
+      text: 'Hỏi đáp', 
+      icon: <Headset />, 
+      active: false,
+      action: () => navigate('/support')
+    },
+    { 
+      text: 'Đăng xuất', 
+      icon: <ExitToApp />, 
+      active: false,
+      action: handleLogout 
+    },
   ];
 
   return (

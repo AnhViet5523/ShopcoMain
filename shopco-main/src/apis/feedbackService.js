@@ -73,6 +73,17 @@ const feedbackService = {
         }
     },
 
+    // Lấy các feedback đã được trả lời cho một người dùng cụ thể
+    getRepliedFeedbacksByUser: async (userId) => {
+        try {
+            const response = await axiosClient.get(`/api/feedbacks/replied/${userId}`);
+            return response;
+        } catch (error) {
+            console.error('Error getting replied feedbacks for user:', error);
+            throw error;
+        }
+    },
+
     // Thêm hàm upload ảnh chuyên dụng
     uploadImage: async (formData) => {
         try {
