@@ -6,6 +6,7 @@ import { InputBase, IconButton } from '@mui/material';
 import { useState, useEffect } from 'react';
 import productService from '../apis/productService';
 import categoryService from '../apis/categoryService';
+import productImageService from '../apis/productImageService';
 
 // Thêm constant cho thứ tự danh mục
 const CATEGORY_ORDER = [
@@ -110,6 +111,8 @@ const CategoryContent = () => {
     const [skinTypes, setSkinTypes] = useState([]);
     const [selectedSkinType, setSelectedSkinType] = useState('');
     const [categoryProducts, setCategoryProducts] = useState([]);
+    const [productImages, setProductImages] = useState([]);
+    const [imagesLoaded, setImagesLoaded] = useState(false);
 
     // Cập nhật useEffect để xử lý dữ liệu tốt hơn
     useEffect(() => {
@@ -229,7 +232,36 @@ const CategoryContent = () => {
         console.log('Sử dụng 5 loại da chuẩn:', standardSkinTypes);
     }, []);
 
-    // Sửa lại hàm fetchProductsByCategory để cập nhật brands nếu rỗng
+    // Thêm useEffect mới để lấy tất cả ảnh sản phẩm từ API
+    useEffect(() => {
+        const fetchAllProductImages = async () => {
+            try {
+                setLoading(true);
+                console.log('Đang tải ảnh sản phẩm từ API...');
+                const response = await productImageService.getAllProductImages();
+                
+                let allImages = [];
+                if (response && response.$values) {
+                    allImages = response.$values;
+                } else if (Array.isArray(response)) {
+                    allImages = response;
+                }
+                
+                console.log('Đã tải thành công', allImages.length, 'ảnh sản phẩm');
+                setProductImages(allImages);
+                setImagesLoaded(true);
+                setLoading(false);
+            } catch (error) {
+                console.error('Lỗi khi tải ảnh sản phẩm:', error);
+                setImagesLoaded(false);
+                setLoading(false);
+            }
+        };
+        
+        fetchAllProductImages();
+    }, []);
+
+    // Sửa lại hàm fetchProductsByCategory để cập nhật hình ảnh cho sản phẩm
     const fetchProductsByCategory = async (categoryId) => {
         try {
             setLoading(true);
@@ -264,7 +296,8 @@ const CategoryContent = () => {
                 categoryId: product.categoryId,
                 description: product.description,
                 capacity: product.capacity,
-                image: product.imgURL || '/placeholder.jpg',
+                image: product.imgURL || getImageUrl(product) || '/placeholder.jpg',
+                imgUrl: getImageUrl(product) || product.imgURL || '/placeholder.jpg',
                 quantity: product.quantity,
                 status: product.status
             }));
@@ -376,6 +409,9 @@ const CategoryContent = () => {
     // Sửa lại hàm handleBrandChange để xử lý khi người dùng chọn thương hiệu
     const handleBrandChange = async (brand) => {
         try {
+            // Hiển thị thông báo đang lọc
+            setLoading(true);
+            
             // Cập nhật danh sách thương hiệu đã chọn
             const newSelectedBrands = selectedBrands.includes(brand)
                 ? selectedBrands.filter(b => b !== brand)
@@ -388,8 +424,11 @@ const CategoryContent = () => {
             
             // Áp dụng tất cả các bộ lọc
             await applyAllFilters(newSelectedBrands, selectedSkinType, selectedPriceRange);
+            
+            console.log(`Trạng thái thương hiệu ${brand}: ${selectedBrands.includes(brand) ? 'Đã bỏ chọn' : 'Đã chọn'}`);
         } catch (error) {
             console.error('Lỗi khi xử lý thương hiệu:', error);
+            setLoading(false);
         }
     };
     
@@ -403,8 +442,35 @@ const CategoryContent = () => {
         // Cập nhật state
         setSelectedPriceRange(newPriceRange);
         
-        // Áp dụng tất cả các bộ lọc
-        await applyAllFilters(selectedBrands, selectedSkinType, newPriceRange);
+        // Hiển thị thông báo đang lọc
+        setLoading(true);
+        
+        if (newPriceRange) {
+            // Nếu chỉ lọc theo giá và không có bộ lọc khác
+            if (selectedBrands.length === 0 && !selectedSkinType) {
+                // Tạo chuỗi tham số giá
+                const priceParam = newPriceRange.max === Infinity 
+                    ? `${newPriceRange.min}-max` 
+                    : `${newPriceRange.min}-${newPriceRange.max}`;
+                
+                // Lọc trực tiếp theo giá
+                await fetchProductsByPrice(priceParam);
+            } else {
+                // Nếu có kết hợp các bộ lọc khác, sử dụng applyAllFilters
+                await applyAllFilters(selectedBrands, selectedSkinType, newPriceRange);
+            }
+        } else {
+            // Nếu bỏ chọn khoảng giá, áp dụng lại các bộ lọc còn lại
+            if (selectedBrands.length > 0 || selectedSkinType) {
+                await applyAllFilters(selectedBrands, selectedSkinType, null);
+            } else {
+                // Nếu không còn bộ lọc nào, hiển thị lại sản phẩm của danh mục
+                setProducts(categoryProducts);
+                updateFilterTitle(selectedBrands, selectedSkinType, null);
+            }
+        }
+        
+        console.log('Trạng thái khoảng giá:', newPriceRange ? `Đã chọn ${newPriceRange.label}` : 'Đã bỏ chọn khoảng giá');
     };
     
     // Cập nhật hàm lấy sản phẩm theo khoảng giá
@@ -431,9 +497,12 @@ const CategoryContent = () => {
                 price: product.price,
                 brand: product.brand,
                 capacity: product.capacity,
-                image: product.imgURL || '/placeholder.jpg',
+                image: getImageUrl(product) || product.imgURL || '/placeholder.jpg',
+                imgUrl: getImageUrl(product) || product.imgURL || '/placeholder.jpg',
                 quantity: product.quantity,
-                status: product.status
+                status: product.status,
+                skinType: product.skinType,
+                categoryId: product.categoryId
             }));
 
             console.log('Sản phẩm theo khoảng giá:', mappedProducts);
@@ -508,7 +577,8 @@ const CategoryContent = () => {
                 categoryId: product.categoryId,
                 description: product.description,
                 capacity: product.capacity,
-                image: product.imgURL || '/placeholder.jpg',
+                image: getImageUrl(product) || product.imgURL || '/placeholder.jpg',
+                imgUrl: getImageUrl(product) || product.imgURL || '/placeholder.jpg',
                 quantity: product.quantity,
                 status: product.status
             }));
@@ -754,14 +824,44 @@ const CategoryContent = () => {
         
         if (filters.length > 0) {
             setSelectedSubItem(filters.join(' - '));
+            console.log("Cập nhật tiêu đề bộ lọc:", filters.join(' - '));
         } else {
             // Quay lại tên danh mục nếu không có bộ lọc nào
             if (selectedCategory && categories[selectedCategory]?.[0]) {
-                setSelectedSubItem(categories[selectedCategory][0].categoryName);
+                const categoryName = categories[selectedCategory].isDirectCategory
+                    ? selectedCategory
+                    : categories[selectedCategory][0].categoryName;
+                
+                setSelectedSubItem(categoryName);
+                console.log("Cập nhật tiêu đề về danh mục:", categoryName);
             } else {
                 setSelectedSubItem('');
+                console.log("Xóa tiêu đề phụ");
             }
         }
+    };
+
+    // Thêm hàm để tạo tiêu đề dựa trên các bộ lọc đã chọn
+    const renderFilterTitle = () => {
+        const filters = [];
+        
+        if (selectedSkinType) {
+            filters.push(selectedSkinType);
+        }
+        
+        if (selectedBrands.length > 0) {
+            if (selectedBrands.length === 1) {
+                filters.push(selectedBrands[0]);
+            } else {
+                filters.push(`${selectedBrands.length} thương hiệu`);
+            }
+        }
+        
+        if (selectedPriceRange) {
+            filters.push(selectedPriceRange.label);
+        }
+        
+        return filters.join(' - ') || 'Tất cả sản phẩm';
     };
 
     // Cập nhật hàm xử lý khi người dùng chọn loại da
@@ -777,18 +877,23 @@ const CategoryContent = () => {
             // Hiển thị thông báo đang lọc
             setLoading(true);
             
-            // Áp dụng tất cả các bộ lọc
-            await applyAllFilters(selectedBrands, newSkinType, selectedPriceRange);
+            if (newSkinType) {
+                // Nếu đã chọn loại da mới, gọi hàm lấy sản phẩm theo loại da
+                await fetchProductsBySkinType(newSkinType);
+                
+                // Cập nhật tiêu đề
+                updateFilterTitle(selectedBrands, newSkinType, selectedPriceRange);
+            } else {
+                // Nếu bỏ chọn loại da, áp dụng lại các bộ lọc khác nếu có
+                await applyAllFilters(selectedBrands, '', selectedPriceRange);
+            }
             
             // Nếu đã chọn loại da, hiển thị thông báo
             if (newSkinType) {
-                // Lưu lại số lượng sản phẩm trước khi lọc
-                const previousCount = products.length;
-                
-                // Sau khi lọc, kiểm tra số lượng sản phẩm
+                // Kiểm tra số lượng sản phẩm
                 setTimeout(() => {
                     const currentCount = products.length;
-                    console.log(`Đã lọc theo loại da ${newSkinType}: ${currentCount} sản phẩm (trước đó: ${previousCount})`);
+                    console.log(`Đã lọc theo loại da ${newSkinType}: ${currentCount} sản phẩm`);
                     
                     // Nếu không tìm thấy sản phẩm nào, hiển thị thông báo
                     if (currentCount === 0) {
@@ -910,43 +1015,110 @@ const CategoryContent = () => {
                 price: product.price,
                 brand: product.brand,
                 capacity: product.capacity,
-                image: product.imgURL || '/placeholder.jpg',
+                image: getImageUrl(product) || product.imgURL || '/placeholder.jpg',
+                imgUrl: getImageUrl(product) || product.imgURL || '/placeholder.jpg',
                 quantity: product.quantity,
-                status: product.status
+                status: product.status,
+                skinType: product.skinType,
+                categoryId: product.categoryId
             }));
 
             console.log('Sản phẩm theo loại da:', mappedProducts);
             setProducts(mappedProducts);
             setAllProducts(mappedProducts);
+            setFilteredProducts(mappedProducts);
         } catch (error) {
             console.error('Lỗi khi lấy sản phẩm theo loại da:', error);
             setProducts([]);
+            setFilteredProducts([]);
         } finally {
             setLoading(false);
         }
     };
 
-    // Thêm hàm để tạo tiêu đề dựa trên các bộ lọc đã chọn
-    const renderFilterTitle = () => {
-        const filters = [];
+    // Thêm hàm getImageUrl để lấy URL hình ảnh sản phẩm
+    const getImageUrl = (product) => {
+        if (!product) return '/images/default-product.jpg';
         
-        if (selectedSkinType) {
-            filters.push(selectedSkinType);
+        const productId = product.productId || product.id;
+        
+        // Tạo map để lưu trữ ảnh theo productId để truy xuất nhanh hơn
+        const productImagesMap = {};
+        if (imagesLoaded && productImages.length > 0) {
+            productImages.forEach(image => {
+                const imgProductId = image.productId || image.productID;
+                if (imgProductId) {
+                    if (!productImagesMap[imgProductId]) {
+                        productImagesMap[imgProductId] = [];
+                    }
+                    productImagesMap[imgProductId].push(image);
+                }
+            });
         }
         
-        if (selectedBrands.length > 0) {
-            if (selectedBrands.length === 1) {
-                filters.push(selectedBrands[0]);
-            } else {
-                filters.push(`${selectedBrands.length} thương hiệu`);
+        // Nếu có product id và có ảnh trong map
+        if (productId && productImagesMap[productId] && productImagesMap[productId].length > 0) {
+            console.log(`Tìm thấy ${productImagesMap[productId].length} ảnh cho sản phẩm ID ${productId}`);
+            
+            // Tìm ảnh đại diện (isMainImage = true)
+            let mainImage = productImagesMap[productId].find(img => img.isMainImage === true);
+            
+            // Nếu không tìm thấy ảnh đại diện, tìm ảnh có displayOrder = 0
+            if (!mainImage) {
+                mainImage = productImagesMap[productId].find(img => img.displayOrder === 0);
+            }
+            
+            // Nếu tìm thấy ảnh đại diện, sử dụng ảnh đó
+            if (mainImage) {
+                return mainImage.imgUrl || mainImage.imageUrl || '/images/default-product.jpg';
+            }
+            
+            // Nếu không tìm thấy ảnh đại diện, sắp xếp theo displayOrder và lấy ảnh đầu tiên
+            const sortedImages = [...productImagesMap[productId]].sort((a, b) => {
+                if (a.displayOrder !== undefined && b.displayOrder !== undefined) {
+                    return a.displayOrder - b.displayOrder;
+                }
+                if (a.displayOrder !== undefined) return -1;
+                if (b.displayOrder !== undefined) return 1;
+                return 0;
+            });
+            
+            // Lấy ảnh đầu tiên sau khi sắp xếp
+            const firstImage = sortedImages[0];
+            if (firstImage) {
+                return firstImage.imgUrl || firstImage.imageUrl || '/images/default-product.jpg';
             }
         }
         
-        if (selectedPriceRange) {
-            filters.push(selectedPriceRange.label);
+        // Kiểm tra nếu product có images
+        if (product.images && product.images.length > 0) {
+            // Tìm ảnh đại diện (isMainImage = true)
+            let mainImage = product.images.find(img => img.isMainImage === true);
+            
+            // Nếu không tìm thấy ảnh đại diện, tìm ảnh có displayOrder = 0
+            if (!mainImage) {
+                mainImage = product.images.find(img => img.displayOrder === 0);
+            }
+            
+            // Nếu tìm thấy ảnh đại diện, sử dụng ảnh đó
+            if (mainImage) {
+                return mainImage.imgUrl || mainImage.imageUrl || '/images/default-product.jpg';
+            }
+            
+            // Nếu không, lấy ảnh đầu tiên
+            const image = product.images[0];
+            if (typeof image === 'string') return image;
+            return image.imgUrl || image.imageUrl || '/images/default-product.jpg';
         }
         
-        return filters.join(' - ') || 'Tất cả sản phẩm';
+        // Kiểm tra các trường hợp khác
+        if (product.imgUrl) return product.imgUrl;
+        if (product.imgURL) return product.imgURL;
+        if (product.image) return product.image;
+        if (product.mainImage) return product.mainImage;
+        
+        // Trả về ảnh mặc định nếu không tìm thấy ảnh
+        return '/images/default-product.jpg';
     };
 
     return (
