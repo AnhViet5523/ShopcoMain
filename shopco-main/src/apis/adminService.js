@@ -22,6 +22,24 @@ const adminService = {
         }
     },
 
+    // Thêm phương thức để nhập kho thêm số lượng sản phẩm
+    importProductStock: async (productId, quantity) => {
+        if (!productId) {
+            throw new Error('ProductId is required');
+        }
+        try {
+            console.log('Sending import request:', { productId, quantity });
+            const response = await axiosClient.patch(`/api/Products/${productId}/import`, { quantity: quantity });
+            console.log('Raw response:', response);
+            
+            // Trả về response.data để xử lý ở component
+            return response.data;
+        } catch (error) {
+            console.error('Error importing product stock:', error);
+            throw error;
+        }
+    },
+
     // Thêm phương thức để thay đổi trạng thái sản phẩm
     toggleProductStatus: async (productId) => {
         try {
