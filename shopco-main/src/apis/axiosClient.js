@@ -40,16 +40,12 @@ const shouldExcludeFromCancellation = (endpoint, method) => {
 
 // Hàm trợ giúp để hủy request trước đó trên cùng một endpoint
 const cancelPreviousRequest = (endpoint, method, requestId) => {
-    // Tạo key duy nhất cho từng cặp endpoint và method
     const key = `${method}:${endpoint}`;
     
-    // Kiểm tra xem có nên loại trừ endpoint này không
     if (shouldExcludeFromCancellation(endpoint, method)) {
-        // Tạo key có requestId để tránh hủy các request khác đến cùng endpoint
         return `${key}:${requestId}`;
     }
     
-    // Nếu không loại trừ, hủy request trước đó
     if (cancelTokens[key]) {
         cancelTokens[key].cancel('Request cancelled due to duplicate request');
         delete cancelTokens[key];

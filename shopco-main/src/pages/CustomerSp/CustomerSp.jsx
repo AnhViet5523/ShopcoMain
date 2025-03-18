@@ -29,7 +29,6 @@ import feedbackService from '../../apis/feedbackService';
 const CustomerSupport = () => {
   const theme = useTheme();
   const [formData, setFormData] = useState({
-    name: '',
     email: '',
     phone: '',
     message: ''
@@ -43,7 +42,6 @@ const CustomerSupport = () => {
   const [userId, setUserId] = useState(0);
   const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
   const [formErrors, setFormErrors] = useState({
-    name: '',
     email: '',
     phone: '',
     message: ''
@@ -134,11 +132,6 @@ const CustomerSupport = () => {
   const validateForm = () => {
     const errors = {};
     let isValid = true;
-
-    if (!formData.name.trim()) {
-      errors.name = "Vui lòng nhập tên của bạn";
-      isValid = false;
-    }
 
     if (!formData.email.trim()) {
       errors.email = "Vui lòng nhập email của bạn";
@@ -237,7 +230,7 @@ const CustomerSupport = () => {
         await feedbackService.sendFeedback(feedbackData);
         
         // Reset form sau khi gửi thành công
-        setFormData({ name: '', email: '', phone: '', message: '' });
+        setFormData({ email: '', phone: '', message: '' });
         setSelectedImage(null);
         setImagePreview('');
         setSnackbar({
@@ -270,7 +263,7 @@ const CustomerSupport = () => {
             await feedbackService.sendFeedback(feedbackDataNoImage);
             
             // Reset form sau khi gửi thành công
-            setFormData({ name: '', email: '', phone: '', message: '' });
+            setFormData({ email: '', phone: '', message: '' });
             setSelectedImage(null);
             setImagePreview('');
             setSnackbar({
@@ -468,19 +461,6 @@ const CustomerSupport = () => {
                   <Grid item xs={12}>
                     <TextField 
                       fullWidth 
-                      label="Tên của bạn" 
-                      name="name" 
-                      value={formData.name} 
-                      onChange={handleChange} 
-                      required 
-                      variant="outlined"
-                      error={!!formErrors.name}
-                      helperText={formErrors.name}
-                    />
-                  </Grid>
-                  <Grid item xs={12}>
-                    <TextField 
-                      fullWidth 
                       label="Email của bạn" 
                       name="email" 
                       type="email" 
@@ -621,9 +601,6 @@ const CustomerSupport = () => {
         </DialogTitle>
         <DialogContent>
           <Box sx={{ my: 2 }}>
-            <Typography variant="subtitle1" fontWeight="bold">Tên:</Typography>
-            <Typography paragraph>{formData.name}</Typography>
-            
             <Typography variant="subtitle1" fontWeight="bold">Email:</Typography>
             <Typography paragraph>{formData.email}</Typography>
             

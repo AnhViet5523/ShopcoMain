@@ -8,6 +8,7 @@ import { CssBaseline } from "@mui/material";
 import CustomerSp from "./pages/CustomerSp/CustomerSp";
 import Info from "./pages/Account/Info";
 import Order from "./pages/Account/Order";
+import Support from "./pages/Account/Support";  
 import CategoryContent from "./components/CategoryContent";
 import DaDau from "./pages/CareProcess/DaDau/DaDau";
 import DaKho from "./pages/CareProcess/DaKho/DaKho";
@@ -203,6 +204,14 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <Order onSignOut={handleSignOut} />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/support"
+            element={
+              <ProtectedRoute>
+                <Support onSignOut={handleSignOut} />
               </ProtectedRoute>
             }
           />

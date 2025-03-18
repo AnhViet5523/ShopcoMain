@@ -1,8 +1,7 @@
-import { Box, Button, Container, Typography, Tabs, Tab, Grid, Paper, Avatar, List, ListItem, ListItemIcon, ListItemText, CircularProgress, Divider, Chip } from "@mui/material";
+import { Box, Button, Container, Typography, Tabs, Tab, Grid, Paper, Avatar, List, ListItem, ListItemIcon, ListItemText, CircularProgress, Divider, Chip, Link, Breadcrumbs } from "@mui/material";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Home, Person, Phone, Email, ExitToApp, ShoppingBag } from "@mui/icons-material";
-import {Link, Breadcrumbs} from '@mui/material'
+import { Home, Person, Phone, ExitToApp, ShoppingBag, Headset } from "@mui/icons-material";
 import Banner from "../../components/Banner";
 import Footer from "../../components/Footer/Footer";
 import Header from "../../components/Header";
@@ -69,10 +68,30 @@ const Order = () => {
   };
 
   const menuItems = [
-    { text: "Thông tin tài khoản", icon: <Person />, action: () => navigate("/account") },
-    { text: "Đơn hàng của tôi", icon: <Phone />, active: true },
-    { text: "Hỏi đáp", icon: <Email /> },
-    { text: "Đăng xuất", icon: <ExitToApp />, action: handleLogout },
+    { 
+      text: "Thông tin tài khoản", 
+      icon: <Person />, 
+      active: false,
+      action: () => navigate("/account") 
+    },
+    { 
+      text: "Đơn hàng của tôi", 
+      icon: <ShoppingBag />,
+      active: true,
+      action: () => navigate("/orders") 
+    },
+    { 
+      text: "Hỏi đáp", 
+      icon: <Headset />, 
+      active: false,
+      action: () => navigate("/support")
+    },
+    { 
+      text: "Đăng xuất", 
+      icon: <ExitToApp />, 
+      active: false,
+      action: handleLogout 
+    },
   ];
 
   // Hàm định dạng ngày giờ
