@@ -1745,57 +1745,72 @@ const Product = () => {
                         {product.ImportDate ? new Date(product.ImportDate).toLocaleDateString('vi-VN') : ''}
                       </td>
                       <td style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxHeight: '100px', padding: '8px 4px', borderBottom: '1px solid #dee2e6', fontSize: '13px', textAlign: 'center' }}>{product.Status}</td>
-                      <td style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxHeight: '100px', padding: '8px 4px', borderBottom: '1px solid #dee2e6', textAlign: 'center' }}>
-                        <button
-                          onClick={() => handleViewDetail(product)}
-                          style={{
-                            padding: '4px 8px',
-                            backgroundColor: '#17a2b8',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '3px',
-                            cursor: 'pointer',
-                            marginRight: '4px',
-                            fontSize: '12px',
-                            transition: 'background-color 0.2s',
-                            ':hover': { backgroundColor: '#138496' }
-                          }}
-                        >
-                          Chi tiết
-                        </button>
-                        <button
-                          onClick={() => handleOpenImportDialog(product)}
-                          style={{
-                            padding: '4px 8px',
-                            backgroundColor: '#28a745',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '3px',
-                            cursor: 'pointer',
-                            marginRight: '4px',
-                            fontSize: '12px',
-                            transition: 'background-color 0.2s',
-                            ':hover': { backgroundColor: '#218838' }
-                          }}
-                        >
-                          Nhập kho
-                        </button>
-                        <button
-                          onClick={() => handleDelete(product.ProductID)}
-                          style={{
-                            padding: '4px 8px',
-                            backgroundColor: '#dc3545',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '3px',
-                            cursor: 'pointer',
-                            fontSize: '12px',
-                            transition: 'background-color 0.2s',
-                            ':hover': { backgroundColor: '#c82333' }
-                          }}
-                        >
-                          Đổi trạng thái
-                        </button>
+                      <td style={{ 
+                        whiteSpace: 'normal', 
+                        overflow: 'visible', 
+                        padding: '8px 4px', 
+                        borderBottom: '1px solid #dee2e6', 
+                        textAlign: 'center',
+                        minWidth: '220px'
+                      }}>
+                        <div style={{ 
+                          display: 'flex', 
+                          flexWrap: 'wrap', 
+                          gap: '4px', 
+                          justifyContent: 'center'
+                        }}>
+                          <button
+                            onClick={() => handleViewDetail(product)}
+                            style={{
+                              padding: '4px 8px',
+                              backgroundColor: '#17a2b8',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '3px',
+                              cursor: 'pointer',
+                              fontSize: '12px',
+                              marginBottom: '4px',
+                              transition: 'background-color 0.2s',
+                              minWidth: '60px'
+                            }}
+                          >
+                            Chi tiết
+                          </button>
+                          <button
+                            onClick={() => handleOpenImportDialog(product)}
+                            style={{
+                              padding: '4px 8px',
+                              backgroundColor: '#28a745',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '3px',
+                              cursor: 'pointer',
+                              fontSize: '12px',
+                              marginBottom: '4px',
+                              transition: 'background-color 0.2s',
+                              minWidth: '60px'
+                            }}
+                          >
+                            Nhập kho
+                          </button>
+                          <button
+                            onClick={() => handleDelete(product.ProductID)}
+                            style={{
+                              padding: '4px 8px',
+                              backgroundColor: '#dc3545',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '3px',
+                              cursor: 'pointer',
+                              fontSize: '12px',
+                              marginBottom: '4px',
+                              transition: 'background-color 0.2s',
+                              minWidth: '85px'
+                            }}
+                          >
+                            Đổi trạng thái
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))
