@@ -103,6 +103,26 @@ const adminService = {
         }
     },
 
+    addStaff: async (staffData) => {
+        try {
+            const response = await axiosClient.post('/api/Users/add-staff', staffData);
+            return response;
+        } catch (error) {
+            console.error('Error adding staff:', error);
+            throw error;
+        }
+    },
+
+    updateStaff: async (userId, staffData) => {
+        try {
+            const response = await axiosClient.put(`/api/Users/update/${userId}`, staffData);
+            return response;
+        } catch (error) {
+            console.error('Error updating staff:', error);
+            throw error;
+        }
+    },
+
     // ... các phương thức khác nếu có ...
 };
 
