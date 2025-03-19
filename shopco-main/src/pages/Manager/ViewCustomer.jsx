@@ -13,6 +13,7 @@ const ViewCustomer = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [originalCustomers, setOriginalCustomers] = useState([]);
 
+  
   const sidebarItems = [
     { id: 'revenue', name: 'Doanh thu', icon: '📊' },
     { id: 'staff', name: 'Nhân viên', icon: '👤' },
@@ -22,6 +23,7 @@ const ViewCustomer = () => {
     { id: 'viewSupport', name: 'Đơn hỗ trợ', icon: '📫' },
     { id: 'voucher', name: 'Vouchers', icon: '🎫' },
     { id: 'feedback', name: 'Feedback', icon: '📢' },
+    { id: 'blogManager', name: 'Blog', icon: '📰' }
   ];
 
   useEffect(() => {

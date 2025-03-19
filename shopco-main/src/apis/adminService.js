@@ -123,6 +123,36 @@ const adminService = {
         }
     },
 
+    getAllPosts: async () => {
+        try {
+            // Thêm tham số ngẫu nhiên để tránh cache và request trùng lặp
+            const timestamp = new Date().getTime();
+            const response = await axiosClient.get(`/api/Post?_t=${timestamp}`, {
+                headers: {
+                    'Cache-Control': 'no-cache',
+                    'Pragma': 'no-cache',
+                    'Expires': '0'
+                }
+            });
+            
+            console.log('Raw Response in Service:', response);
+            
+            // Xử lý nhiều định dạng response
+            if (response && response["$values"]) {
+                return response["$values"];
+            }
+            
+            return response;
+        } catch (error) {
+            console.error('Detailed Error fetching posts:', error);
+            // Trả về một mảng rỗng để dễ xử lý hơn
+            if (error.message === 'Request was cancelled') {
+                return [];
+            }
+            throw error; 
+        }
+    },
+
     // ... các phương thức khác nếu có ...
 };
 

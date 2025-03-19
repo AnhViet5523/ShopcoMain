@@ -78,16 +78,23 @@ axiosClient.interceptors.request.use(
             config.headers['X-Request-Id'] = requestId;
         }
         
-        // Lấy thông tin người dùng từ localStorage
+        // Chỉ áp dụng cho các phương thức GET
+        if (method.toLowerCase() === 'get') {
+            // Thêm timestamp ngẫu nhiên để tránh cache
+            config.params = {
+                ...config.params,
+                _t: Date.now()
+            };
+        }
+        
+        // Thêm thông tin xác thực từ localStorage
         const userStr = localStorage.getItem('user');
         if (userStr) {
             try {
                 const user = JSON.parse(userStr);
-                // Thêm userId vào header để xác thực
                 if (user && user.userId) {
                     config.headers['User-Id'] = user.userId;
                 }
-                // Thêm role vào header để dễ debug
                 if (user && user.role) {
                     config.headers['User-Role'] = user.role;
                     console.log('User role in request:', user.role);
@@ -161,7 +168,7 @@ axiosClient.interceptors.response.use(
         // Xử lý lỗi hủy request
         if (axios.isCancel(error)) {
             console.log('Request cancelled:', error.message);
-            return Promise.reject(error);
+            return Promise.reject(new Error('Request was cancelled'));
         }
         
         if (error.response) {

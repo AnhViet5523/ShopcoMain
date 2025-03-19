@@ -20,6 +20,7 @@ const CustomerStaff = () => {
     { id: 'supportStaff', name: 'Đơn hỗ trợ', icon: '📫' },
     { id: 'voucherStaff', name: 'Vouchers', icon: '🎫' },
     { id: 'feedbackStaff', name: 'Feedback', icon: '📢' },
+    { id: 'blogStaff', name: 'Blog', icon: '📰' }
   ];
 
   useEffect(() => {

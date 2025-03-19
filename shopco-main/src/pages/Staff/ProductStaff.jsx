@@ -106,6 +106,7 @@ const ProductStaff = () => {
     { id: 'supportStaff', name: 'Đơn hỗ trợ', icon: '📫' },
     { id: 'voucherStaff', name: 'Vouchers', icon: '🎫' },
     { id: 'feedbackStaff', name: 'Feedback', icon: '📢' },
+    { id: 'blogStaff', name: 'Blog', icon: '📰' }
   ];
 
   const tabs = ['Tất cả', 'Hàng mới nhập', 'Hàng sắp hết'];

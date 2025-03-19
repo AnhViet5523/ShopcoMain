@@ -29,12 +29,12 @@ import axiosClient from "./apis/axiosClient";
 import ErrorBoundary from "./components/ErrorBoundary";
 import BrandProducts from "./components/BrandProducts";
 import BlogPage from "./pages/Blog/BlogPage";
-import Blog1 from "./pages/Blog/blog1";
-import Blog2 from "./pages/Blog/blog2";
-import Blog3 from "./pages/Blog/blog3";
-import Blog4 from "./pages/Blog/blog4";
-import Blog5 from "./pages/Blog/blog5";
-import Blog6 from "./pages/Blog/blog6";
+// import Blog1 from "./pages/Blog/blog1";
+// import Blog2 from "./pages/Blog/blog2";
+// import Blog3 from "./pages/Blog/blog3";
+// import Blog4 from "./pages/Blog/blog4";
+// import Blog5 from "./pages/Blog/blog5";
+// import Blog6 from "./pages/Blog/blog6";
 import QuizTest from "./pages/Quiz/QuizTest";
 import Checkout from "./pages/checkout/checkout";
 import ViewOrder from "./pages/Manager/ViewOrder";
@@ -53,7 +53,13 @@ import SupportStaff from "./pages/Staff/SupportStaff";
 import VoucherStaff from "./pages/Staff/VoucherStaff";
 import Unauthorized from "./components/Unauthorized";
 import PaymentResult from "./pages/PaymentResult";
-import CompareProducts from "./pages/Product/CompareProducts";
+
+import BestSellers from "./components/BestSellers";
+import BlogManager from "./pages/Manager/BlogManager";
+import BlogStaff from "./pages/Staff/BlogStaff";
+
+
+
 
 // Component để hủy request khi chuyển trang
 function NavigationHandler() {
@@ -142,12 +148,12 @@ export default function App() {
           <Route path="/quiz" element={<QuizTest />} />
           
           <Route path="/blog" element={<BlogPage />} />
-          <Route path="/blog1" element={<Blog1 />} />
+          {/* <Route path="/blog1" element={<Blog1 />} />
           <Route path="/blog2" element={<Blog2 />} />
           <Route path="/blog3" element={<Blog3 />} />
           <Route path="/blog4" element={<Blog4 />} />
           <Route path="/blog5" element={<Blog5 />} />
-          <Route path="/blog6" element={<Blog6 />} />
+          <Route path="/blog6" element={<Blog6 />} /> */}
 
           {/* Static Pages */}
           <Route path="/da-dau" element={<DaDau />} />
@@ -299,7 +305,25 @@ export default function App() {
             }
           />
 
+          <Route
+            path="/blogManager"
+            element={
+              <ProtectedRoute requiredRole="Manager">
+                <BlogManager />
+              </ProtectedRoute>
+            }
+          />
+
           {/* Protected Routes cho Staff */}
+          <Route
+            path="/blogStaff"
+            element={
+              <ProtectedRoute requiredRole="Staff">
+                <BlogStaff />
+              </ProtectedRoute>
+            }
+          />
+
           <Route
             path="/orderStaff"
             element={

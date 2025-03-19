@@ -2,6 +2,7 @@
   "dependencies": {
     "@mui/x-date-pickers": "^7.27.3",
     "axios": "^1.7.9",
+    "dompurify": "^3.2.4",
     "react-router-dom": "^7.3.0"
   },
   "devDependencies": {
