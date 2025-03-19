@@ -53,7 +53,6 @@ import PaymentResult from "./pages/PaymentResult";
 import BestSellers from "./components/BestSellers";
 import BlogManager from "./pages/Manager/BlogManager";
 import BlogStaff from "./pages/Staff/BlogStaff";
-import CompareProducts from "./pages/Product/CompareProducts";
 
 // Component để hủy request khi chuyển trang
 function NavigationHandler() {
