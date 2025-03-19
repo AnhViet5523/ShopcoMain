@@ -108,6 +108,7 @@ const Product = () => {
     { id: 'viewSupport', name: 'Đơn hỗ trợ', icon: '📫' },
     { id: 'voucher', name: 'Vouchers', icon: '🎫' },
     { id: 'feedback', name: 'Feedback', icon: '📢' },
+    { id: 'blogManager', name: 'Blog', icon: '📰' }
   ];
 
   const tabs = ['Tất cả', 'Hàng mới nhập', 'Hàng sắp hết'];

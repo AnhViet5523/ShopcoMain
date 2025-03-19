@@ -23,6 +23,7 @@ const OrderStaff = () => {
     { id: 'supportStaff', name: 'Đơn hỗ trợ', icon: '📫' },
     { id: 'voucherStaff', name: 'Vouchers', icon: '🎫' },
     { id: 'feedbackStaff', name: 'Feedback', icon: '📢' },
+    { id: 'blogStaff', name: 'Blog', icon: '📰' }
   ];
 
   const tabs = ['Tất cả', 'Đơn hàng vận chuyển', 'Đơn hàng bị hủy', 'Giao thành công'];
