@@ -270,6 +270,27 @@ const ViewOrder = () => {
             </div>
           </div>
           
+          {/* Dashboard Title Bar - Giống ViewSupport.jsx */}
+          <div className="dashboard-title-bar">
+            <h1>Đơn Hàng</h1>
+            <div className="dashboard-actions">
+              <button
+                style={{
+                  padding: '10px 15px',
+                  backgroundColor: '#f8f9fa',
+                  border: '1px solid #dee2e6',
+                  borderRadius: '5px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  color: '#495057'
+                }}
+              >
+                <span>Lọc</span>
+              </button>
+            </div>
+          </div>
           
           {/* Tabs */}
           <div className="dashboard-tabs">
@@ -300,7 +321,7 @@ const ViewOrder = () => {
                       <th>TRẠNG THÁI</th>
                       <th>HÀNH ĐỘNG</th>
                     </>
-                  ) : (
+                  ) : activeTab === 'Đơn hàng đang vận chuyển' ? (
                     <>
                       <th>ID ĐƠN HÀNG</th>
                       <th>ID NGƯỜI DÙNG</th>
@@ -316,13 +337,28 @@ const ViewOrder = () => {
                       <th>GHI CHÚ</th>
                       <th>THAO TÁC</th>
                     </>
+                  ) : (
+                    <>
+                      <th>ID ĐƠN HÀNG</th>
+                      <th>ID NGƯỜI DÙNG</th>
+                      <th>TÊN SẢN PHẨM</th>
+                      <th>GIÁ</th>
+                      <th>SỐ LƯỢNG</th>
+                      <th>MÃ GIẢM GIÁ</th>
+                      <th>TỔNG TIỀN</th>
+                      <th>NGÀY ĐẶT HÀNG</th>
+                      <th>TÌNH TRẠNG ĐƠN HÀNG</th>
+                      <th>TÌNH TRẠNG GIAO HÀNG</th>
+                      <th>ĐỊA CHỈ</th>          
+                      <th>GHI CHÚ</th>
+                    </>
                   )}
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan="13" className="empty-data-message">
+                    <td colSpan={activeTab === 'Đơn hàng đang vận chuyển' ? "13" : "12"} className="empty-data-message">
                       Đang tải dữ liệu đơn hàng...
                     </td>
                   </tr>
@@ -390,8 +426,8 @@ const ViewOrder = () => {
                         <td>{order.deliveryStatus}</td>
                         <td>{order.deliveryAddress}</td>
                         <td>{order.note}</td>
-                        <td>
-                          {activeTab === 'Đơn hàng đang vận chuyển' && (
+                        {activeTab === 'Đơn hàng đang vận chuyển' && (
+                          <td>
                             <button
                               onClick={() => handleDelivered(order.orderId)}
                               style={{
@@ -406,14 +442,14 @@ const ViewOrder = () => {
                             >
                               Đã giao
                             </button>
-                          )}
-                        </td>
+                          </td>
+                        )}
                       </tr>
                     )
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="13" className="empty-data-message">
+                    <td colSpan={activeTab === 'Đơn hàng đang vận chuyển' ? "13" : "12"} className="empty-data-message">
                       Chưa có đơn hàng nào.
                     </td>
                   </tr>
