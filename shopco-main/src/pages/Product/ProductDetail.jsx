@@ -16,9 +16,15 @@ import {
   Tab,
   Badge,
   Modal,
-  TextField
+  TextField,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemAvatar,
+  Avatar,
+  Drawer
 } from '@mui/material';
-import { Home as HomeIcon, Add as AddIcon, Remove as RemoveIcon } from '@mui/icons-material';
+import { Home as HomeIcon, Add as AddIcon, Remove as RemoveIcon, Close as CloseIcon } from '@mui/icons-material';
 import productService from '../../apis/productService';
 import orderService from '../../apis/orderService';
 import reviewService from "../../apis/reviewService";
@@ -91,6 +97,10 @@ export default function ProductDetail() {
   const [totalSold, setTotalSold] = useState(0);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [productImages, setProductImages] = useState([]);
+  const [showCompareDrawer, setShowCompareDrawer] = useState(false);
+  const [comparedProducts, setComparedProducts] = useState([]);
+  const [availableProductsToCompare, setAvailableProductsToCompare] = useState([]);
+  const [isCompareModalOpen, setIsCompareModalOpen] = useState(false);
 
   useEffect(() => {
     isMounted.current = true;
@@ -372,6 +382,75 @@ export default function ProductDetail() {
 
   const handleSelectImage = (index) => {
     setSelectedImageIndex(index);
+  };
+
+  const handleCompareProduct = () => {
+    // Nếu sản phẩm hiện tại chưa được thêm vào danh sách so sánh
+    if (!comparedProducts.some(p => p.productId === product.productId)) {
+      // Thêm sản phẩm hiện tại vào danh sách so sánh
+      setComparedProducts([product]);
+    }
+    // Hiển thị drawer
+    setShowCompareDrawer(true);
+  };
+
+  const handleOpenAddProductModal = async () => {
+    try {
+      const categoryId = product?.categoryId;
+      if (categoryId) {
+        // Lấy sản phẩm cùng danh mục
+        const similarProducts = await productService.getProductsByCategory(categoryId);
+        
+        // Loại bỏ sản phẩm đã có trong danh sách so sánh và sản phẩm hiện tại
+        const filteredProducts = similarProducts.filter(
+          p => !comparedProducts.some(cp => cp.productId === p.productId) && 
+               p.productId !== product.productId
+        );
+        
+        // Nếu không có sản phẩm để so sánh, hiển thị thông báo
+        if (filteredProducts.length === 0) {
+          alert('Không có sản phẩm khác trong cùng danh mục để so sánh');
+          return;
+        }
+        
+        setAvailableProductsToCompare(filteredProducts);
+        setShowCompareDrawer(false); // Đóng drawer trước khi mở modal
+        setIsCompareModalOpen(true); // Mở modal chọn sản phẩm
+      } else {
+        alert('Không tìm thấy danh mục sản phẩm');
+      }
+    } catch (error) {
+      console.error('Lỗi khi tải danh sách sản phẩm:', error);
+      alert('Không thể tải danh sách sản phẩm để so sánh');
+    }
+  };
+
+  const handleAddProductToCompare = (productToAdd) => {
+    // Thêm sản phẩm được chọn vào danh sách so sánh
+    setComparedProducts([...comparedProducts, productToAdd]);
+    // Đóng modal
+    setIsCompareModalOpen(false);
+    // Mở lại drawer so sánh
+    setShowCompareDrawer(true);
+  };
+
+  const handleCloseCompareModal = () => {
+    setIsCompareModalOpen(false);
+    // Mở lại drawer so sánh
+    setShowCompareDrawer(true);
+  };
+
+  // Thêm lại hàm handleCloseCompareDrawer
+  const handleCloseCompareDrawer = () => {
+    setShowCompareDrawer(false);
+  };
+
+  const handleNavigateToCompare = () => {
+    // Lưu các sản phẩm so sánh vào localStorage
+    localStorage.setItem('comparedProducts', JSON.stringify(comparedProducts));
+    
+    // Chuyển đến trang so sánh
+    navigate('/compare-products');
   };
 
   return (
@@ -706,6 +785,20 @@ export default function ProductDetail() {
                   >
                     Mua Ngay
                   </Button>
+                  <Button 
+                    variant="outlined" 
+                    color="primary" 
+                    sx={{ 
+                      flex: 1,
+                      py: 1.5,
+                      textTransform: 'none',
+                      fontWeight: 'bold',
+                      ml: 2
+                    }}
+                    onClick={handleCompareProduct}
+                  >
+                    So sánh
+                  </Button>
                 </Box>
                 {console.log("Điều kiện hiển thị:", product?.inventory <= 0, product?.status === 'Out of Stock')}
                 {(product?.inventory <= 0 || product?.status === 'Out of Stock') && (
@@ -850,6 +943,247 @@ export default function ProductDetail() {
         </Box>
         
       </Container>
+      
+      {/* Thay thế Drawer component bằng phần tử div tùy chỉnh */}
+      <div 
+        className={`compare-products ${showCompareDrawer ? 'open' : ''}`}
+      >
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+          <Typography variant="h6" sx={{ fontWeight: 'bold' }}>So sánh sản phẩm</Typography>
+          <IconButton onClick={handleCloseCompareDrawer}>
+            <CloseIcon />
+          </IconButton>
+        </Box>
+        
+        {comparedProducts.length === 0 ? (
+          <Typography>Chưa có sản phẩm nào được chọn để so sánh</Typography>
+        ) : (
+          <>
+            <Grid container spacing={1}>
+              {comparedProducts.map((product, index) => (
+                <Grid item xs={6} key={index}>
+                  <Paper 
+                    sx={{ 
+                      p: 1, 
+                      textAlign: 'center', 
+                      position: 'relative',
+                      border: '1px solid #e0e0e0'
+                    }}
+                  >
+                    <IconButton 
+                      size="small" 
+                      sx={{ 
+                        position: 'absolute', 
+                        top: 5, 
+                        right: 5, 
+                        color: 'gray' 
+                      }}
+                      // Thêm hàm xóa sản phẩm khỏi danh sách so sánh
+                      onClick={() => {
+                        setComparedProducts(comparedProducts.filter(p => p.productId !== product.productId));
+                      }}
+                    >
+                      <CloseIcon fontSize="small" />
+                    </IconButton>
+                    <img 
+                      src={getImageUrl(product.images?.[0])} 
+                      alt={product.productName}
+                      style={{ 
+                        width: '100%', 
+                        height: '150px', 
+                        objectFit: 'contain' 
+                      }}
+                    />
+                    <Typography 
+                      variant="body2" 
+                      sx={{ 
+                        mt: 1, 
+                        fontWeight: 'bold', 
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        height: '40px'
+                      }}
+                    >
+                      {product.productName}
+                    </Typography>
+                    <Typography 
+                      variant="body2" 
+                      color="error" 
+                      sx={{ fontWeight: 'bold' }}
+                    >
+                      {product.price.toLocaleString()}đ
+                    </Typography>
+                  </Paper>
+                </Grid>
+              ))}
+              
+              {comparedProducts.length < 2 && (
+                <Grid item xs={6}>
+                  <Paper 
+                    sx={{ 
+                      p: 2, 
+                      height: '100%', 
+                      display: 'flex', 
+                      flexDirection: 'column',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      cursor: 'pointer',
+                      border: '2px dashed #ddd',
+                      textAlign: 'center'
+                    }}
+                    onClick={handleOpenAddProductModal}
+                  >
+                    <AddIcon sx={{ fontSize: 40, color: '#ddd' }} />
+                    <Typography variant="body2" sx={{ mt: 1, color: 'gray' }}>
+                      Thêm sản phẩm để so sánh
+                    </Typography>
+                  </Paper>
+                </Grid>
+              )}
+            </Grid>
+            
+            <Button 
+              variant="contained" 
+              color="primary" 
+              fullWidth
+              sx={{ 
+                mt: 2, 
+                textTransform: 'none',
+                fontWeight: 'bold',
+                py: 1.5
+              }}
+              onClick={handleNavigateToCompare}
+            >
+              So sánh ngay
+            </Button>
+          </>
+        )}
+      </div>
+      
+      {/* CSS cho phần tử div tùy chỉnh */}
+      <style>
+      {`
+        .compare-products {
+          position: fixed;
+          bottom: 0;
+          left: 0;
+          right: 0;
+          background-color: #fff;
+          padding: 16px;
+          box-shadow: 0px -2px 8px rgba(0, 0, 0, 0.1);
+          transform: translateY(100%);
+          transition: transform 0.3s ease-in-out;
+          z-index: 1000;
+          border-top-left-radius: 16px;
+          border-top-right-radius: 16px;
+        }
+        
+        .compare-products.open {
+          transform: translateY(0);
+        }
+      `}
+      </style>
+      
+      {/* Modal chọn sản phẩm để so sánh */}
+      <Modal open={isCompareModalOpen} onClose={handleCloseCompareModal}>
+        <Box sx={{ 
+          p: 4, 
+          bgcolor: 'background.paper', 
+          borderRadius: 1, 
+          boxShadow: 24, 
+          maxWidth: 600, 
+          maxHeight: '80vh',
+          mx: 'auto', 
+          mt: 4,
+          overflow: 'auto'
+        }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+            <Typography variant="h6" fontWeight="bold">Chọn sản phẩm để so sánh</Typography>
+            <IconButton onClick={handleCloseCompareModal}>
+              <CloseIcon />
+            </IconButton>
+          </Box>
+          
+          {availableProductsToCompare.length > 0 ? (
+            <Grid container spacing={2}>
+              {availableProductsToCompare.map((product, index) => (
+                <Grid item xs={6} key={index}>
+                  <Paper 
+                    sx={{ 
+                      p: 2, 
+                      display: 'flex', 
+                      flexDirection: 'column', 
+                      alignItems: 'center', 
+                      cursor: 'pointer',
+                      transition: 'transform 0.2s',
+                      '&:hover': {
+                        transform: 'scale(1.05)',
+                        boxShadow: 2
+                      }
+                    }}
+                    onClick={() => handleAddProductToCompare(product)}
+                  >
+                    <img 
+                      src={getImageUrl(product.images?.[0])} 
+                      alt={product.productName}
+                      style={{ 
+                        width: '100%', 
+                        height: '150px', 
+                        objectFit: 'contain',
+                        marginBottom: '8px'
+                      }}
+                    />
+                    <Typography 
+                      variant="body2" 
+                      sx={{ 
+                        fontWeight: 'bold', 
+                        textAlign: 'center',
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        height: '40px',
+                        mb: 1
+                      }}
+                    >
+                      {product.productName}
+                    </Typography>
+                    <Typography 
+                      variant="body2" 
+                      color="error" 
+                      sx={{ fontWeight: 'bold' }}
+                    >
+                      {product.price?.toLocaleString()}đ
+                    </Typography>
+                  </Paper>
+                </Grid>
+              ))}
+            </Grid>
+          ) : (
+            <Box 
+              sx={{ 
+                display: 'flex', 
+                flexDirection: 'column', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                height: '300px',
+                textAlign: 'center'
+              }}
+            >
+              <Typography variant="h6" sx={{ mb: 2 }}>
+                Không có sản phẩm để so sánh
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Hiện tại không có sản phẩm khác trong cùng danh mục
+              </Typography>
+            </Box>
+          )}
+        </Box>
+      </Modal>
     </>
   );
 }

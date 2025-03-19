@@ -53,6 +53,7 @@ import SupportStaff from "./pages/Staff/SupportStaff";
 import VoucherStaff from "./pages/Staff/VoucherStaff";
 import Unauthorized from "./components/Unauthorized";
 import PaymentResult from "./pages/PaymentResult";
+import CompareProducts from "./pages/Product/CompareProducts";
 
 // Component để hủy request khi chuyển trang
 function NavigationHandler() {
@@ -357,6 +358,8 @@ export default function App() {
               </ProtectedRoute>
             } 
           />
+
+          <Route path="/compare-products" element={<CompareProducts />} />
         </Routes>
       </BrowserRouter>
     </ErrorBoundary>
