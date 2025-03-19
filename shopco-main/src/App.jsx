@@ -53,9 +53,14 @@ import SupportStaff from "./pages/Staff/SupportStaff";
 import VoucherStaff from "./pages/Staff/VoucherStaff";
 import Unauthorized from "./components/Unauthorized";
 import PaymentResult from "./pages/PaymentResult";
+
 import BestSellers from "./components/BestSellers";
 import BlogManager from "./pages/Manager/BlogManager";
 import BlogStaff from "./pages/Staff/BlogStaff";
+
+
+
+
 // Component để hủy request khi chuyển trang
 function NavigationHandler() {
   const location = useLocation();
@@ -163,7 +168,6 @@ export default function App() {
           <Route path="/complaint" element={<Complaint />} />
           <Route path="/return" element={<Return />} />
           <Route path="/unauthorized" element={<Unauthorized />} />
-          <Route path="/bestsellers" element={<BestSellers />} />
 
           {/* Auth Routes */}
           <Route
@@ -377,8 +381,9 @@ export default function App() {
                 <PaymentResult />
               </ProtectedRoute>
             } 
-            
           />
+
+          <Route path="/compare-products" element={<CompareProducts />} />
         </Routes>
       </BrowserRouter>
     </ErrorBoundary>
