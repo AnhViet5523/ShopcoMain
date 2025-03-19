@@ -65,6 +65,26 @@ const adminService = {
         }
     },
 
+    approveCancellation: async (cancelRequestId) => {
+        try {
+            const response = await axiosClient.put(`/api/Admin/${cancelRequestId}/cancelrequest/approve`);
+            return response.data;
+        } catch (error) {
+            console.error('Error approving cancellation:', error);
+            throw error;
+        }
+    },
+
+    rejectCancellation: async (cancelRequestId) => {
+        try {
+            const response = await axiosClient.put(`/api/Admin/${cancelRequestId}/cancelrequest/reject`);
+            return response;
+        } catch (error) {
+            console.error('Error rejecting cancellation:', error);
+            throw error;
+        }
+    },
+
     // ... các phương thức khác nếu có ...
 };
 
