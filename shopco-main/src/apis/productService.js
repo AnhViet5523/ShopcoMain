@@ -190,6 +190,80 @@ const productService = {
         }
     },
 
+    // Thêm phương thức lấy sản phẩm theo danh mục
+    getProductsByCategory: async (categoryId) => {
+        try {
+            console.log(`Fetching products by category: ${categoryId}`);
+            
+            try {
+                // Thử gọi API endpoint chuyên biệt nếu có
+                console.log(`Calling API: GET /api/Products/category/${categoryId}`);
+                const response = await axiosClient.get(`/api/Products/category/${categoryId}`);
+                console.log('Category Products API Response:', response);
+                
+                const products = Array.isArray(response) ? response : 
+                               (response && response.$values ? response.$values : []);
+                
+                // Lấy ảnh cho các sản phẩm
+                let imagesResponse;
+                try {
+                    imagesResponse = await productImageService.getAllProductImages();
+                } catch (imageError) {
+                    console.error('Error fetching product images:', imageError.message);
+                    imagesResponse = { $values: [] };
+                }
+                
+                let images = [];
+                if (imagesResponse && imagesResponse.$values) {
+                    images = imagesResponse.$values;
+                } else if (Array.isArray(imagesResponse)) {
+                    images = imagesResponse;
+                }
+                
+                const productImagesMap = {};
+                images.forEach(image => {
+                    const productId = image.productId || image.productID;
+                    if (productId) {
+                        if (!productImagesMap[productId]) {
+                            productImagesMap[productId] = [];
+                        }
+                        productImagesMap[productId].push(image);
+                    }
+                });
+                
+                return products.map(product => {
+                    const productId = product.productId || product.productID;
+                    const productImages = productImagesMap[productId] || [];
+                    return {
+                        ...product,
+                        images: productImages,
+                        imgUrl: productImages.length > 0 ? productImages[0].imgUrl : (product.imgURL || '/images/default-product.jpg')
+                    };
+                });
+            } catch (apiError) {
+                console.error(`API endpoint for category ${categoryId} failed:`, apiError.message);
+                console.log('Falling back to filtering all products...');
+                
+                // Fallback: Lấy tất cả sản phẩm và lọc theo danh mục
+                const allProducts = await productService.getAllProducts();
+                
+                // Lọc sản phẩm theo danh mục
+                const filteredProducts = allProducts.filter(product => 
+                    product.categoryId === parseInt(categoryId)
+                );
+                
+                console.log(`Found ${filteredProducts.length} products for category "${categoryId}" (fallback method)`);
+                return filteredProducts;
+            }
+        } catch (error) {
+            console.error(`Error fetching products by category ${categoryId}:`, error.message);
+            console.error('Error stack:', error.stack);
+            
+            // Trả về mảng rỗng nếu có lỗi
+            return [];
+        }
+    },
+
     // Thêm phương thức mới để lấy dữ liệu sản phẩm mẫu khi API không hoạt động
     getMockProducts: () => {
         console.log('Trả về dữ liệu sản phẩm mẫu');
@@ -291,6 +365,52 @@ const productService = {
             console.error(`Error searching products with keyword "${keyword}":`, error.message);
             console.error('Error stack:', error.stack);
             return { $values: [] };
+        }
+    },
+
+    // Thêm phương thức lấy đánh giá sản phẩm
+    getProductReviews: async (productId) => {
+        try {
+            console.log(`Fetching reviews for product: ${productId}`);
+            console.log(`Calling API: GET /api/Reviews/product/${productId}`);
+            
+            const response = await axiosClient.get(`/api/Reviews/product/${productId}`);
+            console.log('Product Reviews API Response:', response);
+            
+            // Kiểm tra và xử lý dữ liệu trả về
+            if (Array.isArray(response)) {
+                return response;
+            } else if (response && response.$values) {
+                return response.$values;
+            } else {
+                return [];
+            }
+        } catch (error) {
+            console.error(`Error fetching reviews for product ${productId}:`, error.message);
+            console.error('Error details:', error.response?.data || error);
+            // Trả về mảng rỗng nếu có lỗi
+            return [];
+        }
+    },
+    
+    // Lấy điểm đánh giá trung bình của sản phẩm
+    getProductAverageRating: async (productId) => {
+        try {
+            console.log(`Fetching average rating for product: ${productId}`);
+            console.log(`Calling API: GET /api/Reviews/product/${productId}/average-rating`);
+            
+            const response = await axiosClient.get(`/api/Reviews/product/${productId}/average-rating`);
+            console.log('Product Average Rating API Response:', response);
+            
+            return {
+                averageRating: response.averageRating || 0,
+                totalReviews: response.totalReviews || 0
+            };
+        } catch (error) {
+            console.error(`Error fetching average rating for product ${productId}:`, error.message);
+            console.error('Error details:', error.response?.data || error);
+            // Trả về giá trị mặc định nếu có lỗi
+            return { averageRating: 0, totalReviews: 0 };
         }
     }
 };
