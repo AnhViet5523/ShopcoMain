@@ -452,43 +452,60 @@ const Order = () => {
         onClose={handleCloseDialog}
         aria-labelledby="alert-dialog-title"
         aria-describedby="alert-dialog-description"
+        maxWidth="sm"
+        fullWidth
       >
-        <DialogTitle id="alert-dialog-title">{"Hủy đơn hàng"}</DialogTitle>
+        <DialogTitle id="alert-dialog-title" sx={{ bgcolor: '#f5f5f5', color: '#333', fontWeight: 'bold' }}>
+          {"Hủy đơn hàng"}
+        </DialogTitle>
         <DialogContent>
-          <TextField
-            autoFocus
-            margin="dense"
-            id="name"
-            label="Họ và tên"
-            type="text"
-            fullWidth
-            value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
-          />
-          <TextField
-            margin="dense"
-            id="phone"
-            label="Số điện thoại"
-            type="text"
-            fullWidth
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-          />
-          <TextField
-            margin="dense"
-            id="reason"
-            label="Lý do hủy"
-            type="text"
-            fullWidth
-            multiline
-            rows={4}
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-          />
+          <Box sx={{ mt: 2 }}>
+            <TextField
+              autoFocus
+              margin="dense"
+              id="reason"
+              label="Lý do hủy"
+              type="text"
+              fullWidth
+              multiline
+              rows={4}
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              variant="outlined"
+              InputLabelProps={{
+                shrink: true,
+              }}
+              InputProps={{
+                sx: {
+                  '& fieldset': {
+                    borderColor: '#ddd',
+                  },
+                  '&:hover fieldset': {
+                    borderColor: '#ccc',
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: '#FF6600',
+                  },
+                },
+              }}
+            />
+          </Box>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseDialog}>Hủy</Button>
-          <Button onClick={handleSubmitCancelRequest}>Đồng ý</Button>
+        <DialogActions sx={{ px: 3, py: 2 }}>
+          <Button onClick={handleCloseDialog} sx={{ textTransform: 'none' }}>
+            Hủy
+          </Button>
+          <Button 
+            onClick={handleSubmitCancelRequest} 
+            variant="contained" 
+            sx={{ 
+              textTransform: 'none', 
+              bgcolor: '#FF6600', 
+              '&:hover': { bgcolor: '#e65c00' } 
+            }}
+          >
+            Đồng ý
+          </Button>
         </DialogActions>
       </Dialog>
     </Box>
