@@ -25,67 +25,129 @@ const BlogDetail = () => {
     window.scrollTo(0, 0);
     
     const fetchPost = async () => {
+      console.log('ID from URL params:', id, 'Type:', typeof id);
+      
+      // Kiểm tra nếu id là undefined hoặc không phải số
+      if (id === undefined || id === null) {
+        setError('ID bài viết không được định nghĩa');
+        setLoading(false);
+        return;
+      }
+      
       try {
         setLoading(true);
-        const response = await blogService.getPostById(id);
-        console.log('Post data:', response);
         
-        // Kiểm tra các định dạng response khác nhau
-        let postData = response;
-        if (response && response.data) {
-          postData = response.data;
+        // Đảm bảo id là một số
+        const numericId = parseInt(id);
+        if (isNaN(numericId)) {
+          throw new Error('Blog ID phải là số');
         }
         
-        setPost(postData);
+        console.log('Fetching post with numeric ID:', numericId);
+        const response = await blogService.getPostById(numericId);
+        console.log('Post data received:', response);
+        
+        // Kiểm tra response
+        if (!response) {
+          throw new Error('Không nhận được dữ liệu từ server');
+        }
+        
+        // Xử lý dữ liệu từ backend
+        const processedPost = {
+          id: response.postId || numericId,
+          title: response.title || 'Không có tiêu đề',
+          content: response.content || 'Không có nội dung',
+          imageUrl: response.imageUrl || null,
+          createdAt: response.createdAt || new Date().toISOString(),
+          userId: response.userId || 1
+        };
+        
+        setPost(processedPost);
         
         // Tự động tạo các section từ nội dung
-        if (postData && postData.content) {
-          generateSectionsFromContent(postData.content);
+        if (processedPost.content) {
+          generateSectionsFromContent(processedPost.content);
         }
         
         setLoading(false);
       } catch (error) {
         console.error('Error fetching post:', error);
-        setError('Không thể tải bài viết. Vui lòng thử lại sau.');
+        setError(`Không thể tải bài viết. Lỗi: ${error.message}`);
         setLoading(false);
       }
     };
 
-    if (id) {
-      fetchPost();
-    }
+    fetchPost();
   }, [id]);
 
   // Hàm phân tích nội dung để tạo mục lục
   const generateSectionsFromContent = (content) => {
-    // Tạm thời tạo DOM element từ content
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = DOMPurify.sanitize(content);
+    if (!content) {
+      console.warn('Content is empty, cannot generate sections');
+      return;
+    }
     
-    // Tìm tất cả các thẻ heading (h2, h3, etc.)
-    const headings = tempDiv.querySelectorAll('h2, h3, h4, h5, h6');
-    
-    const extractedSections = [];
-    headings.forEach((heading, index) => {
-      // Tạo id cho heading nếu chưa có
-      if (!heading.id) {
-        heading.id = `section-${index}`;
+    try {
+      // Tìm các tiêu đề dạng số (1., 1.1., v.v.) trong văn bản
+      const headingRegex = /^(\d+(\.\d+)?)\.?\s+(.+)$/gm;
+      let match;
+      const extractedSections = [];
+      let index = 0;
+      
+      // Tạo bản sao của nội dung để tìm kiếm
+      const contentCopy = content.toString();
+      
+      while ((match = headingRegex.exec(contentCopy)) !== null) {
+        const fullHeading = match[0]; // Toàn bộ tiêu đề, ví dụ: "1. Tiêu đề chính"
+        const headingNumber = match[1]; // Số, ví dụ: "1" hoặc "1.1"
+        const headingText = match[3]; // Phần text của tiêu đề, ví dụ: "Tiêu đề chính"
+        const sectionId = `section-${index}`;
+        
+        // Xác định level dựa trên số lượng dấu chấm trong headingNumber
+        const level = (headingNumber.match(/\./g) || []).length + 2; // level 2 = h2, level 3 = h3, etc.
+        
+        extractedSections.push({
+          id: sectionId,
+          title: headingText, // Chỉ lấy phần text
+          fullTitle: fullHeading, // Lấy cả tiêu đề đầy đủ
+          level: level
+        });
+        
+        sectionRefs.current[sectionId] = sectionId;
+        index++;
       }
       
-      // Lấy level của heading (h2 = 2, h3 = 3, etc.)
-      const level = parseInt(heading.tagName.substring(1));
+      // Nếu tìm thấy các tiêu đề
+      if (extractedSections.length > 0) {
+        setSections(extractedSections);
+        return;
+      }
       
-      extractedSections.push({
-        id: heading.id,
-        title: heading.textContent,
-        level: level
-      });
-      
-      // Khởi tạo ref cho section
-      sectionRefs.current[heading.id] = heading.id;
-    });
-    
-    setSections(extractedSections);
+      // Nếu không tìm thấy tiêu đề ở trên, thử tìm bằng cách phân tích văn bản thành các đoạn
+      const paragraphs = content.split('\n\n');
+      if (paragraphs.length > 2) {
+        const paragraphSections = [];
+        
+        for (let i = 0; i < paragraphs.length; i++) {
+          if (paragraphs[i].trim().length < 20) continue; // Bỏ qua đoạn quá ngắn
+          
+          const sectionId = `section-para-${i}`;
+          paragraphSections.push({
+            id: sectionId,
+            title: paragraphs[i].substring(0, 70) + (paragraphs[i].length > 70 ? '...' : ''),
+            level: 2
+          });
+          
+          sectionRefs.current[sectionId] = sectionId;
+        }
+        
+        if (paragraphSections.length > 0) {
+          setSections(paragraphSections);
+        }
+      }
+    } catch (error) {
+      console.error('Error generating sections:', error);
+    }
   };
   
   // Hàm scroll đến section được chọn
@@ -97,48 +159,85 @@ const BlogDetail = () => {
   };
 
   // Hàm để tạo HTML an toàn từ nội dung của post
-  const createMarkup = (htmlContent) => {
-    if (!htmlContent) return { __html: '' };
+  const createMarkup = (content) => {
+    if (!content) return { __html: '' };
     
-    // Thêm id cho các heading để có thể scroll đến
-    let processedContent = htmlContent;
-    
-    // Tạo tempDiv để xử lý HTML
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = DOMPurify.sanitize(htmlContent);
-    
-    // Tìm và thêm id cho các heading
-    const headings = tempDiv.querySelectorAll('h2, h3, h4, h5, h6');
-    headings.forEach((heading, index) => {
-      if (!heading.id) {
-        heading.id = `section-${index}`;
-      }
-    });
-    
-    // Lấy lại HTML đã được xử lý
-    processedContent = tempDiv.innerHTML;
-    
-    return {
-      __html: processedContent
-    };
-  };
-
-  // Hàm xử lý nội dung để hiển thị đúng định dạng
-  const formatContent = (content) => {
-    if (!content) return '';
-    
-    // Nếu content không phải HTML, chuyển đổi xuống dòng thành thẻ <p>
-    if (!/<[a-z][\s\S]*>/i.test(content)) {
-      return content.split('\n').map((paragraph, index) => 
-        paragraph ? `<p key=${index}>${paragraph}</p>` : '<br />'
-      ).join('');
+    try {
+      // Xử lý văn bản thuần thành HTML có cấu trúc
+      let htmlContent = content;
+      
+      // Tìm các tiêu đề có dạng số
+      htmlContent = htmlContent.replace(
+        /^(\d+(\.\d+)?)\.?\s+(.+)$/gm, 
+        (match, number, dot, text) => {
+          const level = (number.match(/\./g) || []).length + 2; // level 2 = h2, level 3 = h3, etc.
+          const sectionId = `section-${sections.findIndex(s => s.fullTitle === match) || Math.random().toString(36).substr(2, 9)}`;
+          return `<h${level} id="${sectionId}">${match}</h${level}>`;
+        }
+      );
+      
+      // Chuyển đổi đoạn văn và xuống dòng
+      htmlContent = htmlContent.split('\n\n').map((paragraph, index) => {
+        if (!paragraph.trim()) return '';
+        if (paragraph.startsWith('<h')) return paragraph; // Nếu đã là tiêu đề thì giữ nguyên
+        return `<p id="paragraph-${index}">${paragraph.replace(/\n/g, '<br>')}</p>`;
+      }).join('');
+      
+      return { __html: DOMPurify.sanitize(htmlContent) };
+    } catch (error) {
+      console.error('Error creating markup:', error);
+      
+      // Nếu có lỗi, trả về nội dung dạng văn bản đơn giản
+      return { 
+        __html: DOMPurify.sanitize(`<p>${content.replace(/\n/g, '<br>')}</p>`)
+      };
     }
-    
-    return content;
   };
 
   const goBack = () => {
     navigate(-1);
+  };
+
+  const handleRetry = () => {
+    setLoading(true);
+    setError(null);
+    const fetchPost = async () => {
+      // Kiểm tra lại ID khi retry
+      if (!id || isNaN(parseInt(id))) {
+        setError('ID bài viết không hợp lệ hoặc không phải là số');
+        setLoading(false);
+        return;
+      }
+      
+      try {
+        const response = await blogService.getPostById(parseInt(id));
+        
+        if (!response) {
+          throw new Error('Không nhận được dữ liệu từ server');
+        }
+        
+        // Xử lý dữ liệu
+        const processedPost = {
+          id: parseInt(id),
+          title: response.title || 'Không có tiêu đề',
+          content: response.content || 'Không có nội dung',
+          imageUrl: response.imageUrl || null,
+          createdAt: response.createdAt || new Date().toISOString(),
+          userId: response.userId || 1
+        };
+        
+        setPost(processedPost);
+        
+        if (processedPost.content) {
+          generateSectionsFromContent(processedPost.content);
+        }
+        setLoading(false);
+      } catch (error) {
+        setError(`Không thể tải bài viết. Lỗi: ${error.message}`);
+        setLoading(false);
+      }
+    };
+    fetchPost();
   };
 
   if (loading) {
@@ -159,14 +258,23 @@ const BlogDetail = () => {
             <Typography variant="h5" component="h1" color="error" gutterBottom>
               {error}
             </Typography>
-            <Button 
-              variant="contained" 
-              startIcon={<ArrowBack />} 
-              onClick={goBack}
-              sx={{ mt: 2, bgcolor: '#059669', '&:hover': { bgcolor: '#047857' } }}
-            >
-              Quay lại
-            </Button>
+            <Box sx={{ mt: 3, display: 'flex', justifyContent: 'center', gap: 2 }}>
+              <Button 
+                variant="contained" 
+                startIcon={<ArrowBack />} 
+                onClick={goBack}
+                sx={{ bgcolor: '#059669', '&:hover': { bgcolor: '#047857' } }}
+              >
+                Quay lại
+              </Button>
+              <Button 
+                variant="outlined"
+                onClick={handleRetry}
+                sx={{ borderColor: '#059669', color: '#059669', '&:hover': { borderColor: '#047857', color: '#047857' } }}
+              >
+                Thử lại
+              </Button>
+            </Box>
           </Paper>
         </Container>
         <Footer />
@@ -240,6 +348,10 @@ const BlogDetail = () => {
                 height: 'auto',
                 objectFit: 'contain'
               }}
+              onError={(e) => {
+                console.log('Image failed to load, using fallback');
+                e.target.src = '/images/blog-placeholder.jpg';
+              }}
             />
           ) : (
             <Box
@@ -298,7 +410,7 @@ const BlogDetail = () => {
                 fontSize: { xs: '1.8rem', sm: '2.2rem', md: '2.5rem' }
               }}
             >
-              {post.title}
+              {post.title || 'Không có tiêu đề'}
             </Typography>
             
             {/* Phần mục lục - chỉ hiển thị nếu có sections */}
@@ -313,7 +425,7 @@ const BlogDetail = () => {
                 }}
               >
                 <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 2 }}>
-                  Thông tin bài viết
+                  Mục lục bài viết
                 </Typography>
                 
                 <List dense>
@@ -331,7 +443,7 @@ const BlogDetail = () => {
                         <ArrowRightIcon fontSize="small" />
                       </ListItemIcon>
                       <ListItemText 
-                        primary={`${section.level - 1}.${index + 1} ${section.title}`} 
+                        primary={section.fullTitle || section.title} 
                         primaryTypographyProps={{
                           fontSize: section.level > 2 ? '0.95rem' : 'inherit'
                         }}
@@ -345,7 +457,7 @@ const BlogDetail = () => {
             {/* Nội dung bài viết */}
             <div 
               className="blog-content" 
-              dangerouslySetInnerHTML={createMarkup(formatContent(post.content))}
+              dangerouslySetInnerHTML={createMarkup(post.content)}
               style={{
                 lineHeight: 1.8,
                 fontSize: '1rem',
@@ -353,11 +465,11 @@ const BlogDetail = () => {
               }}
             />
 
-            {/* Thông tin tác giả hoặc thẻ */}
+            {/* Thông tin tác giả nếu có */}
             {post.userId && (
               <Box sx={{ mt: 4, pt: 3, borderTop: '1px solid #eaeaea' }}>
                 <Typography variant="body2" color="text.secondary">
-                  Người viết: {post.userId}
+                  Người viết: ID {post.userId}
                 </Typography>
               </Box>
             )}
