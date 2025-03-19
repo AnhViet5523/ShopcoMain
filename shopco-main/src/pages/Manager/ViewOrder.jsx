@@ -26,7 +26,7 @@ const ViewOrder = () => {
     { id: 'feedback', name: 'Feedback', icon: '📢' },
   ];
 
-  const tabs = ['Tất cả', 'Đơn hàng đang xử lý', 'Đơn hàng bị hủy', 'Giao thành công'];
+  const tabs = ['Tất cả', 'Đơn hàng đang vận chuyển', 'Đơn hàng bị hủy', 'Giao thành công'];
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -70,8 +70,8 @@ const ViewOrder = () => {
     let filtered = orders;
 
     // Lọc theo trạng thái
-    if (activeTab === 'Đơn hàng đang xử lý') {
-      filtered = filtered.filter(order => order.orderStatus === 'Pending');
+    if (activeTab === 'Đơn hàng đang vận chuyển') {
+      filtered = filtered.filter(order => order.orderStatus === 'Paid' && order.deliveryStatus === 'Not Delivered');
     } else if (activeTab === 'Đơn hàng bị hủy') {
       filtered = filtered.filter(order => order.orderStatus === 'cancel');
     } else if (activeTab === 'Giao thành công') {
@@ -99,6 +99,19 @@ const ViewOrder = () => {
 
   const handleClearSearch = () => {
     setSearchKey(''); // Xóa từ khóa tìm kiếm
+  };
+
+  const handleDelivered = async (orderId) => {
+    try {
+      await adminService.markOrderAsDelivered(orderId);
+      console.log('Order marked as delivered:', orderId); // Thêm log
+      // Refresh the orders list
+      const response = await adminService.getAllOrders();
+      console.log('Updated orders:', response.$values); // Thêm log
+      setOrders(response.$values);
+    } catch (error) {
+      console.error('Error marking order as delivered:', error);
+    }
   };
 
   return (
@@ -213,13 +226,14 @@ const ViewOrder = () => {
                   <th>TÌNH TRẠNG ĐƠN HÀNG</th>
                   <th>TÌNH TRẠNG GIAO HÀNG</th>
                   <th>ĐỊA CHỈ</th>          
-                  <th>GHI CHÚ</th>    
+                  <th>GHI CHÚ</th>
+                  <th>THAO TÁC</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan="12" className="empty-data-message">
+                    <td colSpan="13" className="empty-data-message">
                       Đang tải dữ liệu đơn hàng...
                     </td>
                   </tr>
@@ -238,11 +252,29 @@ const ViewOrder = () => {
                       <td>{order.deliveryStatus}</td>
                       <td>{order.deliveryAddress}</td>
                       <td>{order.note}</td>
+                      <td>
+                        {activeTab === 'Đơn hàng đang vận chuyển' && (
+                          <button
+                            onClick={() => handleDelivered(order.orderId)}
+                            style={{
+                              padding: '5px 10px',
+                              backgroundColor: '#28a745',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '5px',
+                              cursor: 'pointer',
+                              fontSize: '14px'
+                            }}
+                          >
+                            Đã giao
+                          </button>
+                        )}
+                      </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="12" className="empty-data-message">
+                    <td colSpan="13" className="empty-data-message">
                       Chưa có đơn hàng nào.
                     </td>
                   </tr>

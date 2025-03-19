@@ -1,4 +1,4 @@
-import { Box, Button, Container, Typography, Tabs, Tab, Grid, Paper, Avatar, List, ListItem, ListItemIcon, ListItemText, CircularProgress, Divider, Chip, Link, Breadcrumbs } from "@mui/material";
+import { Box, Button, Container, Typography, Tabs, Tab, Grid, Paper, Avatar, List, ListItem, ListItemIcon, ListItemText, CircularProgress, Divider, Chip, Link, Breadcrumbs, Dialog, DialogTitle, DialogContent, DialogActions, TextField } from "@mui/material";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Home, Person, Phone, ExitToApp, ShoppingBag, Headset } from "@mui/icons-material";
@@ -15,6 +15,11 @@ const Order = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [openDialog, setOpenDialog] = useState(false);
+  const [selectedOrderId, setSelectedOrderId] = useState(null);
+  const [fullName, setFullName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [reason, setReason] = useState('');
 
   useEffect(() => {
     const fetchUserName = () => {
@@ -159,6 +164,49 @@ const Order = () => {
       return orders.filter(order => order.orderStatus === 'Cancelled');
     }
     return orders;
+  };
+
+  const handleCancelOrder = async (orderId) => {
+    try {
+      // Gọi API hủy đơn hàng
+      await userService.requestCancelOrder(orderId);
+      const updatedOrders = orders.filter(order => order.orderId !== orderId);
+      setOrders(updatedOrders);
+    } catch (error) {
+      console.error('Lỗi khi hủy đơn hàng:', error);
+      setError('Không thể hủy đơn hàng. Vui lòng thử lại sau.');
+    }
+  };
+
+  const handleOpenDialog = (orderId) => {
+    setSelectedOrderId(orderId);
+    setOpenDialog(true);
+  };
+
+  const handleCloseDialog = () => {
+    setOpenDialog(false);
+    setFullName('');
+    setPhone('');
+    setReason('');
+  };
+
+  const handleSubmitCancelRequest = async () => {
+    try {
+      const requestDate = new Date().toISOString();
+      await userService.requestCancelOrder({
+        orderId: selectedOrderId,
+        fullName,
+        phone,
+        reason,
+        requestDate
+      });
+      const updatedOrders = orders.filter(order => order.orderId !== selectedOrderId);
+      setOrders(updatedOrders);
+      handleCloseDialog();
+    } catch (error) {
+      console.error('Lỗi khi hủy đơn hàng:', error);
+      setError('Không thể hủy đơn hàng. Vui lòng thử lại sau.');
+    }
   };
 
   return (
@@ -364,6 +412,19 @@ const Order = () => {
                                   {formatCurrency(order.totalAmount)}
                                 </Typography>
                               </Box>
+
+                              {tabIndex === 2 && ( // Chỉ hiển thị nút "Hủy" trong tab "Đang vận chuyển"
+                                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
+                                  <Button 
+                                    variant="outlined" 
+                                    color="error" 
+                                    size="small" 
+                                    onClick={() => handleOpenDialog(order.orderId)}
+                                  >
+                                    Hủy
+                                  </Button>
+                                </Box>
+                              )}
                             </Grid>
                           </Grid>
                         </Box>
@@ -386,6 +447,50 @@ const Order = () => {
         </Grid >
       </Container>
       <Footer />
+      <Dialog
+        open={openDialog}
+        onClose={handleCloseDialog}
+        aria-labelledby="alert-dialog-title"
+        aria-describedby="alert-dialog-description"
+      >
+        <DialogTitle id="alert-dialog-title">{"Hủy đơn hàng"}</DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            margin="dense"
+            id="name"
+            label="Họ và tên"
+            type="text"
+            fullWidth
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+          />
+          <TextField
+            margin="dense"
+            id="phone"
+            label="Số điện thoại"
+            type="text"
+            fullWidth
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+          />
+          <TextField
+            margin="dense"
+            id="reason"
+            label="Lý do hủy"
+            type="text"
+            fullWidth
+            multiline
+            rows={4}
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseDialog}>Hủy</Button>
+          <Button onClick={handleSubmitCancelRequest}>Đồng ý</Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
