@@ -30,12 +30,7 @@ import axiosClient from "./apis/axiosClient";
 import ErrorBoundary from "./components/ErrorBoundary";
 import BrandProducts from "./components/BrandProducts";
 import BlogPage from "./pages/Blog/BlogPage";
-// import Blog1 from "./pages/Blog/blog1";
-// import Blog2 from "./pages/Blog/blog2";
-// import Blog3 from "./pages/Blog/blog3";
-// import Blog4 from "./pages/Blog/blog4";
-// import Blog5 from "./pages/Blog/blog5";
-// import Blog6 from "./pages/Blog/blog6";
+import BlogDetail from "./pages/Blog/BlogDetail";
 import QuizTest from "./pages/Quiz/QuizTest";
 import Checkout from "./pages/checkout/checkout";
 import ViewOrder from "./pages/Manager/ViewOrder";
@@ -58,9 +53,7 @@ import PaymentResult from "./pages/PaymentResult";
 import BestSellers from "./components/BestSellers";
 import BlogManager from "./pages/Manager/BlogManager";
 import BlogStaff from "./pages/Staff/BlogStaff";
-
-
-
+import CompareProducts from "./pages/Product/CompareProducts";
 
 // Component để hủy request khi chuyển trang
 function NavigationHandler() {
@@ -149,6 +142,7 @@ export default function App() {
           <Route path="/quiz" element={<QuizTest />} />
           
           <Route path="/blog" element={<BlogPage />} />
+          <Route path="/blog/:id" element={<BlogDetail />} />
           <Route path="/bestsellers" element={<BestSellers />} />
 
           {/* Static Pages */}
