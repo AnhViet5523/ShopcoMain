@@ -99,30 +99,35 @@ const ViewSupport = () => {
     }
 
     try {
-      let imageUrl = "";
-      
-      // Upload ảnh nếu có
-      if (replyImage) {
-        const formData = new FormData();
-        formData.append('image', replyImage);
-        const uploadResponse = await feedbackService.uploadImage(formData);
-        imageUrl = uploadResponse.data; // Giả sử API trả về URL của ảnh
-      }
-
+      // Chuẩn bị dữ liệu reply với ảnh (nếu có)
       const replyData = {
         conversationId: selectedRequest.conversationId,
         userId: 1, // ID của staff
         messageContent: replyMessage,
-        imageUrl: imageUrl,
+        imageFile: replyImage, // File ảnh gốc
       };
-
-      await feedbackService.replyFeedback(replyData);
+      
+      console.log("Replying to feedback. Image included:", !!replyImage);
+      
+      // Sử dụng API mới để gửi phản hồi kèm ảnh trong một request duy nhất
+      const replyResponse = await feedbackService.replyFeedbackWithImage(replyData);
+      console.log("Kết quả phản hồi:", replyResponse);
+      
       alert('Phản hồi thành công!');
       handleCloseDialog();
       fetchSupportRequests();
     } catch (error) {
       console.error('Lỗi khi gửi phản hồi:', error);
-      alert('Không thể gửi phản hồi. Vui lòng thử lại sau!');
+      let errorMessage = 'Không thể gửi phản hồi. Vui lòng thử lại sau!';
+      
+      // Hiển thị thông báo lỗi chi tiết nếu có
+      if (error.response && error.response.data && error.response.data.error) {
+        errorMessage += '\n\nLỗi: ' + error.response.data.error;
+      } else if (error.message) {
+        errorMessage += '\n\nLỗi: ' + error.message;
+      }
+      
+      alert(errorMessage);
     }
   };
 
@@ -220,10 +225,7 @@ const ViewSupport = () => {
           ))}
         </div>
         
-        <div className="logout-button" onClick={() => navigate('/')}>
-          <span className="logout-icon">🚪</span>
-          <span>Đăng Xuất</span>
-        </div>
+        
       </div>
 
       {/* Main Content */}
@@ -338,13 +340,9 @@ const ViewSupport = () => {
                       <td className="message-content">{firstMessage?.messageContent || 'N/A'}</td>
                       <td>
                         {firstMessage?.imageUrl ? (
-                          <div className="message-image">
-                            <img 
-                              src={firstMessage.imageUrl} 
-                              alt="Attachment"
-                              onClick={() => window.open(firstMessage.imageUrl, '_blank')}
-                            />
-                          </div>
+                          <span className="has-image" style={{ color: 'green', fontWeight: 'bold' }}>
+                            Có ảnh đính kèm
+                          </span>
                         ) : (
                           <span className="no-image">Không có ảnh</span>
                         )}
@@ -396,10 +394,10 @@ const ViewSupport = () => {
               <div style={{ marginTop: '10px' }}>
                 <p><strong>Ảnh đính kèm của khách hàng:</strong></p>
                 <img 
-                  src={selectedRequest.messages[0].imageUrl} 
+                  src={feedbackService.getImageUrl(selectedRequest.messages[0].imageUrl)} 
                   alt="Customer attachment" 
                   style={{ maxWidth: '200px', cursor: 'pointer' }}
-                  onClick={() => window.open(selectedRequest.messages[0].imageUrl, '_blank')}
+                  onClick={() => window.open(feedbackService.getImageUrl(selectedRequest.messages[0].imageUrl), '_blank')}
                 />
               </div>
             )}
@@ -514,9 +512,9 @@ const ViewSupport = () => {
                     <p>{message.messageContent}</p>
                     {message.imageUrl && (
                       <img 
-                        src={message.imageUrl} 
+                        src={feedbackService.getImageUrl(message.imageUrl)} 
                         alt="Attachment" 
-                        onClick={() => window.open(message.imageUrl, '_blank')}
+                        onClick={() => window.open(feedbackService.getImageUrl(message.imageUrl), '_blank')}
                       />
                     )}
                   </div>

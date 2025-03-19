@@ -152,7 +152,7 @@ const Header = () => {
   const accountMenuItems = [
     { icon: <Person fontSize="small" />, text: "Thông tin tài khoản", path: "/account" },
     { icon: <ShoppingBag fontSize="small" />, text: "Đơn hàng của tôi", path: "/orders" },
-    { icon: <HeadsetMic fontSize="small" />, text: "Hỗ trợ", path: "/support" },
+    { icon: <HeadsetMic fontSize="small" />, text: "Hỏi đáp", path: "/support" },
     { 
       icon: <ExitToApp fontSize="small" />, 
       text: "Đăng xuất", 

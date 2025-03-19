@@ -177,119 +177,50 @@ const CustomerSupport = () => {
     setLoading(true);
     
     try {
-      let imageUrlValue = "";
-      
-      // Chuyển đổi ảnh thành Base64 nếu có
-      if (selectedImage) {
-        try {
-          // Nén ảnh với các tham số mạnh hơn
-          const compressedImage = await compressImage(selectedImage, 500, 0.4);
-          
-          const reader = new FileReader();
-          const base64String = await new Promise((resolve) => {
-            reader.onload = () => resolve(reader.result);
-            reader.readAsDataURL(compressedImage || selectedImage);
-          });
-          
-          const sizeInKB = Math.round(base64String.length / 1024);
-          console.log(`Image size after compression: ${sizeInKB}KB`);
-          
-          // Kiểm tra nếu ảnh vẫn lớn, hỏi người dùng có muốn tiếp tục không
-          if (sizeInKB > 300) {
-            console.warn(`Image is still large (${sizeInKB}KB)`);
-            // Trong tình huống thực tế, có thể hiển thị dialog hỏi người dùng
-            // Ở đây chúng ta cứ tiếp tục với ảnh đã nén
-          }
-          
-          imageUrlValue = base64String;
-        } catch (imgError) {
-          console.error("Lỗi xử lý ảnh:", imgError);
-          setLoading(false);
-          setSnackbar({
-            open: true,
-            message: 'Có lỗi khi xử lý ảnh. Vui lòng thử lại với ảnh nhỏ hơn.',
-            severity: 'warning'
-          });
-          return;
-        }
-      }
-      
-      // Chuẩn bị dữ liệu theo đúng format API yêu cầu
+      // Chuẩn bị dữ liệu với ảnh (nếu có)
       const feedbackData = {
         userId: userId, 
         messageContent: formData.message.trim(),
-        imageUrl: imageUrlValue, // Gửi ảnh dạng Base64
+        imageFile: selectedImage, // File ảnh gốc
         email: formData.email.trim(),
         phoneNumber: formData.phone.trim(),
       };
       
-      console.log("Sending feedback with image. Image provided:", !!imageUrlValue);
+      console.log("Sending feedback with image. Image provided:", !!selectedImage);
       
-      // Thử gửi feedback mà không có ảnh nếu gặp lỗi
-      try {
-        await feedbackService.sendFeedback(feedbackData);
-        
-        // Reset form sau khi gửi thành công
-        setFormData({ email: '', phone: '', message: '' });
-        setSelectedImage(null);
-        setImagePreview('');
-        setSnackbar({
-          open: true,
-          message: (
-            <Box>
-              <Typography variant="subtitle1" fontWeight="bold" sx={{ mb: 0.5 }}>
-                Cảm ơn bạn!
-              </Typography>
-              <Typography>
-                Thắc mắc của bạn đã được gửi thành công. Chúng tôi sẽ liên lạc lại với bạn sớm nhất có thể.
-              </Typography>
-            </Box>
-          ),
-          severity: 'success'
-        });
-      } catch (sendError) {
-        console.error('Lỗi khi gửi feedback với ảnh:', sendError);
-        
-        // Nếu có lỗi và có ảnh, thử gửi lại không có ảnh
-        if (imageUrlValue) {
-          try {
-            console.log("Retrying without image...");
-            
-            const feedbackDataNoImage = {
-              ...feedbackData,
-              imageUrl: "" // Gửi không kèm ảnh
-            };
-            
-            await feedbackService.sendFeedback(feedbackDataNoImage);
-            
-            // Reset form sau khi gửi thành công
-            setFormData({ email: '', phone: '', message: '' });
-            setSelectedImage(null);
-            setImagePreview('');
-            setSnackbar({
-              open: true,
-              message: (
-                <Box>
-                  <Typography variant="subtitle1" fontWeight="bold" sx={{ mb: 0.5 }}>
-                    Đã gửi thành công!
-                  </Typography>
-                  <Typography>
-                    Thắc mắc của bạn đã được gửi thành công, nhưng không kèm theo ảnh do kích thước quá lớn.
-                  </Typography>
-                </Box>
-              ),
-              severity: 'warning'
-            });
-          } catch (retryError) {
-            console.error('Lỗi khi thử lại không có ảnh:', retryError);
-            throw retryError; // Tiếp tục ném lỗi để xử lý bên dưới
-          }
-        } else {
-          throw sendError; // Ném lỗi nếu không có ảnh
-        }
-      }
+      // Sử dụng API mới gửi feedback kèm ảnh trong một request duy nhất
+      await feedbackService.sendFeedbackWithImage(feedbackData);
+      
+      // Reset form sau khi gửi thành công
+      setFormData({ email: '', phone: '', message: '' });
+      setSelectedImage(null);
+      setImagePreview('');
+      setSnackbar({
+        open: true,
+        message: (
+          <Box>
+            <Typography variant="subtitle1" fontWeight="bold" sx={{ mb: 0.5 }}>
+              Cảm ơn bạn!
+            </Typography>
+            <Typography>
+              Thắc mắc của bạn đã được gửi thành công. Chúng tôi sẽ liên lạc lại với bạn sớm nhất có thể.
+            </Typography>
+          </Box>
+        ),
+        severity: 'success'
+      });
     } catch (error) {
       console.error('Lỗi khi gửi thắc mắc:', error);
+      
+      // Hiển thị thông báo lỗi chi tiết hơn
+      let errorMessage = 'Không thể gửi thắc mắc của bạn. Vui lòng thử lại sau hoặc liên hệ qua số điện thoại.';
+      
+      if (error.response && error.response.data && error.response.data.error) {
+        errorMessage = error.response.data.error;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
       setSnackbar({
         open: true,
         message: (
@@ -298,7 +229,7 @@ const CustomerSupport = () => {
               Có lỗi xảy ra!
             </Typography>
             <Typography sx={{ color: '#fff' }}>
-              Không thể gửi thắc mắc của bạn. Vui lòng thử lại sau hoặc liên hệ qua số điện thoại.
+              {errorMessage}
             </Typography>
           </Box>
         ),

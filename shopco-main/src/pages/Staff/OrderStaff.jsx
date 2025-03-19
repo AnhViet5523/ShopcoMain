@@ -134,10 +134,7 @@ const OrderStaff = () => {
             ))}
           </div>
           
-          <div className="logout-button" onClick={() => navigate('/')}>
-            <span className="logout-icon">🚪</span>
-            <span>Đăng Xuất</span>
-          </div>
+          
         </div>
 
         {/* Main Content */}
