@@ -23,6 +23,7 @@ import Complaint from "./pages/PagesOfFooter/Complaint";
 import Return from "./pages/PagesOfFooter/Return";
 import Cart from "./pages/Cart/Cart";
 import ProductScreen from "./pages/Product/ProductScreen";
+import CompareProducts from "./pages/Product/CompareProducts";
 import ProtectedRoute from "./components/ProtectedRoute";
 import userService from "./apis/userService";
 import axiosClient from "./apis/axiosClient";
