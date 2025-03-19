@@ -3,6 +3,8 @@ import { Menu as MenuIcon, KeyboardArrowDown, KeyboardArrowRight } from "@mui/ic
 import { useState } from "react";
 import { useTheme } from "@mui/material/styles";
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Link } from 'react-router-dom';
+import { Typography } from '@mui/material';
 
 const menuItems = [
   { name: "Làm Sạch Da", subItems: ["Tẩy Trang Mặt", "Sữa Rửa Mặt", "Tẩy Tế Bào Chết Da Mặt", "Toner/ Nước Cân Bằng Da"] },
@@ -17,7 +19,7 @@ const menuItems = [
   { name: "Dụng Cụ/Phụ Kiện Chăm Sóc Da", subItems: ["Bông Tẩy Trang", "Dụng Cụ/Máy Rửa Mặt", "Máy Xông Mặt/Đẩy Tinh Chất"] }
 ];
 
-const extraMenuItems = ["Hot Deals", "Thương Hiệu", "Bán chạy", "Blog", "Tra cứu đơn hàng", "Quy trình chăm sóc da"];
+const extraMenuItems = ["Thương Hiệu", "Bán chạy", "Blog", "Voucher", "So sánh sản phẩm",  "Quy trình chăm sóc da"];
 
 const skinTypes = ["Da Dầu", "Da Khô", "Da Thường", "Da Hỗn Hợp", "Da Nhạy Cảm"];
 
@@ -194,7 +196,9 @@ const handleClickAway = () => {
                   ? handleSkinTypesOpen 
                   : item === "Blog"
                     ? () => navigate("/blog")
-                    : undefined
+                    : item === "Bán chạy"
+                      ? () => navigate("/bestsellers")
+                      : undefined
               } 
               sx={{ 
                 color: 'text.primary', 
@@ -264,6 +268,12 @@ const handleClickAway = () => {
               </Grow>
             )}
           </Popper>
+
+          {/* <Link to="/bestsellers" style={{ textDecoration: 'none', color: 'inherit' }}>
+            <Typography variant="body1" component="span">
+                Bán chạy
+            </Typography> */}
+          {/* </Link> */}
         </Box>
       </Container>
     </Box>
