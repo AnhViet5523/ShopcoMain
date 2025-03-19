@@ -37,6 +37,7 @@ export default function CompareProducts() {
   const [usernames, setUsernames] = useState({});
   const [productImages, setProductImages] = useState({});
   const [imagesLoading, setImagesLoading] = useState(false);
+  const [productImageLoading, setProductImageLoading] = useState({});
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -130,6 +131,8 @@ export default function CompareProducts() {
   const fetchProductImages = async (productId) => {
     try {
       setImagesLoading(true);
+      setProductImageLoading(prev => ({...prev, [productId]: true}));
+      
       const images = await productImageService.getProductImages(productId);
       
       // Kiểm tra xem kết quả trả về có phải là mảng hay không
@@ -154,6 +157,7 @@ export default function CompareProducts() {
       console.error(`Lỗi khi lấy ảnh cho sản phẩm ${productId}:`, error);
     } finally {
       setImagesLoading(false);
+      setProductImageLoading(prev => ({...prev, [productId]: false}));
     }
   };
 
@@ -196,6 +200,13 @@ export default function CompareProducts() {
           );
           
           setAvailableProducts(filteredProducts);
+          
+          // Tải hình ảnh cho tất cả sản phẩm trong modal
+          filteredProducts.forEach(product => {
+            if(product.productId) {
+              fetchProductImages(product.productId);
+            }
+          });
         } else {
           // Nếu không tìm thấy categoryId, lấy tất cả sản phẩm
           const allProducts = await productService.getAllProducts();
@@ -203,6 +214,13 @@ export default function CompareProducts() {
             p => !comparedProducts.some(cp => cp.productId === p.productId)
           );
           setAvailableProducts(filteredProducts);
+          
+          // Tải hình ảnh cho tất cả sản phẩm trong modal
+          filteredProducts.forEach(product => {
+            if(product.productId) {
+              fetchProductImages(product.productId);
+            }
+          });
         }
       }
     } catch (error) {
@@ -242,6 +260,11 @@ export default function CompareProducts() {
     if (product.imgURL) {
       return product.imgURL;
     }
+
+    // Fallback: sử dụng ảnh từ imageUrl nếu có
+    if (product.imageUrl) {
+      return product.imageUrl;
+    }
     
     // Fallback: sử dụng ảnh mặc định
     return '/images/default-product.jpg';
@@ -258,7 +281,7 @@ export default function CompareProducts() {
       label: 'Đánh giá',
       key: 'rating',
       renderComponent: (product) => (
-        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <Rating 
             value={product.rating || 0} 
             precision={0.5} 
@@ -418,224 +441,7 @@ export default function CompareProducts() {
       
       <Box sx={{ backgroundColor: '#ffffff', py: 4, minHeight: 'calc(100vh - 200px)', width: '99vw' }}>
         <Container maxWidth="lg">
-          <Paper elevation={1} sx={{ p: 3, mb: 4, borderRadius: 2 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-              <Typography variant="h5" fontWeight="bold">So sánh sản phẩm</Typography>
-              <Button 
-                variant="outlined" 
-                color="error" 
-                startIcon={<CloseIcon />}
-                onClick={handleClearComparison}
-              >
-                Xóa so sánh
-              </Button>
-            </Box>
-
-            {comparedProducts.length === 1 && (
-              <Typography variant="body1" sx={{ mb: 3, fontStyle: 'italic', color: 'text.secondary' }}>
-                So Sánh {comparedProducts[0].productName} | Chính hãng VN/A
-              </Typography>
-            )}
-
-            {/* Thông tin tổng quan */}
-            <Grid container spacing={3} sx={{ mb: 4 }}>
-              {comparedProducts.map((product, index) => (
-                <Grid item xs={12} md={comparedProducts.length === 1 ? 6 : 12 / comparedProducts.length} key={product.productId}>
-                  {comparedProducts.length === 1 ? (
-                    <Paper sx={{ 
-                      p: 3, 
-                      borderRadius: 2,
-                      textAlign: 'center',
-                      position: 'relative',
-                      boxShadow: '0 3px 10px rgba(0,0,0,0.08)',
-                      transition: 'transform 0.2s',
-                      '&:hover': {
-                        transform: 'translateY(-5px)',
-                        boxShadow: '0 6px 15px rgba(0,0,0,0.1)'
-                      }
-                    }}>
-                      <IconButton
-                        size="small"
-                        sx={{ position: 'absolute', top: 8, right: 8 }}
-                        onClick={() => handleRemoveProduct(index)}
-                      >
-                        <CloseIcon fontSize="small" />
-                      </IconButton>
-                      
-                      <Box sx={{ 
-                        height: 200, 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        justifyContent: 'center',
-                        mb: 2
-                      }}>
-                        {imagesLoading ? (
-                          <CircularProgress size={40} />
-                        ) : (
-                          <img 
-                            src={getImageUrl(product)} 
-                            alt={product.productName} 
-                            style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} 
-                          />
-                        )}
-                      </Box>
-                      
-                      <Typography variant="h6" sx={{ fontSize: '1.1rem', mb: 1, fontWeight: 'bold' }}>
-                        {product.productName}
-                      </Typography>
-                      
-                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 1 }}>
-                        <Rating 
-                          value={product.rating || 0} 
-                          precision={0.5} 
-                          readOnly 
-                          size="small"
-                        />
-                        <Typography variant="body2" sx={{ ml: 1 }}>
-                          ({product.totalReviews || (productReviews[product.productId]?.length || 0)})
-                        </Typography>
-                      </Box>
-                      
-                      <Typography variant="body1" color="error" sx={{ fontWeight: 'bold', mt: 1 }}>
-                        {product.price?.toLocaleString()}đ
-                      </Typography>
-                      
-                      {product.originalPrice && (
-                        <Typography 
-                          variant="body2" 
-                          sx={{ 
-                            textDecoration: 'line-through', 
-                            color: 'text.secondary' 
-                          }}
-                        >
-                          {product.originalPrice?.toLocaleString()}đ
-                        </Typography>
-                      )}
-                      
-                      <Button
-                        variant="outlined"
-                        color="primary"
-                        sx={{ mt: 2 }}
-                        startIcon={<ShoppingCartIcon />}
-                        component={Link}
-                        to={`/product/${product.productId}`}
-                      >
-                        Mua ngay
-                      </Button>
-                    </Paper>
-                  ) : (
-                    <Paper elevation={3} sx={{ 
-                      p: 3, 
-                      position: 'relative', 
-                      height: '100%',
-                      borderRadius: 2,
-                      boxShadow: '0 3px 10px rgba(0,0,0,0.08)',
-                      transition: 'transform 0.2s',
-                      '&:hover': {
-                        transform: 'translateY(-5px)',
-                        boxShadow: '0 6px 15px rgba(0,0,0,0.1)'
-                      }
-                    }}>
-                      <Button 
-                        variant="outlined" 
-                        color="error" 
-                        size="small"
-                        sx={{ position: 'absolute', top: 10, right: 10 }}
-                        onClick={() => handleRemoveProduct(index)}
-                      >
-                        Xóa
-                      </Button>
-
-                      <Box sx={{ textAlign: 'center', mb: 2 }}>
-                        <Box sx={{ 
-                          height: 150, 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          justifyContent: 'center',
-                          mb: 2
-                        }}>
-                          {imagesLoading ? (
-                            <CircularProgress size={30} />
-                          ) : (
-                            <img 
-                              src={getImageUrl(product)} 
-                              alt={product.productName} 
-                              style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'contain' }} 
-                            />
-                          )}
-                        </Box>
-                        <Typography variant="h6" sx={{ fontSize: '1rem', fontWeight: 'bold' }}>
-                          {product.productName}
-                        </Typography>
-                        
-                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', my: 1 }}>
-                          <Rating 
-                            value={product.rating || 0} 
-                            precision={0.5} 
-                            readOnly 
-                            size="small"
-                          />
-                          <Typography variant="body2" sx={{ ml: 1 }}>
-                            ({product.totalReviews || (productReviews[product.productId]?.length || 0)})
-                          </Typography>
-                        </Box>
-                        
-                        <Typography variant="body1" color="error" sx={{ fontWeight: 'bold' }}>
-                          {product.price?.toLocaleString()}đ
-                        </Typography>
-                        
-                        <Button
-                          variant="outlined"
-                          color="primary"
-                          sx={{ mt: 2 }}
-                          size="small"
-                          component={Link}
-                          to={`/product/${product.productId}`}
-                        >
-                          Mua ngay
-                        </Button>
-                      </Box>
-                    </Paper>
-                  )}
-                </Grid>
-              ))}
-
-              {/* Nếu chỉ có 1 sản phẩm, hiển thị ô thêm sản phẩm */}
-              {comparedProducts.length === 1 && (
-                <Grid item xs={12} md={6}>
-                  <Paper sx={{ 
-                    border: '2px dashed #e0e0e0', 
-                    borderRadius: 2,
-                    p: 3,
-                    height: '100%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer',
-                    minHeight: 300,
-                    backgroundColor: 'rgba(0,0,0,0.01)',
-                    transition: 'all 0.2s',
-                    '&:hover': {
-                      backgroundColor: 'rgba(0,0,0,0.03)',
-                      borderColor: '#bdbdbd'
-                    }
-                  }}
-                    onClick={handleOpenAddProductModal}
-                  >
-                    <Box sx={{ textAlign: 'center' }}>
-                      <MoreHorizIcon sx={{ fontSize: 60, color: 'text.disabled', mb: 2 }} />
-                      <Typography variant="h6" sx={{ mb: 1, color: 'text.secondary' }}>
-                        Thêm sản phẩm để so sánh
-                      </Typography>
-                      <Typography variant="body2" color="text.disabled">
-                        Nhấn vào đây để chọn thêm sản phẩm khác
-                      </Typography>
-                    </Box>
-                  </Paper>
-                </Grid>
-              )}
-            </Grid>
-          </Paper>
+          {/* Bỏ Paper đầu tiên, chuyển thẳng sang bảng so sánh */}
 
           {/* Modal thêm sản phẩm so sánh */}
           <Modal
@@ -697,13 +503,23 @@ export default function CompareProducts() {
                           display: 'flex', 
                           justifyContent: 'center', 
                           mb: 2,
-                          flex: '0 0 auto'
+                          flex: '0 0 auto',
+                          height: '120px',
+                          alignItems: 'center'
                         }}>
-                          <img 
-                            src={getImageUrl(product)} 
-                            alt={product.productName}
-                            style={{ height: '120px', maxWidth: '100%', objectFit: 'contain' }}
-                          />
+                          {imagesLoading ? (
+                            <CircularProgress size={24} />
+                          ) : (
+                            <img 
+                              src={getImageUrl(product)} 
+                              alt={product.productName}
+                              style={{ height: '120px', maxWidth: '100%', objectFit: 'contain' }}
+                              onError={(e) => {
+                                e.target.onerror = null;
+                                e.target.src = '/images/default-product.jpg';
+                              }}
+                            />
+                          )}
                         </Box>
                         <Box sx={{ flex: '1 1 auto' }}>
                           <Typography 
@@ -751,68 +567,297 @@ export default function CompareProducts() {
             </Box>
           </Modal>
 
-          {/* So sánh thông tin cơ bản */}
+          {/* Bảng so sánh mới theo mẫu hình */}
           <Paper elevation={1} sx={{ mb: 4, p: 3, borderRadius: 2 }}>
-            <Typography variant="h6" sx={{ mb: 3, borderBottom: '1px solid #eee', pb: 1, fontWeight: 'bold' }}>
-              Thông tin cơ bản
-            </Typography>
-            {comparisonFields.map((field) => (
-              <Grid container key={field.label} sx={{ borderBottom: '1px solid #f0f0f0', py: 1 }}>
-                <Grid item xs={12} md={4}>
-                  <Typography variant="body1" fontWeight="bold" sx={{ py: 1 }}>{field.label}</Typography>
-                </Grid>
-                <Grid item xs={12} md={8} container spacing={2}>
-                  {comparedProducts.map((product) => (
-                    <Grid item xs={comparedProducts.length === 1 ? 6 : 12 / comparedProducts.length} key={product.productId}>
-                      {field.renderComponent ? field.renderComponent(product) : (
-                        <Typography variant="body2" sx={{ py: 1 }}>
-                          {field.format(product[field.key])}
-                        </Typography>
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', mb: 3 }}>
+              <Button 
+                variant="outlined" 
+                color="error" 
+                startIcon={<CloseIcon />}
+                onClick={handleClearComparison}
+              >
+                Xóa so sánh
+              </Button>
+            </Box>
+            
+            <Box sx={{ 
+              border: '1px solid #e0e0e0',
+              borderRadius: 1,
+              overflow: 'hidden',
+              mb: 2
+            }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                {/* Hàng đầu tiên: tên sản phẩm và hình ảnh */}
+                <thead>
+                  <tr style={{ backgroundColor: '#f5f5f5' }}>
+                    <th style={{ 
+                      width: '20%', 
+                      padding: '16px', 
+                      textAlign: 'left', 
+                      borderBottom: '1px solid #e0e0e0', 
+                      borderRight: '1px solid #e0e0e0' 
+                    }}>
+                      <Typography variant="body1" fontWeight="bold">Sản phẩm</Typography>
+                    </th>
+                    {comparedProducts.map((product, idx) => (
+                      <th key={`header-${product.productId}`} style={{ 
+                        width: comparedProducts.length === 1 ? '40%' : `${80 / comparedProducts.length}%`,
+                        padding: '16px',
+                        borderBottom: '1px solid #e0e0e0',
+                        borderRight: idx < comparedProducts.length - 1 ? '1px solid #e0e0e0' : 'none',
+                        textAlign: 'center'
+                      }}>
+                        <Box sx={{ 
+                          display: 'flex', 
+                          flexDirection: 'column', 
+                          alignItems: 'center', 
+                          justifyContent: 'center'
+                        }}>
+                          <Box sx={{ 
+                            height: 120, 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            justifyContent: 'center',
+                            mb: 1,
+                            position: 'relative',
+                            width: '100%'
+                          }}>
+                            <Button
+                              variant="outlined"
+                              color="error"
+                              size="small"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRemoveProduct(idx);
+                              }}
+                              sx={{
+                                position: 'absolute',
+                                top: 0,
+                                right: 0,
+                                minWidth: '60px',
+                                py: 0.5
+                              }}
+                            >
+                              Xóa
+                            </Button>
+                            {imagesLoading ? (
+                              <CircularProgress size={30} />
+                            ) : (
+                              <img 
+                                src={getImageUrl(product)} 
+                                alt={product.productName} 
+                                style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'contain' }} 
+                              />
+                            )}
+                          </Box>
+                          <Typography variant="body2" sx={{ 
+                            fontWeight: 'bold',
+                            textAlign: 'center',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical',
+                            maxHeight: '3em'
+                          }}>
+                            {product.productName}
+                          </Typography>
+                          <Typography color="error" fontWeight="bold" sx={{ mt: 1 }}>
+                            {product.price?.toLocaleString()}đ
+                          </Typography>
+                        </Box>
+                      </th>
+                    ))}
+                    
+                    {/* Nếu chỉ có 1 sản phẩm, hiển thị ô thêm sản phẩm */}
+                    {comparedProducts.length === 1 && (
+                      <th style={{ 
+                        width: '40%',
+                        padding: '16px',
+                        borderBottom: '1px solid #e0e0e0',
+                        textAlign: 'center'
+                      }}>
+                        <Box sx={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          height: '100%'
+                        }}>
+                          <Box sx={{ 
+                            height: 120, 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            justifyContent: 'center',
+                            mb: 1
+                          }}>
+                            <MoreHorizIcon sx={{ fontSize: 40, color: 'text.disabled' }} />
+                          </Box>
+                          <Typography variant="body2" sx={{ mb: 1, fontWeight: 'bold' }}>
+                            Thêm sản phẩm để so sánh
+                          </Typography>
+                          <Button
+                            variant="outlined"
+                            color="primary"
+                            size="small"
+                            onClick={handleOpenAddProductModal}
+                            sx={{ mb: 1 }}
+                          >
+                            Thêm sản phẩm
+                          </Button>
+                        </Box>
+                      </th>
+                    )}
+                  </tr>
+                </thead>
+                <tbody>
+                  {/* TIÊU ĐỀ: THÔNG TIN CƠ BẢN */}
+                  <tr>
+                    <td colSpan={comparedProducts.length === 1 ? 3 : comparedProducts.length + 1} style={{ 
+                      padding: '12px 16px',
+                      borderBottom: '1px solid #e0e0e0',
+                      backgroundColor: '#f5f5f5',
+                      fontWeight: 'bold'
+                    }}>
+                      <Typography variant="subtitle1" fontWeight="bold">Thông tin cơ bản</Typography>
+                    </td>
+                  </tr>
+                  
+                  {/* Các hàng thông số kỹ thuật */}
+                  {comparisonFields.map((field) => (
+                    <tr key={field.label}>
+                      <td style={{ 
+                        padding: '12px 16px',
+                        borderBottom: '1px solid #e0e0e0',
+                        borderRight: '1px solid #e0e0e0',
+                        backgroundColor: '#fafafa'
+                      }}>
+                        <Typography variant="body2" fontWeight="bold">{field.label}</Typography>
+                      </td>
+                      {comparedProducts.map((product, idx) => (
+                        <td key={`${field.label}-${product.productId}`} style={{ 
+                          padding: '12px 16px',
+                          borderBottom: '1px solid #e0e0e0',
+                          borderRight: idx < comparedProducts.length - 1 ? '1px solid #e0e0e0' : 'none',
+                          textAlign: 'center'
+                        }}>
+                          {field.renderComponent ? field.renderComponent(product) : (
+                            <Typography variant="body2">
+                              {field.format(product[field.key])}
+                            </Typography>
+                          )}
+                        </td>
+                      ))}
+                      
+                      {/* Nếu chỉ có 1 sản phẩm, hiển thị ô trống */}
+                      {comparedProducts.length === 1 && (
+                        <td style={{ 
+                          padding: '12px 16px',
+                          borderBottom: '1px solid #e0e0e0',
+                          textAlign: 'center'
+                        }}>
+                          <Typography variant="body2" color="text.disabled">
+                            -
+                          </Typography>
+                        </td>
                       )}
-                    </Grid>
+                    </tr>
                   ))}
                   
-                  {/* Nếu chỉ có 1 sản phẩm, hiển thị ô trống */}
-                  {comparedProducts.length === 1 && (
-                    <Grid item xs={6}>
-                      <Typography variant="body2" color="text.disabled" sx={{ py: 1 }}>
-                        -
-                      </Typography>
-                    </Grid>
-                  )}
-                </Grid>
-              </Grid>
-            ))}
+                  {/* Lặp lại cho các nhóm thông tin chi tiết */}
+                  {detailedFields.map((field, index) => (
+                    <React.Fragment key={field.label}>
+                      {/* Tiêu đề cho mỗi mục thông tin chi tiết */}
+                      <tr>
+                        <td colSpan={comparedProducts.length === 1 ? 3 : comparedProducts.length + 1} style={{ 
+                          padding: '12px 16px',
+                          borderBottom: '1px solid #e0e0e0',
+                          backgroundColor: '#f5f5f5',
+                          fontWeight: 'bold'
+                        }}>
+                          <Typography variant="subtitle1" fontWeight="bold">{field.label}</Typography>
+                        </td>
+                      </tr>
+                      
+                      {/* Nội dung cho mỗi mục chi tiết */}
+                      {!field.renderComponent ? (
+                        <tr>
+                          <td style={{ 
+                            padding: '12px 16px',
+                            borderBottom: '1px solid #e0e0e0',
+                            borderRight: '1px solid #e0e0e0',
+                            backgroundColor: '#fafafa',
+                            width: '20%'
+                          }}>
+                            <Typography variant="body2" fontWeight="bold">Chi tiết</Typography>
+                          </td>
+                          {comparedProducts.map((product, idx) => (
+                            <td key={`${field.label}-${product.productId}`} style={{ 
+                              padding: '16px',
+                              borderBottom: '1px solid #e0e0e0',
+                              borderRight: idx < comparedProducts.length - 1 ? '1px solid #e0e0e0' : 'none',
+                              verticalAlign: 'top'
+                            }}>
+                              <Typography variant="body2" sx={{ whiteSpace: 'pre-line' }}>
+                                {field.format(product[field.key])}
+                              </Typography>
+                            </td>
+                          ))}
+                          
+                          {/* Nếu chỉ có 1 sản phẩm, hiển thị ô trống */}
+                          {comparedProducts.length === 1 && (
+                            <td style={{ 
+                              padding: '16px',
+                              borderBottom: '1px solid #e0e0e0',
+                              textAlign: 'center',
+                              verticalAlign: 'middle'
+                            }}>
+                              <Typography variant="body2" color="text.disabled">
+                                -
+                              </Typography>
+                            </td>
+                          )}
+                        </tr>
+                      ) : (
+                        <tr>
+                          <td style={{ 
+                            padding: '12px 16px',
+                            borderBottom: '1px solid #e0e0e0',
+                            borderRight: '1px solid #e0e0e0',
+                            backgroundColor: '#fafafa',
+                            width: '20%'
+                          }}>
+                            <Typography variant="body2" fontWeight="bold">Chi tiết</Typography>
+                          </td>
+                          <td colSpan={comparedProducts.length === 1 ? 2 : comparedProducts.length} style={{ 
+                            padding: '16px',
+                            borderBottom: '1px solid #e0e0e0'
+                          }}>
+                            <Grid container spacing={2}>
+                              {comparedProducts.map((product) => (
+                                <Grid item xs={12} md={comparedProducts.length === 1 ? 6 : 12 / comparedProducts.length} key={product.productId}>
+                                  {field.renderComponent(product)}
+                                </Grid>
+                              ))}
+                              
+                              {/* Nếu chỉ có 1 sản phẩm, hiển thị ô trống */}
+                              {comparedProducts.length === 1 && (
+                                <Grid item xs={12} md={6} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100px' }}>
+                                  <Typography variant="body2" color="text.disabled" sx={{ fontStyle: 'italic' }}>
+                                    Thêm sản phẩm để so sánh
+                                  </Typography>
+                                </Grid>
+                              )}
+                            </Grid>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  ))}
+                </tbody>
+              </table>
+            </Box>
           </Paper>
-
-          {/* So sánh thông tin chi tiết */}
-          {detailedFields.map((field) => (
-            <Paper key={field.label} elevation={1} sx={{ mb: 4, p: 3, borderRadius: 2 }}>
-              <Typography variant="h6" sx={{ mb: 3, borderBottom: '1px solid #eee', pb: 1, fontWeight: 'bold' }}>
-                {field.label}
-              </Typography>
-              <Grid container spacing={2}>
-                {comparedProducts.map((product) => (
-                  <Grid item xs={12} md={comparedProducts.length === 1 ? 6 : 12 / comparedProducts.length} key={product.productId}>
-                    {field.renderComponent ? field.renderComponent(product) : (
-                      <Typography variant="body2">
-                        {field.format(product[field.key])}
-                      </Typography>
-                    )}
-                  </Grid>
-                ))}
-                
-                {/* Nếu chỉ có 1 sản phẩm, hiển thị ô trống */}
-                {comparedProducts.length === 1 && (
-                  <Grid item xs={12} md={6}>
-                    <Typography variant="body2" color="text.disabled">
-                      -
-                    </Typography>
-                  </Grid>
-                )}
-              </Grid>
-            </Paper>
-          ))}
 
           <Box sx={{ textAlign: 'center', mt: 4, mb: 3 }}>
             <Button 
