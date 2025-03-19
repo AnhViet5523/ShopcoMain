@@ -148,12 +148,7 @@ export default function App() {
           <Route path="/quiz" element={<QuizTest />} />
           
           <Route path="/blog" element={<BlogPage />} />
-          {/* <Route path="/blog1" element={<Blog1 />} />
-          <Route path="/blog2" element={<Blog2 />} />
-          <Route path="/blog3" element={<Blog3 />} />
-          <Route path="/blog4" element={<Blog4 />} />
-          <Route path="/blog5" element={<Blog5 />} />
-          <Route path="/blog6" element={<Blog6 />} /> */}
+          <Route path="/bestsellers" element={<BestSellers />} />
 
           {/* Static Pages */}
           <Route path="/da-dau" element={<DaDau />} />
