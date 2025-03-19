@@ -85,6 +85,30 @@ const productImageService = {
         }
     },
 
+    // Thêm nhiều ảnh cùng lúc cho sản phẩm
+    uploadMultipleProductPhotos: async (productId, files) => {
+        try {
+            console.log(`Calling API: POST /api/Photos/upload-multiple/product/${productId}`);
+            const formData = new FormData();
+            
+            // Thêm các file vào formData với đúng tên tham số là 'files'
+            for (let i = 0; i < files.length; i++) {
+                formData.append('files', files[i]);
+            }
+            
+            const response = await axiosClient.post(`/api/Photos/upload-multiple/product/${productId}`, formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data'
+                }
+            });
+            console.log('API Response for multiple upload:', response);
+            return response;
+        } catch (error) {
+            console.error(`Error uploading multiple images for product ${productId}:`, error);
+            throw error;
+        }
+    },
+
     // Cập nhật ảnh sản phẩm
     updateProductImage: async (imageId, file, displayOrder) => {
         try {

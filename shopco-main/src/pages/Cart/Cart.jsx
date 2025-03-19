@@ -2,9 +2,10 @@ import { useState, useEffect, useRef } from 'react';
 import { Box, Typography, Container, Button, TextField, Paper, CircularProgress } from '@mui/material';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer/Footer';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import orderService from '../../apis/orderService';
+import productImageService from '../../apis/productImageService';
 
 const Cart = () => {
   const navigate = useNavigate();
@@ -36,15 +37,6 @@ const Cart = () => {
   }, []);
 
   const fetchCarts = async () => {
-
-    // lấy thông tin giỏ hàng từ api order.getCurrentCart
-    // xử lí hiện thi thông tin
-    // thêm bớt số lượng sản phẩm, update giỏ hàng, tăng giảm số lượng sản phẩm
-    // bấm vào nút thanh toán ngay -> đi đến trang checkout, truyền orderID vào trang checkout
-
-
-
-
     // Nếu đã có yêu cầu đang xử lý, không gửi yêu cầu mới
     if (requestInProgress.current) return;
     
@@ -60,20 +52,121 @@ const Cart = () => {
           // Fetch current cart from orderService
           
           const response = await orderService.getCurrentCart(user.userId);
-          console.log(response);
+          console.log("API Response:", response);
           // Store the order ID for checkout
           if (response && response.orderId) {
             setCurrentOrderId(response.orderId);
           }
-          const items = response.items.$values.map(item => ({
-            id: item.orderItemId,
-            productId: item.productId,
-            name: item.product ? item.product.productName : 'Product Name',
-            price: item.price,
-            originalPrice: item.price * 1.2, // Assuming 20% markup, adjust as needed
-            quantity: item.quantity,
-            imgUrl: item.product ? item.product.imgUrl : 'https://via.placeholder.com/150',
-          }));
+          
+          // Kiểm tra dữ liệu items từ API
+          if (!response || !response.items || !response.items.$values) {
+            console.error("Không tìm thấy dữ liệu items trong response", response);
+            setCartItems([]);
+            localStorage.setItem('cart', '[]');
+            return;
+          }
+          
+          console.log("Các sản phẩm trong giỏ hàng:", response.items.$values);
+          
+          // Lấy tất cả ảnh sản phẩm trước để tối ưu hiệu suất
+          let allProductImages = [];
+          try {
+            const imagesResponse = await productImageService.getAllProductImages();
+            if (imagesResponse && imagesResponse.$values) {
+              allProductImages = imagesResponse.$values;
+            } else if (Array.isArray(imagesResponse)) {
+              allProductImages = imagesResponse;
+            }
+            console.log("Tất cả ảnh sản phẩm:", allProductImages);
+          } catch (err) {
+            console.error("Lỗi khi lấy ảnh sản phẩm:", err);
+          }
+          
+          // Tạo map để lưu ảnh theo productId cho truy xuất nhanh
+          const productImagesMap = {};
+          allProductImages.forEach(image => {
+            const productId = image.productId || image.productID;
+            if (productId) {
+              if (!productImagesMap[productId]) {
+                productImagesMap[productId] = [];
+              }
+              productImagesMap[productId].push(image);
+            }
+          });
+          
+          // Xử lý từng sản phẩm trong giỏ hàng
+          const items = response.items.$values.map(item => {
+            console.log("Chi tiết sản phẩm:", item);
+            
+            let productImage = '';
+            const productId = item.productId;
+            
+            // Nếu có thông tin sản phẩm
+            if (item.product) {
+              let productImages = productImagesMap[productId] || [];
+              
+              // Nếu có ảnh từ productImageService
+              if (productImages.length > 0) {
+                // Tìm ảnh đại diện (isMainImage = true)
+                let mainImage = productImages.find(img => img.isMainImage === true);
+                
+                // Nếu không tìm thấy ảnh đại diện, tìm ảnh có displayOrder = 0
+                if (!mainImage) {
+                  mainImage = productImages.find(img => img.displayOrder === 0);
+                }
+                
+                // Nếu tìm thấy ảnh đại diện, sử dụng ảnh đó
+                if (mainImage) {
+                  productImage = mainImage.imgUrl || mainImage.imageUrl;
+                  console.log(`Tìm thấy ảnh đại diện cho sản phẩm ID ${productId}: ${productImage}`);
+                } else {
+                  // Nếu không, lấy ảnh đầu tiên trong mảng
+                  const firstImage = productImages[0];
+                  productImage = firstImage?.imgUrl || firstImage?.imageUrl;
+                  console.log(`Sử dụng ảnh đầu tiên cho sản phẩm ID ${productId}: ${productImage}`);
+                }
+              }
+              // Fallback vào các cách khác nếu không có ảnh từ productImageService
+              else {
+                // Case 1: Nếu sản phẩm có mảng ảnh từ product
+                if (item.product.images && item.product.images.length > 0) {
+                  const firstImage = item.product.images[0];
+                  productImage = firstImage?.imgUrl || firstImage?.imageUrl;
+                }
+                // Case 2: Nếu sản phẩm có imgUrl
+                else if (item.product.imgUrl) {
+                  productImage = item.product.imgUrl;
+                }
+                // Case 3: Nếu sản phẩm có imgURL (chú ý chữ hoa)
+                else if (item.product.imgURL) {
+                  productImage = item.product.imgURL;
+                }
+                // Case 4: Nếu sản phẩm có image
+                else if (item.product.image) {
+                  productImage = item.product.image;
+                }
+                // Case 5: Không tìm thấy ảnh nào, sử dụng placeholder
+                else {
+                  productImage = `https://via.placeholder.com/150/ffcc66/333333?text=${encodeURIComponent(item.product.productName ? item.product.productName.substring(0, 8) : 'Product')}`;
+                }
+              }
+            } else {
+              // Không có thông tin sản phẩm, sử dụng placeholder
+              productImage = `https://via.placeholder.com/150/ffcc66/333333?text=Product`;
+            }
+            
+            return {
+              id: item.orderItemId,
+              productId: item.productId,
+              name: item.product ? item.product.productName : 'Sản phẩm không xác định',
+              price: item.price,
+              originalPrice: item.price * 1.2, // Tính giá gốc cao hơn 20%
+              quantity: item.quantity,
+              imgUrl: productImage,
+            };
+          });
+          
+          console.log("Danh sách sản phẩm đã xử lý:", items);
           setCartItems(items);
           localStorage.setItem('cart', JSON.stringify(items));
         } else {
@@ -355,11 +448,39 @@ const Cart = () => {
                     borderBottom: index < cartItems.length - 1 ? '1px solid #eee' : 'none',
                     alignItems: 'center'
                   }}>
-                    <Box sx={{ width: 42, height: 42, mr: 2, display: 'flex', alignItems: 'center' }}>
+                    <Box component={Link} 
+                      to={`/product/${item.productId}`}
+                      sx={{ 
+                      width: 80, 
+                      height: 80, 
+                      mr: 2, 
+                      display: 'flex', 
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderRadius: '8px',
+                      overflow: 'hidden',
+                      boxShadow: '0 2px 5px rgba(0,0,0,0.1)',
+                      bgcolor: '#f5f5f5',
+                      textDecoration: 'none',
+                      '&:hover img': {
+                        transform: 'scale(1.05)'
+                      }
+                    }}>
                       <img 
                         src={item.imgUrl} 
                         alt={item.name} 
-                        style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                        style={{ 
+                          width: '100%', 
+                          height: '100%', 
+                          objectFit: 'cover',
+                          transition: 'transform 0.3s ease'
+                        }}
+                        onError={(e) => {
+                          console.log(`Lỗi khi tải ảnh: ${e.target.src}`);
+                          e.target.onerror = null; // Tránh lặp vô hạn
+                          // Sử dụng placeholder trực tiếp thay vì thử ảnh mặc định
+                          e.target.src = `https://via.placeholder.com/80/ffcc66/333333?text=${encodeURIComponent(item.name.substring(0, 8))}`;
+                        }}
                       />
                     </Box>
                     
