@@ -17,8 +17,19 @@ export default function BlogPage() {
       try {
         setLoading(true);
         const data = await adminService.getAllPosts();
-        console.log('Blog posts fetched:', data);
-        setBlogPosts(data || []);
+        console.log('Raw blog posts data:', data);
+        
+        const processedData = Array.isArray(data) ? data.map(post => ({
+          id: post.postId || post.id || post.$id,
+          postId: post.postId,
+          title: post.title,
+          summary: post.content ? (post.content.substring(0, 150) + '...') : '',
+          image: post.imageUrl,
+          createdAt: post.createdAt
+        })) : [];
+        
+        console.log('Processed blog posts:', processedData);
+        setBlogPosts(processedData || []);
         setError(null);
       } catch (err) {
         console.error('Error fetching blog posts:', err);
@@ -32,8 +43,22 @@ export default function BlogPage() {
   }, []);
   
   const handleBlogClick = (blogId) => {
-    navigate(`/blog/${blogId}`);
+    if (!blogId && blogId !== 0) {
+      console.error('Blog ID is undefined');
+      return;
+    }
+    
+    console.log('Clicking blog with ID:', blogId, 'Type:', typeof blogId);
+    
+    const numericId = parseInt(blogId);
+    if (!isNaN(numericId)) {
+      navigate(`/blog/${numericId}`);
+    } else {
+      console.error('Blog ID không phải là số: ', blogId);
+    }
   };
+
+  console.log('Blog posts mapped:', blogPosts.map(post => ({id: post.id, postId: post.postId, sid: post.sid, title: post.title})));
 
   return (
     <>
@@ -91,7 +116,7 @@ export default function BlogPage() {
               >
                 {blogPosts.map((post) => (
                   <Grid 
-                    key={post.id} 
+                    key={post.postId || post.id} 
                     item 
                     xs={12} 
                     sm={6}
@@ -102,7 +127,7 @@ export default function BlogPage() {
                   >
                     <Box 
                       className="blog-box"
-                      onClick={() => handleBlogClick(post.id)}
+                      onClick={() => handleBlogClick(post.postId || post.id)}
                       sx={{ 
                         position: "relative", 
                         width: "100%",
