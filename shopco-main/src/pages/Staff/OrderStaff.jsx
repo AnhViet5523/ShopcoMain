@@ -13,6 +13,7 @@ const OrderStaff = () => {
   const [loading, setLoading] = useState(true); 
   const [orderItems, setOrderItems] = useState([]);
   const [searchKey, setSearchKey] = useState(''); 
+  const [cancelledOrders, setCancelledOrders] = useState([]); // Thêm state để lưu trữ các đơn hàng bị hủy
   const navigate = useNavigate();
 
   const sidebarItems = [
@@ -24,7 +25,7 @@ const OrderStaff = () => {
     { id: 'feedbackStaff', name: 'Feedback', icon: '📢' },
   ];
 
-  const tabs = ['Tất cả', 'Đơn hàng đang xử lý', 'Đơn hàng bị hủy', 'Giao thành công'];
+  const tabs = ['Tất cả', 'Đơn hàng vận chuyển', 'Đơn hàng bị hủy', 'Giao thành công'];
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -50,6 +51,23 @@ const OrderStaff = () => {
     };
 
     fetchOrders();
+
+    const fetchCancelledOrders = async () => {
+      try {
+        const response = await adminService.getCancelledOrders();
+        console.log('Response từ API cancelled orders:', response);
+
+        if (response && response.$values && Array.isArray(response.$values)) {
+          setCancelledOrders(response.$values);
+        } else {
+          console.error('Dữ liệu trả về không đúng định dạng:', response);
+        }
+      } catch (error) {
+        console.error('Error fetching cancelled orders:', error);
+      }
+    };
+
+    fetchCancelledOrders();
   }, []);
 
   // Hàm để lấy tên người dùng
@@ -68,10 +86,10 @@ const OrderStaff = () => {
     let filtered = orders;
 
     // Lọc theo trạng thái
-    if (activeTab === 'Đơn hàng đang xử lý') {
-      filtered = filtered.filter(order => order.orderStatus === 'Pending');
+    if (activeTab === 'Đơn hàng vận chuyển') {
+      filtered = filtered.filter(order => order.orderStatus === 'Paid' && order.deliveryStatus === 'Not Delivered');
     } else if (activeTab === 'Đơn hàng bị hủy') {
-      filtered = filtered.filter(order => order.orderStatus === 'cancel');
+      filtered = cancelledOrders;
     } else if (activeTab === 'Giao thành công') {
       filtered = filtered.filter(order => order.orderStatus === 'Completed');
     }
@@ -97,6 +115,75 @@ const OrderStaff = () => {
 
   const handleClearSearch = () => {
     setSearchKey(''); // Xóa từ khóa tìm kiếm
+  };
+
+  const handleApproveCancellation = async (cancelRequestId) => {
+    try {
+      await adminService.approveCancellation(cancelRequestId);
+      console.log('Cancellation approved:', cancelRequestId); // Thêm log
+      
+      // Cập nhật trạng thái trong danh sách đơn hàng bị hủy
+      setCancelledOrders(prevOrders => 
+        prevOrders.map(order => 
+          order.cancelRequestId === cancelRequestId 
+            ? { ...order, status: 'Approved' } 
+            : order
+        )
+      );
+      
+      // Refresh the orders list
+      const response = await adminService.getAllOrders(); // Gọi lại API để lấy danh sách đơn hàng
+      setOrders(response.$values); // Cập nhật lại danh sách đơn hàng
+    } catch (error) {
+      console.error('Error approving cancellation:', error);
+    }
+  };
+
+  const handleRejectCancellation = async (cancelRequestId) => {
+    try {
+      await adminService.rejectCancellation(cancelRequestId);
+      console.log('Cancellation rejected:', cancelRequestId); // Thêm log
+      
+      // Cập nhật trạng thái trong danh sách đơn hàng bị hủy
+      setCancelledOrders(prevOrders => 
+        prevOrders.map(order => 
+          order.cancelRequestId === cancelRequestId 
+            ? { ...order, status: 'Rejected' } 
+            : order
+        )
+      );
+      
+      // Refresh the orders list
+      const response = await adminService.getAllOrders(); // Gọi lại API để lấy danh sách đơn hàng
+      setOrders(response.$values); // Cập nhật lại danh sách đơn hàng
+    } catch (error) {
+      console.error('Error rejecting cancellation:', error);
+    }
+  };
+
+  const isCancellationApproved = (order) => {
+    return order.status === 'Approved';
+  };
+
+  const isCancellationRejected = (order) => {
+    return order.status === 'Rejected';
+  };
+
+  const getSelectedOrder = (cancelRequestId) => {
+    return cancelledOrders.find(order => order.cancelRequestId === cancelRequestId);
+  };
+
+  const handleDelivered = async (orderId) => {
+    try {
+      await adminService.markOrderAsDelivered(orderId);
+      console.log('Order marked as delivered:', orderId); // Thêm log
+      // Refresh the orders list
+      const response = await adminService.getAllOrders();
+      console.log('Updated orders:', response.$values); // Thêm log
+      setOrders(response.$values);
+    } catch (error) {
+      console.error('Error marking order as delivered:', error);
+    }
   };
 
   return (
@@ -178,6 +265,27 @@ const OrderStaff = () => {
             </div>
           </div>
           
+          {/* Dashboard Title Bar */}
+          <div className="dashboard-title-bar">
+            <h1>Đơn Hàng</h1>
+            <div className="dashboard-actions">
+              <button
+                style={{
+                  padding: '10px 15px',
+                  backgroundColor: '#f8f9fa',
+                  border: '1px solid #dee2e6',
+                  borderRadius: '5px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  color: '#495057'
+                }}
+              >
+                <span>Lọc</span>
+              </button>
+            </div>
+          </div>
           
           {/* Tabs */}
           <div className="dashboard-tabs">
@@ -197,47 +305,146 @@ const OrderStaff = () => {
             <table>
               <thead>
                 <tr>
-                  <th>ID ĐƠN HÀNG</th>
-                  <th>ID NGƯỜI DÙNG</th>
-                  <th>TÊN SẢN PHẨM</th>
-                  <th>GIÁ</th>
-                  <th>SỐ LƯỢNG</th>
-                  <th>MÃ GIẢM GIÁ</th>
-                  <th>TỔNG TIỀN</th>
-                  <th>NGÀY ĐẶT HÀNG</th>
-                  <th>TÌNH TRẠNG ĐƠN HÀNG</th>
-                  <th>TÌNH TRẠNG GIAO HÀNG</th>
-                  <th>ĐỊA CHỈ</th>          
-                  <th>GHI CHÚ</th>    
+                  {activeTab === 'Đơn hàng bị hủy' ? (
+                    <>
+                      <th>ID</th>
+                      <th>ID ĐƠN HÀNG</th>
+                      <th>TÊN ĐẦY ĐỦ</th>
+                      <th>SỐ ĐIỆN THOẠI</th>
+                      <th>LÝ DO</th>
+                      <th>NGÀY YÊU CẦU</th>
+                      <th>TRẠNG THÁI</th>
+                      <th>HÀNH ĐỘNG</th>
+                    </>
+                  ) : activeTab === 'Đơn hàng vận chuyển' ? (
+                    <>
+                      <th>ID ĐƠN HÀNG</th>
+                      <th>ID NGƯỜI DÙNG</th>
+                      <th>TÊN SẢN PHẨM</th>
+                      <th>GIÁ</th>
+                      <th>SỐ LƯỢNG</th>
+                      <th>MÃ GIẢM GIÁ</th>
+                      <th>TỔNG TIỀN</th>
+                      <th>NGÀY ĐẶT HÀNG</th>
+                      <th>TÌNH TRẠNG ĐƠN HÀNG</th>
+                      <th>TÌNH TRẠNG GIAO HÀNG</th>
+                      <th>ĐỊA CHỈ</th>          
+                      <th>GHI CHÚ</th>
+                      <th>HÀNH ĐỘNG</th>
+                    </>
+                  ) : (
+                    <>
+                      <th>ID ĐƠN HÀNG</th>
+                      <th>ID NGƯỜI DÙNG</th>
+                      <th>TÊN SẢN PHẨM</th>
+                      <th>GIÁ</th>
+                      <th>SỐ LƯỢNG</th>
+                      <th>MÃ GIẢM GIÁ</th>
+                      <th>TỔNG TIỀN</th>
+                      <th>NGÀY ĐẶT HÀNG</th>
+                      <th>TÌNH TRẠNG ĐƠN HÀNG</th>
+                      <th>TÌNH TRẠNG GIAO HÀNG</th>
+                      <th>ĐỊA CHỈ</th>          
+                      <th>GHI CHÚ</th>
+                    </>
+                  )}
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan="12" className="empty-data-message">
+                    <td colSpan={activeTab === 'Đơn hàng vận chuyển' || activeTab === 'Đơn hàng bị hủy' ? "13" : "12"} className="empty-data-message">
                       Đang tải dữ liệu đơn hàng...
                     </td>
                   </tr>
                 ) : filteredOrders().length > 0 ? (
                   filteredOrders().map((order, index) => (
-                    <tr key={order.orderId}>
-                      <td>{order.orderId}</td>
-                      <td>{order.userId}</td>
-                      <td>{order.items?.$values.map(item => item.productName).join(', ')}</td>
-                      <td>{order.items?.$values.map(item => item.price).join(', ')}</td>
-                      <td>{order.items?.$values.map(item => item.quantity).join(', ')}</td>
-                      <td>{order.voucherId}</td>
-                      <td>{order.totalAmount}</td>
-                      <td>{order.orderDate}</td>
-                      <td>{order.orderStatus}</td>
-                      <td>{order.deliveryStatus}</td>
-                      <td>{order.deliveryAddress}</td>
-                      <td>{order.note}</td>
-                    </tr>
+                    activeTab === 'Đơn hàng bị hủy' ? (
+                      <tr key={order.cancelRequestId}>
+                        <td>{order.cancelRequestId}</td>
+                        <td>{order.orderId}</td>
+                        <td>{order.fullName}</td>
+                        <td>{order.phone}</td>
+                        <td>{order.reason}</td>
+                        <td>{order.requestDate}</td>
+                        <td>{order.status}</td>
+                        <td>
+                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <button
+                              onClick={() => handleApproveCancellation(order.cancelRequestId)}
+                              disabled={isCancellationApproved(order) || isCancellationRejected(order)}
+                              style={{
+                                padding: '5px 10px',
+                                backgroundColor: isCancellationApproved(order) || isCancellationRejected(order) ? '#6c757d' : '#28a745',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '5px',
+                                cursor: isCancellationApproved(order) || isCancellationRejected(order) ? 'not-allowed' : 'pointer',
+                                fontSize: '14px',
+                                flex: '1',
+                                marginRight: '5px',
+                              }}
+                            >
+                              Đồng ý
+                            </button>
+                            <button
+                              onClick={() => handleRejectCancellation(order.cancelRequestId)}
+                              disabled={isCancellationApproved(order) || isCancellationRejected(order)}
+                              style={{
+                                padding: '5px 10px',
+                                backgroundColor: isCancellationApproved(order) || isCancellationRejected(order) ? '#6c757d' : '#dc3545',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '5px',
+                                cursor: isCancellationApproved(order) || isCancellationRejected(order) ? 'not-allowed' : 'pointer',
+                                fontSize: '14px',
+                                flex: '1',
+                                marginLeft: '5px',
+                              }}
+                            >
+                              Từ chối
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : (
+                      <tr key={order.orderId}>
+                        <td>{order.orderId}</td>
+                        <td>{order.userId}</td>
+                        <td>{order.items?.$values.map(item => item.productName).join(', ')}</td>
+                        <td>{order.items?.$values.map(item => item.price).join(', ')}</td>
+                        <td>{order.items?.$values.map(item => item.quantity).join(', ')}</td>
+                        <td>{order.voucherId}</td>
+                        <td>{order.totalAmount}</td>
+                        <td>{order.orderDate}</td>
+                        <td>{order.orderStatus}</td>
+                        <td>{order.deliveryStatus}</td>
+                        <td>{order.deliveryAddress}</td>
+                        <td>{order.note}</td>
+                        {activeTab === 'Đơn hàng vận chuyển' && (
+                          <td>
+                            <button
+                              onClick={() => handleDelivered(order.orderId)}
+                              style={{
+                                padding: '5px 10px',
+                                backgroundColor: '#28a745',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '5px',
+                                cursor: 'pointer',
+                                fontSize: '14px'
+                              }}
+                            >
+                              Đã giao
+                            </button>
+                          </td>
+                        )}
+                      </tr>
+                    )
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="12" className="empty-data-message">
+                    <td colSpan={activeTab === 'Đơn hàng vận chuyển' || activeTab === 'Đơn hàng bị hủy' ? "13" : "12"} className="empty-data-message">
                       Chưa có đơn hàng nào.
                     </td>
                   </tr>
