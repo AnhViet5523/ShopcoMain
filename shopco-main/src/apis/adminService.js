@@ -29,7 +29,7 @@ const adminService = {
         }
         try {
             console.log('Sending import request:', { productId, quantity });
-            const response = await axiosClient.patch(`/api/Products/${productId}/import`, { quantity: quantity });
+            const response = await axiosClient.post(`/api/Products/${productId}/import`, quantity);
             console.log('Raw response:', response);
             
             // Trả về response.data để xử lý ở component

@@ -1,5 +1,6 @@
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import { Box, Button, Container, Typography, Tabs, Tab, Grid, Paper, Avatar, List, ListItem, ListItemIcon, ListItemText, CircularProgress, Divider, Chip, Link, Breadcrumbs, Dialog, DialogTitle, DialogContent, DialogActions } from "@mui/material";
-import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Home, Person, Phone, ExitToApp, ShoppingBag, Headset } from "@mui/icons-material";
 import Banner from "../../components/Banner";
@@ -7,7 +8,6 @@ import Footer from "../../components/Footer/Footer";
 import Header from "../../components/Header";
 import userService from "../../apis/userService";
 import feedbackService from "../../apis/feedbackService";
-import axios from "axios";
 
 const Support = () => {
   const [tabIndex, setTabIndex] = useState(0);  // Mặc định sẽ trỏ đến tab đầu tiên (Đang xử lý)
@@ -384,7 +384,7 @@ const Support = () => {
                     {message.imageUrl && (
                       <Box 
                         component="img"
-                        src={message.imageUrl}
+                        src={feedbackService.getImageUrl(message.imageUrl)}
                         alt="Attached image"
                         sx={{ 
                           maxWidth: 200,
@@ -393,7 +393,7 @@ const Support = () => {
                           mt: 2,
                           cursor: 'pointer'
                         }}
-                        onClick={() => window.open(message.imageUrl, '_blank')}
+                        onClick={() => window.open(feedbackService.getImageUrl(message.imageUrl), '_blank')}
                       />
                     )}
                   </Box>
