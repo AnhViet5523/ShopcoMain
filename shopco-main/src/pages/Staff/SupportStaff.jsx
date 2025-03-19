@@ -218,10 +218,7 @@ const SupportStaff = () => {
           ))}
         </div>
         
-        <div className="logout-button" onClick={() => navigate('/')}>
-          <span className="logout-icon">🚪</span>
-          <span>Đăng Xuất</span>
-        </div>
+       
       </div>
 
       {/* Main Content */}
@@ -338,9 +335,9 @@ const SupportStaff = () => {
                         {firstMessage?.imageUrl ? (
                           <div className="message-image">
                             <img 
-                              src={firstMessage.imageUrl} 
+                              src={feedbackService.getImageUrl(firstMessage.imageUrl)} 
                               alt="Attachment"
-                              onClick={() => window.open(firstMessage.imageUrl, '_blank')}
+                              onClick={() => window.open(feedbackService.getImageUrl(firstMessage.imageUrl), '_blank')}
                             />
                           </div>
                         ) : (
@@ -394,10 +391,10 @@ const SupportStaff = () => {
               <div style={{ marginTop: '10px' }}>
                 <p><strong>Ảnh đính kèm của khách hàng:</strong></p>
                 <img 
-                  src={selectedRequest.messages[0].imageUrl} 
+                  src={feedbackService.getImageUrl(selectedRequest.messages[0].imageUrl)} 
                   alt="Customer attachment" 
                   style={{ maxWidth: '200px', cursor: 'pointer' }}
-                  onClick={() => window.open(selectedRequest.messages[0].imageUrl, '_blank')}
+                  onClick={() => window.open(feedbackService.getImageUrl(selectedRequest.messages[0].imageUrl), '_blank')}
                 />
               </div>
             )}
@@ -512,9 +509,9 @@ const SupportStaff = () => {
                     <p>{message.messageContent}</p>
                     {message.imageUrl && (
                       <img 
-                        src={message.imageUrl} 
+                        src={feedbackService.getImageUrl(message.imageUrl)} 
                         alt="Attachment" 
-                        onClick={() => window.open(message.imageUrl, '_blank')}
+                        onClick={() => window.open(feedbackService.getImageUrl(message.imageUrl), '_blank')}
                       />
                     )}
                   </div>
