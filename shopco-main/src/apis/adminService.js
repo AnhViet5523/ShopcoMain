@@ -43,6 +43,28 @@ const adminService = {
             throw error;
         }
     },
+
+    markOrderAsDelivered: async (orderId) => {
+        try {
+            const response = await axiosClient.post(`/api/Orders/mark-delivered`, { orderId });
+            console.log('Mark as delivered response:', response);
+            return response;
+        } catch (error) {
+            console.error('Error marking order as delivered:', error);
+            throw error;
+        }
+    },
+
+    getCancelledOrders: async () => {
+        try {
+            const response = await axiosClient.get('/api/CancelRequests');
+            return response; // Trả về dữ liệu từ API
+        } catch (error) {
+            console.error('Error fetching cancelled orders:', error);
+            throw error;
+        }
+    },
+
     // ... các phương thức khác nếu có ...
 };
 

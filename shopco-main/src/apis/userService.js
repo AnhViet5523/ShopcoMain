@@ -257,6 +257,15 @@ const userService = {
         } catch (error) {
             console.error('Error during logout:', error);
         }
+    },
+    requestCancelOrder: async (cancelData) => {
+        try {
+            const response = await axiosClient.post('/api/CancelRequests/request-cancel', cancelData);
+            return response;
+        } catch (error) {
+            console.error('Error requesting order cancellation:', error);
+            throw error;
+        }
     }
 };
 
