@@ -1,15 +1,7 @@
 import axiosClient from './axiosClient';
 
 const blogService = {
-    getAllPosts: async () => {
-        try {
-            const response = await axiosClient.get('/api/Post');
-            return response;
-        } catch (error) {
-            console.error('Error fetching posts:', error);
-            throw error;
-        }
-    },
+    
 
     getPostById: async (id) => {
         try {

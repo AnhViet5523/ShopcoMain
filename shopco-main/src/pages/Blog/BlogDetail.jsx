@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Box, Container, Typography, Paper, CircularProgress, Button } from '@mui/material';
+import { Box, Container, Typography, Paper, CircularProgress, Button, List, ListItem, ListItemIcon, ListItemText } from '@mui/material';
 import { ArrowBack } from '@mui/icons-material';
+import ArrowRightIcon from '@mui/icons-material/ArrowRight';
 import DOMPurify from 'dompurify';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer/Footer';
@@ -14,6 +15,10 @@ const BlogDetail = () => {
   const [post, setPost] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [sections, setSections] = useState([]);
+  
+  // Tạo refs cho các section
+  const sectionRefs = useRef({});
 
   useEffect(() => {
     // Cuộn lên đầu trang khi component được tải
@@ -32,6 +37,12 @@ const BlogDetail = () => {
         }
         
         setPost(postData);
+        
+        // Tự động tạo các section từ nội dung
+        if (postData && postData.content) {
+          generateSectionsFromContent(postData.content);
+        }
+        
         setLoading(false);
       } catch (error) {
         console.error('Error fetching post:', error);
@@ -45,10 +56,70 @@ const BlogDetail = () => {
     }
   }, [id]);
 
+  // Hàm phân tích nội dung để tạo mục lục
+  const generateSectionsFromContent = (content) => {
+    // Tạm thời tạo DOM element từ content
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = DOMPurify.sanitize(content);
+    
+    // Tìm tất cả các thẻ heading (h2, h3, etc.)
+    const headings = tempDiv.querySelectorAll('h2, h3, h4, h5, h6');
+    
+    const extractedSections = [];
+    headings.forEach((heading, index) => {
+      // Tạo id cho heading nếu chưa có
+      if (!heading.id) {
+        heading.id = `section-${index}`;
+      }
+      
+      // Lấy level của heading (h2 = 2, h3 = 3, etc.)
+      const level = parseInt(heading.tagName.substring(1));
+      
+      extractedSections.push({
+        id: heading.id,
+        title: heading.textContent,
+        level: level
+      });
+      
+      // Khởi tạo ref cho section
+      sectionRefs.current[heading.id] = heading.id;
+    });
+    
+    setSections(extractedSections);
+  };
+  
+  // Hàm scroll đến section được chọn
+  const scrollToSection = (sectionId) => {
+    const element = document.getElementById(sectionId);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
   // Hàm để tạo HTML an toàn từ nội dung của post
   const createMarkup = (htmlContent) => {
+    if (!htmlContent) return { __html: '' };
+    
+    // Thêm id cho các heading để có thể scroll đến
+    let processedContent = htmlContent;
+    
+    // Tạo tempDiv để xử lý HTML
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = DOMPurify.sanitize(htmlContent);
+    
+    // Tìm và thêm id cho các heading
+    const headings = tempDiv.querySelectorAll('h2, h3, h4, h5, h6');
+    headings.forEach((heading, index) => {
+      if (!heading.id) {
+        heading.id = `section-${index}`;
+      }
+    });
+    
+    // Lấy lại HTML đã được xử lý
+    processedContent = tempDiv.innerHTML;
+    
     return {
-      __html: DOMPurify.sanitize(htmlContent)
+      __html: processedContent
     };
   };
 
@@ -229,6 +300,47 @@ const BlogDetail = () => {
             >
               {post.title}
             </Typography>
+            
+            {/* Phần mục lục - chỉ hiển thị nếu có sections */}
+            {sections.length > 0 && (
+              <Paper 
+                elevation={1} 
+                sx={{ 
+                  p: 3, 
+                  mb: 4, 
+                  borderRadius: 2,
+                  bgcolor: '#f5f5f5'
+                }}
+              >
+                <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 2 }}>
+                  Thông tin bài viết
+                </Typography>
+                
+                <List dense>
+                  {sections.map((section, index) => (
+                    <ListItem 
+                      key={section.id} 
+                      button 
+                      onClick={() => scrollToSection(section.id)}
+                      sx={{ 
+                        color: '#0ea5e9',
+                        pl: section.level > 2 ? (section.level - 1) * 2 : 0 // Thụt vào cho các tiêu đề cấp thấp hơn
+                      }}
+                    >
+                      <ListItemIcon sx={{ minWidth: '30px' }}>
+                        <ArrowRightIcon fontSize="small" />
+                      </ListItemIcon>
+                      <ListItemText 
+                        primary={`${section.level - 1}.${index + 1} ${section.title}`} 
+                        primaryTypographyProps={{
+                          fontSize: section.level > 2 ? '0.95rem' : 'inherit'
+                        }}
+                      />
+                    </ListItem>
+                  ))}
+                </List>
+              </Paper>
+            )}
             
             {/* Nội dung bài viết */}
             <div 
