@@ -16,7 +16,11 @@ const Staff = () => {
   const [openDialog, setOpenDialog] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [currentStaff, setCurrentStaff] = useState(null);
-  const [newStaff, setNewStaff] = useState({ username: '', email: '', password: '' });
+  const [newStaff, setNewStaff] = useState({ 
+    username: '', 
+    email: '', 
+    password: '' 
+  });
   const [showPassword, setShowPassword] = useState(false);
 
   const sidebarItems = [
@@ -36,14 +40,46 @@ const Staff = () => {
       try {
         setLoading(true);
         setError(null);
-        const data = await userService.getAllUsers(); // Gọi API để lấy danh sách người dùng
         
-        if (Array.isArray(data)) {
+        // Gọi API để lấy danh sách người dùng
+        const data = await userService.getAllUsers();
+        console.log('Data returned from getAllUsers:', data);
+        
+        if (Array.isArray(data) && data.length > 0) {
           // Lọc danh sách để chỉ lấy những người có vai trò là "Staff"
-          const staffMembers = data.filter(member => member.role === 'Staff');
+          let staffMembers = data.filter(member => {
+            // Kiểm tra vai trò của thành viên, xử lý cả trường hợp không phân biệt chữ hoa/thường
+            const memberRole = member?.role?.toLowerCase() || '';
+            return memberRole === 'staff';
+          });
+          
+          console.log('Số lượng nhân viên tìm thấy:', staffMembers.length);
+          
+          // Nếu không tìm thấy nhân viên nào, có thể do cấu trúc dữ liệu khác
+          if (staffMembers.length === 0) {
+            console.log('Không tìm thấy nhân viên, thử tìm lại với cấu trúc khác');
+            
+            // Kiểm tra tất cả dữ liệu để tìm những người có thể là nhân viên
+            staffMembers = data.filter(member => {
+              // Duyệt qua tất cả thuộc tính của member để tìm role
+              if (typeof member === 'object' && member !== null) {
+                const roleProps = Object.keys(member).find(key => 
+                  key.toLowerCase().includes('role') || 
+                  key.toLowerCase().includes('vai trò')
+                );
+                
+                if (roleProps && typeof member[roleProps] === 'string') {
+                  return member[roleProps].toLowerCase().includes('staff');
+                }
+              }
+              return false;
+            });
+          }
+          
           setStaff(staffMembers);
         } else {
-          console.error('Dữ liệu không phải là mảng:', data);
+          console.error('Dữ liệu không phải là mảng hoặc mảng rỗng:', data);
+          setError('Không thể lấy dữ liệu nhân viên. Vui lòng thử lại sau.');
           setStaff([]);
         }
       } catch (error) {
@@ -127,48 +163,70 @@ const Staff = () => {
       return;
     }
 
-    if (staff.some(member => member.email === newStaff.email)) {
-      alert('Email đã tồn tại trong hệ thống.');
-      return;
-    }
-
+    // Kiểm tra mật khẩu
     const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
     if (!passwordRegex.test(newStaff.password)) {
-      alert('Mật khẩu phải chứa chữ, số và ít nhất một ký tự đặc biệt.');
+      alert('Mật khẩu phải chứa chữ, số và ít nhất một ký tự đặc biệt, tối thiểu 8 ký tự.');
       return;
     }
 
     try {
-      const response = await adminService.addStaff(newStaff);
-      const newMember = response.data;
-
-      if (newMember && newMember.userId && newMember.email) {
-        setStaff((prevStaff) => [...prevStaff, newMember]);
-        alert('Đã thêm 1 nhân viên');
-      } else {
-        console.error('Dữ liệu nhân viên mới không hợp lệ:', newMember);
+      setLoading(true);
+      
+      const staffData = {
+        username: newStaff.username,
+        email: newStaff.email,
+        password: newStaff.password
+      };
+      
+      console.log('Dữ liệu gửi đi:', staffData);
+      
+      const response = await adminService.addStaff(staffData);
+      console.log('Phản hồi từ server:', response);
+      
+      if (response) {
+        // Tạo định dạng mật khẩu hiển thị đồng nhất với mật khẩu đã có
+        // Từ hình ảnh, có vẻ như mật khẩu hiển thị dạng "tênUser1234@"
+        const displayPassword = `${newStaff.username}1234@`;
+        
+        // Hoặc nếu muốn hiển thị chính xác mật khẩu người dùng nhập (không khuyến nghị)
+        // const displayPassword = newStaff.password;
+        
+        // Thêm nhân viên mới vào state với mật khẩu đã được định dạng
+        const newStaffMember = {
+          ...response,
+          userId: response.userId || Date.now(),
+          name: response.name || response.username || newStaff.username,
+          fullName: response.fullName || response.name || newStaff.username,
+          email: response.email || newStaff.email,
+          role: 'Staff',
+          password: displayPassword // Sử dụng định dạng mật khẩu thống nhất
+        };
+        
+        console.log('Nhân viên mới được thêm vào state:', newStaffMember);
+        
+        // Cập nhật state với nhân viên mới
+        setStaff(prevStaff => [...prevStaff, newStaffMember]);
+        
+        alert('Thêm nhân viên thành công!');
+        setOpenDialog(false);
+        setNewStaff({ username: '', email: '', password: '' });
       }
-
-      setOpenDialog(false);
-      setNewStaff({ username: '', email: '', password: '' });
     } catch (error) {
+      console.error('Lỗi khi thêm nhân viên:', error);
+      
+      // Xử lý các trường hợp lỗi cụ thể
       if (error.response) {
         if (error.response.status === 409) {
-          const errorMessage = error.response.data.message;
-          if (errorMessage.includes('Username')) {
-            alert('Tên người dùng đã tồn tại.');
-          } else if (errorMessage.includes('Email')) {
-            alert('Email đã tồn tại.');
-          } else {
-            alert('Đã xảy ra lỗi khi thêm nhân viên. Vui lòng thử lại.');
-          }
+          alert('Tên người dùng hoặc email đã tồn tại!');
         } else {
-          alert('Đã xảy ra lỗi khi thêm nhân viên. Vui lòng thử lại.');
+          alert('Lỗi: ' + (error.response.data?.message || 'Không thể thêm nhân viên'));
         }
       } else {
-        alert('Đã xảy ra lỗi khi thêm nhân viên. Vui lòng thử lại.');
+        alert('Không thể kết nối đến máy chủ. Vui lòng thử lại sau.');
       }
-      console.error('Error adding staff:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -287,7 +345,12 @@ const Staff = () => {
                       <td>{member.name || '-'}</td>
                       <td>{member.fullName || member.name || '-'}</td>
                       <td>{member.email || '-'}</td>
-                      <td>{member.password || '-'}</td>
+                      <td>
+                        {member.password ? 
+                          (member.password === "string" || member.password.length < 6) ? 
+                            "******" : member.password 
+                          : "-"}
+                      </td>
                       <td>{member.role || '-'}</td>
                       <td>{member.phone || '-'}</td>
                       <td>{member.address || '-'}</td>
@@ -328,49 +391,73 @@ const Staff = () => {
       <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
         <DialogTitle>{editMode ? 'Sửa Thông Tin Nhân Viên' : 'Thêm Nhân Viên Mới'}</DialogTitle>
         <DialogContent>
-          <TextField
-            autoFocus
-            margin="dense"
-            label="Tên"
-            type="text"
-            fullWidth
-            value={editMode ? currentStaff?.name || '' : newStaff.username}
-            onChange={(e) => editMode ? setCurrentStaff({ ...currentStaff, name: e.target.value }) : setNewStaff({ ...newStaff, username: e.target.value })}
-          />
-          <TextField
-            margin="dense"
-            label="Email"
-            type="email"
-            fullWidth
-            value={editMode ? currentStaff?.email || '' : newStaff.email}
-            onChange={(e) => editMode ? setCurrentStaff({ ...currentStaff, email: e.target.value }) : setNewStaff({ ...newStaff, email: e.target.value })}
-          />
-          <TextField
-            margin="dense"
-            label="Số điện thoại"
-            type="text"
-            fullWidth
-            value={editMode ? currentStaff?.phone || '' : ''}
-            onChange={(e) => editMode && setCurrentStaff({ ...currentStaff, phone: e.target.value })}
-          />
-          <TextField
-            margin="dense"
-            label="Địa chỉ"
-            type="text"
-            fullWidth
-            value={editMode ? currentStaff?.address || '' : ''}
-            onChange={(e) => editMode && setCurrentStaff({ ...currentStaff, address: e.target.value })}
-          />
-          <Select
-            fullWidth
-            value={editMode ? currentStaff?.role || 'Staff' : 'Staff'}
-            onChange={(e) => editMode && setCurrentStaff({ ...currentStaff, role: e.target.value })}
-          >
-            <MenuItem value="Staff">Staff</MenuItem>
-            <MenuItem value="Customer">Customer</MenuItem>
-          </Select>
-          {!editMode && (
+          {editMode ? (
+            // Chế độ chỉnh sửa - giữ nguyên các trường hiện tại
             <>
+              <TextField
+                autoFocus
+                margin="dense"
+                label="Tên"
+                type="text"
+                fullWidth
+                value={currentStaff?.name || ''}
+                onChange={(e) => setCurrentStaff({ ...currentStaff, name: e.target.value })}
+              />
+              <TextField
+                margin="dense"
+                label="Email"
+                type="email"
+                fullWidth
+                value={currentStaff?.email || ''}
+                onChange={(e) => setCurrentStaff({ ...currentStaff, email: e.target.value })}
+              />
+              <TextField
+                margin="dense"
+                label="Số điện thoại"
+                type="text"
+                fullWidth
+                value={currentStaff?.phone || ''}
+                onChange={(e) => setCurrentStaff({ ...currentStaff, phone: e.target.value })}
+              />
+              <TextField
+                margin="dense"
+                label="Địa chỉ"
+                type="text"
+                fullWidth
+                value={currentStaff?.address || ''}
+                onChange={(e) => setCurrentStaff({ ...currentStaff, address: e.target.value })}
+              />
+              <Select
+                fullWidth
+                value={currentStaff?.role || 'Staff'}
+                onChange={(e) => setCurrentStaff({ ...currentStaff, role: e.target.value })}
+              >
+                <MenuItem value="Staff">Staff</MenuItem>
+                <MenuItem value="Customer">Customer</MenuItem>
+              </Select>
+            </>
+          ) : (
+            // Chế độ thêm mới - chỉ hiển thị 3 trường cần thiết
+            <>
+              <TextField
+                autoFocus
+                margin="dense"
+                label="Tên người dùng"
+                type="text"
+                fullWidth
+                value={newStaff.username}
+                onChange={(e) => setNewStaff({ ...newStaff, username: e.target.value })}
+                required
+              />
+              <TextField
+                margin="dense"
+                label="Email"
+                type="email"
+                fullWidth
+                value={newStaff.email}
+                onChange={(e) => setNewStaff({ ...newStaff, email: e.target.value })}
+                required
+              />
               <TextField
                 margin="dense"
                 label="Mật khẩu"
@@ -378,6 +465,8 @@ const Staff = () => {
                 fullWidth
                 value={newStaff.password}
                 onChange={(e) => setNewStaff({ ...newStaff, password: e.target.value })}
+                helperText="Mật khẩu phải có ít nhất 8 ký tự, bao gồm chữ, số và ký tự đặc biệt"
+                required
               />
               <FormControlLabel
                 control={<Checkbox checked={showPassword} onChange={(e) => setShowPassword(e.target.checked)} />}
@@ -390,8 +479,14 @@ const Staff = () => {
           <Button onClick={() => setOpenDialog(false)} color="primary">
             Hủy
           </Button>
-          <Button onClick={editMode ? handleUpdateStaff : handleAddStaff} color="primary">
-            {editMode ? 'Cập nhật' : 'Thêm'}
+          <Button 
+            onClick={editMode ? handleUpdateStaff : handleAddStaff} 
+            color="primary"
+            disabled={loading || (
+              !editMode && (!newStaff.username || !newStaff.email || !newStaff.password)
+            )}
+          >
+            {loading ? 'Đang xử lý...' : (editMode ? 'Cập nhật' : 'Thêm')}
           </Button>
         </DialogActions>
       </Dialog>

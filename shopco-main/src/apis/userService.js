@@ -7,24 +7,65 @@ const userService = {
     getAllUsers: async () => {
         try {
             const response = await axiosClient.get(API_ENDPOINTS.USERS.LIST);
-            console.log('Raw response:', response);
+            console.log('Raw users response:', response);
+            
+            // Thêm biến lưu trữ kết quả xử lý
+            let processedUsers = [];
             
             if (response && response.data && response.data.$values) {
-                return response.data.$values;
+                processedUsers = response.data.$values;
             } else if (response && response.data) {
-                return response.data;
+                processedUsers = Array.isArray(response.data) ? response.data : [response.data];
             } else if (Array.isArray(response)) {
-                return response;
+                processedUsers = response;
             } else if (response && response.$values) {
-                return response.$values;
+                processedUsers = response.$values;
+            } else if (response && response.$id) {
+                // Trường hợp đặc biệt của .NET
+                const values = response.$values || [];
+                processedUsers = Array.isArray(values) ? values : [];
+            } else {
+                // Nếu response là object, thử chuyển thành mảng với các thuộc tính là phần tử
+                if (typeof response === 'object' && response !== null) {
+                    // Kiểm tra xem response có thuộc tính nào có dạng $values hoặc values không
+                    const possibleArrayProps = Object.keys(response).filter(key => 
+                        key.includes('values') || key.includes('Values') || Array.isArray(response[key])
+                    );
+                    
+                    if (possibleArrayProps.length > 0) {
+                        const firstArrayProp = possibleArrayProps[0];
+                        processedUsers = Array.isArray(response[firstArrayProp]) ? 
+                            response[firstArrayProp] : [];
+                    } else {
+                        // Nếu không tìm thấy mảng, thử xem response có phải là mảng bị bọc không
+                        const values = Object.values(response);
+                        if (values.length > 0 && Array.isArray(values[0])) {
+                            processedUsers = values[0];
+                        }
+                    }
+                }
             }
             
-            console.error('Cấu trúc response không đúng:', response);
-            return [];
+            console.log('Processed users data:', processedUsers);
+            return processedUsers;
         } catch (error) {
-            if (error.name === 'CanceledError' || error.name === 'AbortError') {
+            if (error.name === 'CanceledError' || error.message === 'Request was cancelled') {
                 console.log('Request bị hủy do trùng lặp:', error.message);
-                return [];
+                // Thử gọi lại API với tham số khác để tránh cache
+                try {
+                    console.log('Thử gọi lại API với tham số khác');
+                    const retryResponse = await axiosClient.get(`${API_ENDPOINTS.USERS.LIST}?_t=${Date.now()}`);
+                    if (Array.isArray(retryResponse)) {
+                        return retryResponse;
+                    } else if (retryResponse && retryResponse.$values) {
+                        return retryResponse.$values;
+                    } else {
+                        return [];
+                    }
+                } catch (retryError) {
+                    console.error('Lỗi khi thử gọi lại API:', retryError);
+                    return [];
+                }
             } else {
                 console.error('Lỗi khi lấy danh sách người dùng:', error);
                 throw error;
