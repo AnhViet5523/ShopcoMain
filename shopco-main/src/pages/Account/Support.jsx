@@ -151,9 +151,29 @@ const Support = () => {
     setSelectedDetailRequest(null);
   };
 
-  // Thêm hàm sắp xếp tin nhắn theo thời gian
-  const sortMessagesByTime = (messages) => {
-    return [...messages].sort((a, b) => new Date(a.sendTime) - new Date(b.sendTime));
+  // Sửa hàm sắp xếp tin nhắn để tránh trùng lặp
+  const sortMessagesByTime = (feedback) => {
+    if (!feedback) return [];
+    
+    // Tạo mảng tin nhắn từ messages có sẵn
+    let allMessages = feedback.messages ? [...feedback.messages] : [];
+    
+    // Kiểm tra xem tin nhắn đầu tiên đã có trong mảng hay chưa
+    // Nếu không có tin nhắn nào HOẶC tin nhắn đầu tiên chưa có trong danh sách
+    if (feedback.messageContent && allMessages.length === 0) {
+      // Thêm tin nhắn đầu tiên vào danh sách
+      allMessages.push({
+        messageId: 'initial-' + feedback.conversationId,
+        messageContent: feedback.messageContent,
+        sendTime: feedback.sendTime,
+        isAdmin: false,
+        imageUrl: feedback.imageUrl || null,
+        userId: feedback.userId
+      });
+    }
+    
+    // Sắp xếp tất cả tin nhắn theo thời gian
+    return [...allMessages].sort((a, b) => new Date(a.sendTime) - new Date(b.sendTime));
   };
 
   return (
@@ -359,8 +379,8 @@ const Support = () => {
               </Typography>
               
               <div>
-                {/* Chỉ hiển thị tin nhắn từ messages đã được sắp xếp */}
-                {sortMessagesByTime(selectedDetailRequest.messages).map((message, index) => (
+                {/* Hiển thị tất cả tin nhắn bao gồm cả tin nhắn đầu tiên của người dùng */}
+                {sortMessagesByTime(selectedDetailRequest).map((message, index) => (
                   <Box 
                     key={message.messageId || index}
                     sx={{ 
@@ -372,7 +392,7 @@ const Support = () => {
                   >
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                       <Typography variant="subtitle2" fontWeight="bold" color={message.isAdmin ? 'primary' : 'textPrimary'}>
-                        {message.isAdmin ? 'Admin' : selectedDetailRequest.userName}
+                        {message.isAdmin ? 'Admin' : selectedDetailRequest.userName || 'Bạn'}
                       </Typography>
                       <Typography variant="caption" color="text.secondary">
                         {formatDate(message.sendTime)}
