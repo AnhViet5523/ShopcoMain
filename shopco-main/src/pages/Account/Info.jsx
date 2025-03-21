@@ -373,14 +373,14 @@ const Info = () => {
                     sx={{ mb: 2 }}
                   />
                 </Grid>
-                <Grid item xs={12}>
+                {/* <Grid item xs={12}>
                   <Typography variant="subtitle2" color="text.secondary" gutterBottom>
                     Liên kết mạng xã hội
                   </Typography>
                   <Button startIcon={<Google />} variant="outlined" sx={{ mb: 2 }}>
                     Google
                   </Button>
-                </Grid>
+                </Grid> */}
                 <Grid item xs={12}>
                   <Button 
                     variant="contained" 

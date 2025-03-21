@@ -431,9 +431,9 @@ export default function CompareProducts() {
                 Trang chủ
               </Typography>
             </Link>
-            <Typography variant="body2" component="span" sx={{ mx: 1 }}>/</Typography>
+            <Typography variant="body2" component="span" sx={{ mx: 1 }}></Typography>
             <Typography variant="body2" component="span" color="text.secondary">
-              Tài khoản
+              
             </Typography>
           </Box>
         </Container>
