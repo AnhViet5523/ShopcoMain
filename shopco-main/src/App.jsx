@@ -53,6 +53,7 @@ import PaymentResult from "./pages/PaymentResult";
 import BestSellers from "./components/BestSellers";
 import BlogManager from "./pages/Manager/BlogManager";
 import BlogStaff from "./pages/Staff/BlogStaff";
+import CreatePost from "./pages/Blog/CreatePost";
 
 // Component để hủy request khi chuyển trang
 function NavigationHandler() {
@@ -142,6 +143,8 @@ export default function App() {
           
           <Route path="/blog" element={<BlogPage />} />
           <Route path="/blog/:id" element={<BlogDetail />} />
+          <Route path="/blogManager/:id" element={<BlogDetail />} />
+          <Route path="/Blog/CreateEditPost/CreatePost" element={<CreatePost />} />
           <Route path="/bestsellers" element={<BestSellers />} />
 
           {/* Static Pages */}
