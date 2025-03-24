@@ -131,19 +131,6 @@ const userService = {
             throw error; 
         }
     },
-    // Lưu SkinType
-    saveSkinType: async (userId, skinType) => {
-        try {
-            const response = await axiosClient.post('/api/UserSkinTypeResults', {
-                userId,
-                skinType
-            });
-            return response;
-        } catch (error) {
-            console.error('Error saving skin type:', error);
-            throw error;
-        }
-    },
     // Lấy thông tin người dùng hiện tại từ localStorage
     getCurrentUser: () => {
         try {
