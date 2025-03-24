@@ -10,7 +10,6 @@ import {
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import Navigation from "./Navigation";
-import QuizTest from '../pages/Quiz/QuizTest';
 import orderService from '../apis/orderService';
 
 
@@ -19,9 +18,10 @@ const Header = () => {
   const [searchValue, setSearchValue] = useState("");
   const [accountMenuAnchor, setAccountMenuAnchor] = useState(null);
   const [cartItemCount, setCartItemCount] = useState(0);
-  const [open, setOpen] = useState(false);
   const isMounted = useRef(true);
   const [userRole, setUserRole] = useState(null);
+  const [openAuthDialog, setOpenAuthDialog] = useState(false);
+  const [authDialogMessage, setAuthDialogMessage] = useState('');
 
   // Update cart count from orderService
   useEffect(() => {
@@ -86,10 +86,6 @@ const Header = () => {
   }, []);
   
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  
-  // Thêm state mới cho dialog yêu cầu đăng nhập
-  const [openAuthDialog, setOpenAuthDialog] = useState(false);
-  const [authDialogMessage, setAuthDialogMessage] = useState("");
   
   // Kiểm tra trạng thái đăng nhập
   useEffect(() => {
@@ -160,14 +156,6 @@ const Header = () => {
     }
   ];
 
-  const handleClickOpen = () => {
-    setOpen(true);
-  };
-
-  const handleClose = () => {
-    setOpen(false);
-  };
-
   // Hàm mới để hiển thị dialog yêu cầu đăng nhập
   const showAuthRequiredDialog = (feature) => {
     setAuthDialogMessage(`Bạn cần đăng nhập để sử dụng ${feature}`);
@@ -187,7 +175,7 @@ const Header = () => {
 
   const handleQuizClick = () => {
     if (isAuthenticated) {
-      handleClickOpen();
+      navigate("/quiz");
     } else {
       showAuthRequiredDialog("tính năng Quiz");
     }
@@ -364,19 +352,6 @@ const Header = () => {
           <Navigation />
         </Container>
       </AppBar>
-
-      {/* Dialog cho Quiz */}
-      <Dialog open={open} onClose={handleClose} fullWidth>
-        <DialogTitle>Quiz</DialogTitle>
-        <DialogContent>
-          <QuizTest />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleClose} color="primary">
-            Đóng
-          </Button>
-        </DialogActions>
-      </Dialog>
 
       {/* Dialog yêu cầu đăng nhập mới */}
       <Dialog open={openAuthDialog} onClose={handleAuthDialogClose}>
