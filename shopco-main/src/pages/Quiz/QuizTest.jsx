@@ -241,7 +241,7 @@ const QuizTest = () => {
                         lineHeight: 1.5,
                         color: '#555'
                     }}>
-                        Bài kiểm tra miễn phí này sẽ giúp bạn xác định chính xác loại da của mình dựa trên những câu hỏi đơn giản về tình trạng da hàng ngày. Từ đó, chúng tôi sẽ gợi ý các sản phẩm chăm sóc da phù hợp từ bộ sưu tập của ShopCO, giúp bạn xây dựng quy trình chăm sóc da hiệu quả cho riêng bạn.
+                        Bài kiểm tra miễn phí này sẽ giúp bạn xác định chính xác loại da của mình dựa trên những câu hỏi đơn giản về tình trạng da hàng ngày. Từ đó, chúng tôi sẽ gợi ý các sản phẩm chăm sóc da phù hợp từ bộ sưu tập của Beauty Cosmetics, giúp bạn xây dựng quy trình chăm sóc da hiệu quả cho riêng bạn.
                     </Typography>
                     
                     <Typography variant="h6" sx={{
@@ -307,7 +307,7 @@ const QuizTest = () => {
                     boxShadow: 1
                 }}>
                     <Typography variant="h6" sx={{ color: '#003366', fontWeight: 'bold' }}>
-                        ShopCO - Bài Kiểm Tra Loại Da
+                        Beauty Cosmetics - Bài Kiểm Tra Loại Da
                     </Typography>
                     <IconButton 
                         onClick={handleCloseQuiz} 
@@ -473,7 +473,7 @@ const QuizTest = () => {
                     </Box>
                     
                     <Typography variant="h5" sx={{ mb: 3, color: '#003366', fontWeight: 'bold' }}>
-                        ShopCO - Kết Quả Phân Tích Làn Da Của Bạn
+                        Beauty Cosmetics - Kết Quả Phân Tích Làn Da Của Bạn
                     </Typography>
                     
                     <Box sx={{ 
@@ -489,7 +489,7 @@ const QuizTest = () => {
                         </Typography>
                         
                         <Typography sx={{ color: '#003366' }}>
-                            Dựa trên câu trả lời của bạn, ShopCO đã phân tích và xác định được loại da của bạn. Chúng tôi sẽ gợi ý những sản phẩm phù hợp nhất giúp bạn chăm sóc làn da tối ưu.
+                            Dựa trên câu trả lời của bạn, Beauty Cosmetics đã phân tích và xác định được loại da của bạn. Chúng tôi sẽ gợi ý những sản phẩm phù hợp nhất giúp bạn chăm sóc làn da tối ưu.
                         </Typography>
                     </Box>
                     
