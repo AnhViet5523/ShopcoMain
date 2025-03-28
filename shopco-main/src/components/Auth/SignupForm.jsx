@@ -46,7 +46,7 @@ const SignupForm = ({ onSwitchMode }) => {
         if (!value) {
           error = 'Vui lòng nhập email';
         } else if (!patterns.email.test(value)) {
-          error = 'Email không hợp lệ';
+          error = 'Email phải có đuôi hợp lệ (@gmail.com, @yahoo.com, @outlook.com)...';
         }
         break;
 
@@ -54,9 +54,9 @@ const SignupForm = ({ onSwitchMode }) => {
         if (!value) {
           error = 'Vui lòng nhập mật khẩu';
         } else if (value.length < 8) {
-          error = 'Mật khẩu phải có ít nhất 8 ký tự';
+          error = 'Mật khẩu phải có ít nhất 8 ký tự, bao gồm chữ, số và ký tự đặc biệt';
         } else if (!patterns.password.test(value)) {
-          error = 'Mật khẩu phải chứa ít nhất 1 chữ cái, 1 số và 1 ký tự đặc biệt';
+          error = 'Mật khẩu phải có ít nhất 8 ký tự, bao gồm chữ, số và ký tự đặc biệt';
         }
         break;
 
