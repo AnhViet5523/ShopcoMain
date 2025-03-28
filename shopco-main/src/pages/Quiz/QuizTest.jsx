@@ -378,6 +378,10 @@ const QuizTest = () => {
                                             />
                                         }
                                         label={answer.answerText}
+
+
+                                    />
+
                                             sx={{ 
                                                 py: 1,
                                                 px: 2, 
@@ -386,13 +390,20 @@ const QuizTest = () => {
                                                 borderRadius: 1,
                                                 '&:hover': { bgcolor: 'rgba(0, 0, 0, 0.04)' },
                                                 ...(selectedAnswers[currentQuestion.id] === answer.answerId ? {
+
+                                                    bgcolor: 'rgba(245, 169, 160, 0.2)',
+                                                    color: '#e74c3c',
+                                                    fontWeight: 'bold',
+
                                                     bgcolor: 'primary.light',
                                                     color: 'primary.contrastText',
+
                                                 } : {}),
                                                 transition: 'all 0.3s ease'
                                             }}
                                         />
                                     </Grow>
+
                                 ))}
                             </FormControl>
                         </CardContent>
@@ -475,6 +486,7 @@ const QuizTest = () => {
                     <Typography variant="h5" sx={{ mb: 3, color: '#003366', fontWeight: 'bold' }}>
                         Beauty Cosmetics - Kết Quả Phân Tích Làn Da Của Bạn
                     </Typography>
+
                     
                     <Box sx={{ 
                         p: 3, 
@@ -608,7 +620,35 @@ const QuizTest = () => {
                         <Button
                             variant="contained"
                             color="primary"
-                            onClick={() => window.location.href = '/category'}
+
+                            onClick={() => {
+                                // Điều hướng tùy thuộc vào loại da
+                                let targetPath = '/category';
+                                if (results && results.length > 0) {
+                                    switch(results[0]) {
+                                        case "Da dầu":
+                                            targetPath = '/da-dau';
+                                            break;
+                                        case "Da hỗn hợp":
+                                            targetPath = '/da-hon-hop';
+                                            break;
+                                        case "Da khô":
+                                            targetPath = '/da-kho';
+                                            break;
+                                        case "Da nhạy cảm":
+                                            targetPath = '/da-nhay-cam';
+                                            break;
+                                        case "Da thường":
+                                            targetPath = '/da-thuong';
+                                            break;
+                                        default:
+                                            targetPath = '/category';
+                                            break;
+                                    }
+                                }
+                                navigate(targetPath);
+                            }}
+
                             sx={{
                                 px: 4,
                                 py: 1.5,
@@ -619,7 +659,7 @@ const QuizTest = () => {
                                 }
                             }}
                         >
-                            Xem các sản phẩm phù hợp
+
                         </Button>
                     </Box>
                 </Paper>
@@ -703,6 +743,7 @@ const QuizTest = () => {
             
             <Footer />
         </Box>
+
     );
 };
 
