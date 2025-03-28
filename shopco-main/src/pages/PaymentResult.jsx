@@ -36,9 +36,29 @@ function PaymentResult() {
                     
                     if (orderData && orderData.orderStatus === 'Paid') {
                         setOrderStatus('success');
-                        // Xóa giỏ hàng và pendingOrderId
+                        
+                        // Xóa giỏ hàng trên localStorage
                         localStorage.setItem('cart', JSON.stringify([]));
                         localStorage.removeItem('pendingOrderId');
+                        
+                        // Kích hoạt sự kiện để cập nhật lại số lượng giỏ hàng ngay lập tức
+                        window.dispatchEvent(new CustomEvent('cartUpdated'));
+                        
+                        // Lấy userId từ localStorage để xóa giỏ hàng trên server
+                        try {
+                            const user = JSON.parse(localStorage.getItem('user'));
+                            if (user && user.userId) {
+                                // Gọi API để xóa giỏ hàng trên server
+                                await orderService.clearCartAfterPayment(user.userId);
+                                // Kích hoạt sự kiện để cập nhật lại số lượng giỏ hàng trên Header lần nữa sau khi xóa
+                                setTimeout(() => {
+                                    window.dispatchEvent(new CustomEvent('cartUpdated'));
+                                }, 500);
+                                console.log("Đã xóa giỏ hàng sau khi thanh toán thành công");
+                            }
+                        } catch (clearCartError) {
+                            console.error("Lỗi khi xóa giỏ hàng:", clearCartError);
+                        }
                     } else {
                         setOrderStatus('error');
                     }
