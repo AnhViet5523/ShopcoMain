@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { FaFilter, FaFileExport, FaPlus } from 'react-icons/fa';
+import { FaFilter} from 'react-icons/fa';
 import { Box, Dialog, DialogTitle, DialogContent, DialogActions, Button, Select, MenuItem, Pagination, CircularProgress } from '@mui/material';
 import './Manager.css';
 import { useNavigate } from 'react-router-dom';
@@ -23,7 +23,7 @@ const Feedback = () => {
   
   // Phân trang
   const [page, setPage] = useState(1);
-  const pageSize = 10;
+  const pageSize = 15;
 
   const sidebarItems = [
     { id: 'revenue', name: 'Doanh thu', icon: '📊' },

@@ -6,7 +6,7 @@ import adminService from '../../apis/adminService';
 import userService from '../../apis/userService'; // Import userService
 import './Manager.css';
 
-const ViewOrder = () => {
+const OrderStaff = () => {
   const [activeTab, setActiveTab] = useState('Tất cả');
   const [activeItem, setActiveItem] = useState('');
   const [orders, setOrders] = useState([]); 
@@ -14,7 +14,20 @@ const ViewOrder = () => {
   const [orderItems, setOrderItems] = useState([]);
   const [searchKey, setSearchKey] = useState(''); 
   const [cancelledOrders, setCancelledOrders] = useState([]); // Thêm state để lưu trữ các đơn hàng bị hủy
+  const [filterStatus, setFilterStatus] = useState(''); // Thêm state để lưu trạng thái lọc
+  const [showFilterMenu, setShowFilterMenu] = useState(false); // Thêm state để hiển thị/ẩn menu lọc
   const navigate = useNavigate();
+
+  // Phân trang
+  const [page, setPage] = useState(1);
+  const pageSize = 15;
+  
+  // Tính toán các đơn hàng cho trang hiện tại
+  const paginatedOrders = (orders) => {
+    const startIndex = (page - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    return orders.slice(startIndex, endIndex);
+  };
 
   const sidebarItems = [
     { id: 'revenue', name: 'Doanh thu', icon: '📊' },
@@ -28,7 +41,7 @@ const ViewOrder = () => {
     { id: 'blogManager', name: 'Blog', icon: '📰' }
   ];
 
-  const tabs = ['Tất cả', 'Đơn hàng đang vận chuyển', 'Đơn hàng bị hủy', 'Giao thành công'];
+  const tabs = ['Tất cả', 'Đơn hàng vận chuyển', 'Đơn hàng bị hủy', 'Giao thành công'];
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -88,13 +101,18 @@ const ViewOrder = () => {
   const filteredOrders = () => {
     let filtered = orders;
 
-    // Lọc theo trạng thái
-    if (activeTab === 'Đơn hàng đang vận chuyển') {
+    // Lọc theo trạng thái tab
+    if (activeTab === 'Đơn hàng vận chuyển') {
       filtered = filtered.filter(order => order.orderStatus === 'Paid' && order.deliveryStatus === 'Not Delivered');
     } else if (activeTab === 'Đơn hàng bị hủy') {
       filtered = cancelledOrders;
     } else if (activeTab === 'Giao thành công') {
       filtered = filtered.filter(order => order.orderStatus === 'Completed');
+    }
+
+    // Lọc theo trạng thái đơn hàng từ filter menu
+    if (filterStatus && filterStatus !== 'Tất cả') {
+      filtered = filtered.filter(order => order.orderStatus === filterStatus);
     }
 
     // Lọc theo từ khóa tìm kiếm
@@ -113,24 +131,11 @@ const ViewOrder = () => {
       );
     }
 
-    return filtered; // Trả về danh sách đơn hàng đã lọc
+    return filtered;
   };
 
   const handleClearSearch = () => {
     setSearchKey(''); // Xóa từ khóa tìm kiếm
-  };
-
-  const handleDelivered = async (orderId) => {
-    try {
-      await adminService.markOrderAsDelivered(orderId);
-      console.log('Order marked as delivered:', orderId); // Thêm log
-      // Refresh the orders list
-      const response = await adminService.getAllOrders();
-      console.log('Updated orders:', response.$values); // Thêm log
-      setOrders(response.$values);
-    } catch (error) {
-      console.error('Error marking order as delivered:', error);
-    }
   };
 
   const handleApproveCancellation = async (cancelRequestId) => {
@@ -189,6 +194,53 @@ const ViewOrder = () => {
     return cancelledOrders.find(order => order.cancelRequestId === cancelRequestId);
   };
 
+  const handleDelivered = async (orderId) => {
+    try {
+      await adminService.markOrderAsDelivered(orderId);
+      console.log('Order marked as delivered:', orderId); // Thêm log
+      // Refresh the orders list
+      const response = await adminService.getAllOrders();
+      console.log('Updated orders:', response.$values); // Thêm log
+      setOrders(response.$values);
+    } catch (error) {
+      console.error('Error marking order as delivered:', error);
+    }
+  };
+
+  // Function to toggle filter menu and handle status selection
+  const toggleFilterMenu = () => {
+    setShowFilterMenu(!showFilterMenu);
+  };
+
+  const handleFilterStatusChange = (status) => {
+    setFilterStatus(status);
+    setShowFilterMenu(false);
+  };
+
+  // Function to count orders by status
+  const getOrderCountByStatus = (status) => {
+    if (!orders || !orders.length) return 0;
+    
+    if (status === '') {
+      return orders.length; // Total count for "Tất cả"
+    } else {
+      return orders.filter(order => order.orderStatus === status).length;
+    }
+  };
+
+  // Get count of cancelled orders
+  const getCancelledOrdersCount = () => {
+    return cancelledOrders?.length || 0;
+  };
+
+  // Cập nhật hàm handlePageChange để giống với Product.jsx
+  const handlePageChange = (newPage) => {
+    // Đảm bảo newPage trong phạm vi hợp lệ
+    if (newPage >= 1 && newPage <= Math.ceil(filteredOrders().length / pageSize)) {
+      setPage(newPage);
+    }
+  };
+
   return (
     <Box sx={{ bgcolor: "#f0f0f0", minHeight: "100vh", width:'99vw' }}>
       <div className="manager-container">
@@ -213,7 +265,7 @@ const ViewOrder = () => {
             </div>
           </div>
           
-          <div className="sidebar-title">MANAGER</div>
+          <div className="sidebar-title">STAFF</div>
           
           <div className="sidebar-menu">
             {sidebarItems.map((item) => (
@@ -268,25 +320,199 @@ const ViewOrder = () => {
             </div>
           </div>
           
-          {/* Dashboard Title Bar - Giống ViewSupport.jsx */}
+          {/* Dashboard Title Bar */}
           <div className="dashboard-title-bar">
             <h1>Đơn Hàng</h1>
             <div className="dashboard-actions">
-              <button
-                style={{
-                  padding: '10px 15px',
-                  backgroundColor: '#f8f9fa',
-                  border: '1px solid #dee2e6',
-                  borderRadius: '5px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '5px',
-                  color: '#495057'
-                }}
-              >
-                <span>Lọc</span>
-              </button>
+              <div style={{ position: 'relative' }}>
+                <button
+                  onClick={toggleFilterMenu}
+                  style={{
+                    padding: '10px 15px',
+                    backgroundColor: '#f8f9fa',
+                    border: '1px solid #dee2e6',
+                    borderRadius: '5px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    color: '#495057'
+                  }}
+                >
+                  <FaFilter />
+                  <span>Lọc: {filterStatus || 'Tất cả'}</span>
+                  {filterStatus && (
+                    <span style={{
+                      backgroundColor: '#dc3545',
+                      color: 'white',
+                      borderRadius: '50%',
+                      width: '20px',
+                      height: '20px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '12px',
+                      marginLeft: '5px'
+                    }}>
+                      {filterStatus === '' 
+                        ? getOrderCountByStatus('') 
+                        : filterStatus === 'Cancelled' 
+                          ? getCancelledOrdersCount() 
+                          : getOrderCountByStatus(filterStatus)
+                      }
+                    </span>
+                  )}
+                </button>
+                
+                {showFilterMenu && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '100%',
+                    right: 0,
+                    backgroundColor: 'white',
+                    boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
+                    borderRadius: '5px',
+                    zIndex: 10,
+                    width: '200px',
+                    marginTop: '5px'
+                  }}>
+                    <div 
+                      style={{
+                        padding: '10px 15px',
+                        borderBottom: '1px solid #eee',
+                        cursor: 'pointer',
+                        backgroundColor: filterStatus === '' ? '#f0f0f0' : 'transparent',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center'
+                      }}
+                      onClick={() => handleFilterStatusChange('')}
+                    >
+                      <span>Tất cả</span>
+                      <span style={{
+                        backgroundColor: '#dc3545',
+                        color: 'white',
+                        borderRadius: '50%',
+                        width: '20px',
+                        height: '20px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '12px'
+                      }}>
+                        {getOrderCountByStatus('')}
+                      </span>
+                    </div>
+                    <div 
+                      style={{
+                        padding: '10px 15px',
+                        borderBottom: '1px solid #eee',
+                        cursor: 'pointer',
+                        backgroundColor: filterStatus === 'Completed' ? '#f0f0f0' : 'transparent',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center'
+                      }}
+                      onClick={() => handleFilterStatusChange('Completed')}
+                    >
+                      <span>Completed</span>
+                      <span style={{
+                        backgroundColor: '#28a745',
+                        color: 'white',
+                        borderRadius: '50%',
+                        width: '20px',
+                        height: '20px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '12px'
+                      }}>
+                        {getOrderCountByStatus('Completed')}
+                      </span>
+                    </div>
+                    <div 
+                      style={{
+                        padding: '10px 15px',
+                        borderBottom: '1px solid #eee',
+                        cursor: 'pointer',
+                        backgroundColor: filterStatus === 'Pending' ? '#f0f0f0' : 'transparent',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center'
+                      }}
+                      onClick={() => handleFilterStatusChange('Pending')}
+                    >
+                      <span>Pending</span>
+                      <span style={{
+                        backgroundColor: '#ffc107',
+                        color: 'white',
+                        borderRadius: '50%',
+                        width: '20px',
+                        height: '20px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '12px'
+                      }}>
+                        {getOrderCountByStatus('Pending')}
+                      </span>
+                    </div>
+                    <div 
+                      style={{
+                        padding: '10px 15px',
+                        borderBottom: '1px solid #eee',
+                        cursor: 'pointer',
+                        backgroundColor: filterStatus === 'Paid' ? '#f0f0f0' : 'transparent',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center'
+                      }}
+                      onClick={() => handleFilterStatusChange('Paid')}
+                    >
+                      <span>Paid</span>
+                      <span style={{
+                        backgroundColor: '#17a2b8',
+                        color: 'white',
+                        borderRadius: '50%',
+                        width: '20px',
+                        height: '20px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '12px'
+                      }}>
+                        {getOrderCountByStatus('Paid')}
+                      </span>
+                    </div>
+                    <div 
+                      style={{
+                        padding: '10px 15px',
+                        cursor: 'pointer',
+                        backgroundColor: filterStatus === 'Cancelled' ? '#f0f0f0' : 'transparent',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center'
+                      }}
+                      onClick={() => handleFilterStatusChange('Cancelled')}
+                    >
+                      <span>Cancelled</span>
+                      <span style={{
+                        backgroundColor: '#dc3545',
+                        color: 'white',
+                        borderRadius: '50%',
+                        width: '20px',
+                        height: '20px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '12px'
+                      }}>
+                        {getCancelledOrdersCount()}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
           
@@ -319,7 +545,7 @@ const ViewOrder = () => {
                       <th>TRẠNG THÁI</th>
                       <th>HÀNH ĐỘNG</th>
                     </>
-                  ) : activeTab === 'Đơn hàng đang vận chuyển' ? (
+                  ) : activeTab === 'Đơn hàng vận chuyển' ? (
                     <>
                       <th>ID ĐƠN HÀNG</th>
                       <th>ID NGƯỜI DÙNG</th>
@@ -333,7 +559,7 @@ const ViewOrder = () => {
                       <th>TÌNH TRẠNG GIAO HÀNG</th>
                       <th>ĐỊA CHỈ</th>          
                       <th>GHI CHÚ</th>
-                      <th>THAO TÁC</th>
+                      <th>HÀNH ĐỘNG</th>
                     </>
                   ) : (
                     <>
@@ -356,12 +582,12 @@ const ViewOrder = () => {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={activeTab === 'Đơn hàng đang vận chuyển' ? "13" : "12"} className="empty-data-message">
+                    <td colSpan={activeTab === 'Đơn hàng vận chuyển' || activeTab === 'Đơn hàng bị hủy' ? "13" : "12"} className="empty-data-message">
                       Đang tải dữ liệu đơn hàng...
                     </td>
                   </tr>
                 ) : filteredOrders().length > 0 ? (
-                  filteredOrders().map((order, index) => (
+                  paginatedOrders(filteredOrders()).map((order, index) => (
                     activeTab === 'Đơn hàng bị hủy' ? (
                       <tr key={order.cancelRequestId}>
                         <td>{order.cancelRequestId}</td>
@@ -424,7 +650,7 @@ const ViewOrder = () => {
                         <td>{order.deliveryStatus}</td>
                         <td>{order.deliveryAddress}</td>
                         <td>{order.note}</td>
-                        {activeTab === 'Đơn hàng đang vận chuyển' && (
+                        {activeTab === 'Đơn hàng vận chuyển' && (
                           <td>
                             <button
                               onClick={() => handleDelivered(order.orderId)}
@@ -447,7 +673,7 @@ const ViewOrder = () => {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={activeTab === 'Đơn hàng đang vận chuyển' ? "13" : "12"} className="empty-data-message">
+                    <td colSpan={activeTab === 'Đơn hàng vận chuyển' || activeTab === 'Đơn hàng bị hủy' ? "13" : "12"} className="empty-data-message">
                       Chưa có đơn hàng nào.
                     </td>
                   </tr>
@@ -455,10 +681,101 @@ const ViewOrder = () => {
               </tbody>
             </table>
           </div>
+          
+          {/* Pagination Controls */}
+          {filteredOrders().length > 0 && (
+            <div style={{ display: 'flex', justifyContent: 'center', margin: '20px 0' }}>
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <button
+                  onClick={() => handlePageChange(page - 1)}
+                  disabled={page === 1}
+                  style={{
+                    width: '40px',
+                    height: '40px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    border: '1px solid #ddd',
+                    backgroundColor: 'white',
+                    color: page === 1 ? '#ccc' : '#000',
+                    borderRadius: '4px',
+                    cursor: page === 1 ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  &lt;
+                </button>
+                
+                {Array.from({ length: Math.ceil(filteredOrders().length / pageSize) }).map((_, i) => {
+                  const pageNumber = i + 1;
+                  // Hiển thị trang 1, trang hiện tại và các trang xung quanh trang hiện tại, và trang cuối
+                  const shouldShowPage = 
+                    pageNumber === 1 || 
+                    pageNumber === Math.ceil(filteredOrders().length / pageSize) ||
+                    (pageNumber >= page - 1 && pageNumber <= page + 1);
+                  
+                  // Hiển thị dấu ... sau trang 1 nếu trang hiện tại > 3
+                  const showEllipsisBegin = pageNumber === 2 && page > 3;
+                  
+                  // Hiển thị dấu ... trước trang cuối nếu trang hiện tại < tổng trang - 2
+                  const showEllipsisEnd = pageNumber === Math.ceil(filteredOrders().length / pageSize) - 1 && 
+                                         page < Math.ceil(filteredOrders().length / pageSize) - 2;
+                  
+                  if (shouldShowPage) {
+                    return (
+                      <button
+                        key={pageNumber}
+                        onClick={() => handlePageChange(pageNumber)}
+                        style={{
+                          width: '40px',
+                          height: '40px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          border: page === pageNumber ? 'none' : '1px solid #ddd',
+                          backgroundColor: page === pageNumber ? '#000' : 'white',
+                          color: page === pageNumber ? 'white' : 'black',
+                          borderRadius: '50%',
+                          margin: '0 5px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {pageNumber}
+                      </button>
+                    );
+                  } else if (showEllipsisBegin || showEllipsisEnd) {
+                    return (
+                      <span key={`ellipsis-${pageNumber}`} style={{ margin: '0 5px' }}>...</span>
+                    );
+                  }
+                  
+                  return null;
+                })}
+                
+                <button
+                  onClick={() => handlePageChange(page + 1)}
+                  disabled={page === Math.ceil(filteredOrders().length / pageSize)}
+                  style={{
+                    width: '40px',
+                    height: '40px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    border: '1px solid #ddd',
+                    backgroundColor: 'white',
+                    color: page === Math.ceil(filteredOrders().length / pageSize) ? '#ccc' : '#000',
+                    borderRadius: '4px',
+                    cursor: page === Math.ceil(filteredOrders().length / pageSize) ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  &gt;
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </Box>
   );
 };
 
-export default ViewOrder;
+export default OrderStaff;
