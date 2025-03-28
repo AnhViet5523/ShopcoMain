@@ -605,55 +605,22 @@ const QuizTest = () => {
                             </Box>
                         )}
                         
-                        <Box sx={{ display: 'flex', flexDirection: {xs: 'column', md: 'row'}, justifyContent: 'center', gap: 2, mt: 4 }}>
-                            <Button
-                                variant="contained"
-                                color="primary"
-                                onClick={() => {
-                                    // Chuyển hướng đến trang sản phẩm với loại da đã xác định
-                                    const skinType = results[0];
-                                    // Tạo tham số URL để lọc sản phẩm theo loại da
-                                    const params = new URLSearchParams();
-                                    params.append('skinType', skinType);
-                                    navigate(`/category?${params.toString()}`);
-                                }}
-                                sx={{
-                                    px: 4,
-                                    py: 1.5,
-                                    borderRadius: 2,
-                                    backgroundColor: '#f5a9a0',
-                                    fontWeight: 'bold',
-                                    '&:hover': {
-                                        backgroundColor: '#e74c3c',
-                                    }
-                                }}
-                                startIcon={<i className="fas fa-search" />}
-                            >
-                                Xem sản phẩm phù hợp với làn da của bạn
-                            </Button>
-                            
-                            <Button
-                                variant="outlined"
-                                onClick={() => {
-                                    // Lưu kết quả vào localStorage để sử dụng sau này
-                                    localStorage.setItem('userSkinType', results[0]);
-                                    navigate('/');
-                                }}
-                                sx={{
-                                    px: 4,
-                                    py: 1.5,
-                                    borderRadius: 2,
-                                    borderColor: '#f5a9a0',
-                                    color: '#e74c3c',
-                                    '&:hover': {
-                                        borderColor: '#e74c3c',
-                                        backgroundColor: 'rgba(231, 76, 60, 0.04)',
-                                    }
-                                }}
-                            >
-                                Quay lại trang chủ
-                            </Button>
-                        </Box>
+                        <Button
+                            variant="contained"
+                            color="primary"
+                            onClick={() => window.location.href = '/category'}
+                            sx={{
+                                px: 4,
+                                py: 1.5,
+                                borderRadius: 2,
+                                backgroundColor: '#f5a9a0',
+                                '&:hover': {
+                                    backgroundColor: '#e74c3c',
+                                }
+                            }}
+                        >
+                            Xem các sản phẩm phù hợp
+                        </Button>
                     </Box>
                 </Paper>
             </Grow>

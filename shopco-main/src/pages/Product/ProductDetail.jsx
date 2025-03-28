@@ -255,34 +255,10 @@ export default function ProductDetail() {
     try {
       // Get user ID from localStorage
       const user = JSON.parse(localStorage.getItem('user'));
-      
-      // Kiểm tra đăng nhập
-      if (!user || !user.userId) {
-        alert('Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng');
-        navigate('/login', { state: { returnUrl: `/product/${id}` } });
-        return;
-      }
-      
-      const userId = user.userId;
+      const userId = user?.userId || 1; // Fallback to 1 if no user ID found
       
       // Call the API to add item to cart
       await orderService.addtocard(userId, product.productId, quantity);
-      
-      // Lấy thông tin giỏ hàng mới nhất
-      const currentCart = await orderService.getCurrentCart(userId);
-      if (currentCart && currentCart.items && currentCart.items.$values) {
-        // Cập nhật localStorage với dữ liệu giỏ hàng mới
-        const cartItems = currentCart.items.$values.map(item => ({
-          id: item.orderItemId,
-          productId: item.productId,
-          name: item.product ? item.product.productName : 'Sản phẩm không xác định',
-          price: item.price,
-          originalPrice: item.price * 1.2,
-          quantity: item.quantity,
-          imgUrl: getProductImage(item.product),
-        }));
-        localStorage.setItem('cart', JSON.stringify(cartItems));
-      }
       
       // Dispatch custom event to notify other components (like Header) that cart has been updated
       window.dispatchEvent(new CustomEvent('cartUpdated'));
@@ -295,24 +271,6 @@ export default function ProductDetail() {
     } catch (error) {
       console.error('Error adding to cart:', error);
       alert('Có lỗi xảy ra khi thêm vào giỏ hàng. Vui lòng thử lại sau.');
-    }
-  };
-  
-  // Hàm hỗ trợ lấy hình ảnh sản phẩm
-  const getProductImage = (product) => {
-    if (!product) return 'https://via.placeholder.com/150/ffcc66/333333?text=Product';
-    
-    if (product.images && product.images.length > 0) {
-      const firstImage = product.images[0];
-      return firstImage?.imgUrl || firstImage?.imageUrl;
-    } else if (product.imgUrl) {
-      return product.imgUrl;
-    } else if (product.imgURL) {
-      return product.imgURL;
-    } else if (product.image) {
-      return product.image;
-    } else {
-      return `https://via.placeholder.com/150/ffcc66/333333?text=${encodeURIComponent(product.productName ? product.productName.substring(0, 8) : 'Product')}`;
     }
   };
 

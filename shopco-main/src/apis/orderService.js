@@ -41,38 +41,16 @@ const orderService = {
         }
     },
     addtocard: async (userId, productId, quantity) => {
+
         try {
-            // Gọi API để thêm vào giỏ hàng
             const response = await axiosClient.post('/api/Orders/addtocart', {
                 userId,
                 productId,
                 quantity
             });
-            
-            try {
-                // Sau khi thêm vào giỏ hàng thành công, lấy lại giỏ hàng mới nhất
-                const updatedCart = await orderService.getCurrentCart(userId);
-                
-                // Cập nhật localStorage với dữ liệu giỏ hàng mới nếu API trả về thành công
-                if (updatedCart && updatedCart.items && updatedCart.items.$values) {
-                    const cartItems = updatedCart.items.$values.map(item => ({
-                        id: item.orderItemId,
-                        productId: item.productId,
-                        name: item.product ? item.product.productName : 'Sản phẩm không xác định',
-                        price: item.price,
-                        quantity: item.quantity,
-                        imgUrl: item.product && item.product.imgUrl ? item.product.imgUrl : '',
-                    }));
-                    
-                    localStorage.setItem('cart', JSON.stringify(cartItems));
-                }
-            } catch (localStorageError) {
-                console.error('Error updating localStorage after adding to cart:', localStorageError);
-            }
-            
             return response; 
         } catch (error) {
-            console.error('Error adding to cart:', error);
+            console.error('Error:', error);
             return error;
             throw error; 
         }
@@ -209,72 +187,6 @@ const orderService = {
         } catch (error) {
             console.error('Error removing item from checkout:', error);
             console.error('Error details:', error.response?.data || error);
-            throw error;
-        }
-    },
-    markOrderAsPaid: async (orderId) => {
-        try {
-            console.log(`Marking order ${orderId} as paid for COD payment`);
-            
-            try {
-                // Gọi API để đánh dấu đơn hàng đã thanh toán
-                const response = await axiosClient.post('/api/Orders/mark-as-paid', { orderId });
-                console.log('Mark order as paid response:', response);
-                return response;
-            } catch (apiError) {
-                console.warn('API mark-as-paid không tồn tại:', apiError);
-                // Nếu API không tồn tại, có thể thực hiện các bước thay thế hoặc bỏ qua
-                return { success: false, message: 'API không tồn tại, đơn hàng sẽ được đánh dấu thủ công' };
-            }
-        } catch (error) {
-            console.error('Error marking order as paid:', error);
-            console.error('Error details:', error.response?.data || error);
-            throw error;
-        }
-    },
-    clearCartAfterPayment: async (userId) => {
-        try {
-            console.log(`Clearing cart for user ${userId} after successful payment`);
-            
-            // Đảm bảo localStorage đã được cập nhật
-            localStorage.setItem('cart', JSON.stringify([]));
-            
-            try {
-                // Gọi API để xóa giỏ hàng hiện tại
-                const response = await axiosClient.post('/api/Orders/clear-cart', { userId });
-                console.log('Clear cart response:', response);
-                
-                // Kích hoạt sự kiện để cập nhật lại giỏ hàng trên Header
-                window.dispatchEvent(new CustomEvent('cartUpdated'));
-                
-                return response;
-            } catch (apiError) {
-                console.warn('API clear-cart không tồn tại, sử dụng giải pháp thay thế:', apiError);
-                
-                // Nếu API không tồn tại, sử dụng giải pháp thay thế:
-                // 1. Lấy giỏ hàng hiện tại
-                const currentCart = await orderService.getCurrentCart(userId);
-                
-                // 2. Xóa từng sản phẩm trong giỏ hàng
-                if (currentCart && currentCart.items && currentCart.items.$values) {
-                    const items = currentCart.items.$values;
-                    for (const item of items) {
-                        await orderService.removefromcart(item.orderItemId);
-                    }
-                }
-                
-                // 3. Kích hoạt sự kiện để cập nhật lại giỏ hàng
-                window.dispatchEvent(new CustomEvent('cartUpdated'));
-                
-                return { success: true, message: 'Đã xóa giỏ hàng bằng giải pháp thay thế' };
-            }
-        } catch (error) {
-            console.error('Error clearing cart after payment:', error);
-            console.error('Error details:', error.response?.data || error);
-            // Đảm bảo localStorage vẫn được cập nhật ngay cả khi có lỗi
-            localStorage.setItem('cart', JSON.stringify([]));
-            // Kích hoạt sự kiện cập nhật giỏ hàng ngay cả khi gặp lỗi
-            window.dispatchEvent(new CustomEvent('cartUpdated'));
             throw error;
         }
     }
