@@ -37,17 +37,42 @@ const Header = () => {
           // Fetch current cart directly using getCurrentCart
           const response = await orderService.getCurrentCart(user.userId);
           
+          // Lấy giỏ hàng từ localStorage để so sánh
+          const localCart = JSON.parse(localStorage.getItem('cart') || '[]');
+          
+          // Nếu có phản hồi từ API và có items
           if (response && response.items && response.items.$values) {
             // Calculate total quantity from order items
             const count = response.items.$values.reduce(
               (total, item) => total + item.quantity, 0
             );
+            
             if (isMounted.current) {
               setCartItemCount(count);
+              
+              // Cập nhật localStorage nếu không khớp với server để đồng bộ
+              if (localCart.length === 0 && count > 0) {
+                const cartItems = response.items.$values.map(item => ({
+                  id: item.orderItemId,
+                  productId: item.productId,
+                  quantity: item.quantity,
+                  // Các thông tin khác nếu cần
+                }));
+                localStorage.setItem('cart', JSON.stringify(cartItems));
+              }
             }
           } else {
-            if (isMounted.current) {
-              setCartItemCount(0);
+            // Nếu localStorage đã rỗng (đã thanh toán xong), ưu tiên sử dụng giá trị này
+            if (localCart.length === 0) {
+              if (isMounted.current) {
+                setCartItemCount(0);
+              }
+            } else {
+              // Tính tổng số lượng từ localStorage
+              const count = localCart.reduce((total, item) => total + item.quantity, 0);
+              if (isMounted.current) {
+                setCartItemCount(count);
+              }
             }
           }
         } else {
