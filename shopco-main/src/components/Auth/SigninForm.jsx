@@ -81,6 +81,8 @@ const SigninForm = ({ onSwitchMode, onSignIn }) => {
       setIsLoading(true);
       
       try {
+        console.log('Trying to login with:', formData.username);
+        
         // Gọi hàm đăng nhập từ userService
         const response = await userService.login(formData.username, formData.password);
         
@@ -119,6 +121,15 @@ const SigninForm = ({ onSwitchMode, onSignIn }) => {
 
       } catch (error) {
         console.error('Login failed:', error);
+        
+        // Kiểm tra chi tiết về lỗi
+        console.log('Error details:', {
+          isAxiosError: error.isAxiosError,
+          response: error.response,
+          request: error.request,
+          message: error.message,
+          stack: error.stack
+        });
         
         if (error.response) {
           // Xử lý lỗi từ server

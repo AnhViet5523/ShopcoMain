@@ -97,10 +97,35 @@ axiosClient.interceptors.request.use(
                 const user = JSON.parse(userStr);
                 if (user && user.userId) {
                     config.headers['User-Id'] = user.userId;
+                    // Thêm UserId vào claims
+                    config.headers['X-UserId'] = user.userId;
                 }
                 if (user && user.role) {
-                    config.headers['User-Role'] = user.role;
-                    console.log('User role in request:', user.role);
+                    // Đảm bảo role được chuẩn hóa đúng cách - bảo toàn chữ hoa/thường
+                    const normalizedRole = String(user.role).trim();
+                    
+                    // Thử gửi role theo nhiều cách khác nhau để đảm bảo backend nhận được
+                    config.headers['User-Role'] = normalizedRole;
+                    config.headers['X-User-Role'] = normalizedRole;
+                    config.headers['Role'] = normalizedRole;  // Thêm header này để phù hợp với Claim.Type = "Role"
+                    
+                    console.log('User role in request:', normalizedRole);
+                    
+                    // In thêm thông tin debug
+                    if (normalizedRole !== 'Manager' && normalizedRole !== 'Admin') {
+                        console.warn('Role không phải Manager hoặc Admin:', normalizedRole);
+                    }
+                }
+                
+                // Thêm token Bearer nếu có
+                if (user && user.token) {
+                    config.headers['Authorization'] = `Bearer ${user.token}`;
+                }
+                
+                // Thêm token từ localStorage nếu có
+                const token = localStorage.getItem('token');
+                if (token && !config.headers['Authorization']) {
+                    config.headers['Authorization'] = `Bearer ${token}`;
                 }
             } catch (error) {
                 console.error('Error parsing user data:', error);
@@ -177,7 +202,10 @@ axiosClient.interceptors.response.use(
         if (error.response) {
             console.error('API Error:', error.response.status, error.response.data);
             
-            if (error.response.status === 401) {
+            // Chỉ xóa localStorage khi nhận lỗi 401 và KHÔNG phải từ API đăng nhập
+            if (error.response.status === 401 && error.config && error.config.url 
+                && !error.config.url.includes('/api/Users/login')) {
+                console.log('Xóa thông tin người dùng do lỗi xác thực với API:', error.config.url);
                 localStorage.removeItem('user');
                 localStorage.removeItem('token');
             }

@@ -54,20 +54,20 @@ const img2 = "https://png.pngtree.com/background/20210716/original/pngtree-hello
     
     // Điều hướng dựa vào role của người dùng
     if (userData && userData.role) {
-      // Chuẩn hóa role để so sánh không phân biệt chữ hoa/thường
-      const userRole = String(userData.role).trim().toLowerCase();
+      // Lấy vai trò với chữ hoa/thường đúng (không lowercase)
+      const userRole = String(userData.role).trim();
       console.log("User role (normalized):", userRole);
       
       // Lưu role vào localStorage để debug
       localStorage.setItem('debug_role', userRole);
       
-      // Kiểm tra role và chuyển hướng tương ứng
-      if (userRole === "manager") {
+      // Kiểm tra role và chuyển hướng tương ứng - sử dụng chính xác chuỗi với chữ hoa/thường
+      if (userRole === "Manager") {
         console.log("Redirecting to Manager page: /revenue");
         setTimeout(() => {
           navigate('/revenue');
         }, 100);
-      } else if (userRole === "staff") {
+      } else if (userRole === "Staff") {
         console.log("Redirecting to Staff page: /orderStaff");
         setTimeout(() => {
           navigate('/orderStaff');
