@@ -28,7 +28,7 @@ const Product = () => {
   
   // Phân trang
   const [page, setPage] = useState(1);
-  const pageSize = 20;
+  const pageSize = 15;
 
   // Thêm state cho dialog và form thêm sản phẩm
   const [openAddDialog, setOpenAddDialog] = useState(false);

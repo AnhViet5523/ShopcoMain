@@ -111,6 +111,7 @@ const BlogManager = () => {
     setFilteredCount(0);
   };
 
+  
   const sidebarItems = [
     { id: 'revenue', name: 'Doanh thu', icon: '📊' },
     { id: 'staff', name: 'Nhân viên', icon: '👤' },
