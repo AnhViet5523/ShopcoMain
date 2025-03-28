@@ -16,7 +16,7 @@ const CustomerStaff = () => {
   const sidebarItems = [
     { id: 'orderStaff', name: 'Đơn hàng', icon: '📋' },
     { id: 'productStaff', name: 'Sản phẩm', icon: '📦' },
-    { id: 'customerStaff', name: 'Hồ sơ khách hàng', icon: '📝' },
+    { id: 'customerStaff', name: 'Hồ sơ người dùng', icon: '📝' },
     { id: 'supportStaff', name: 'Đơn hỗ trợ', icon: '📫' },
     { id: 'voucherStaff', name: 'Vouchers', icon: '🎫' },
     { id: 'feedbackStaff', name: 'Feedback', icon: '📢' },
@@ -171,7 +171,7 @@ const CustomerStaff = () => {
           
           {/* Dashboard Title and Actions */}
           <div className="dashboard-title-bar">
-            <h1>Hồ sơ khách hàng</h1>
+            <h1>Hồ sơ người dùng</h1>
             <div style={{ marginLeft: 'auto', display: 'flex', gap: '10px' }}>
               {searchTerm && customers.length > 0 && (
                 <div style={{ color: '#666', fontSize: '14px', alignSelf: 'center' }}>

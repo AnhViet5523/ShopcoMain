@@ -90,6 +90,8 @@ const userService = {
     // Đăng nhập người dùng
     login: async (username, password) => {
         try {
+            console.log('Đang gửi yêu cầu đăng nhập với:', { username });
+            
             const response = await axiosClient.post(API_ENDPOINTS.USERS.LOGIN, {
                 username,
                 password
@@ -109,19 +111,35 @@ const userService = {
                 } else {
                     console.log('User role from login:', response.role);
                     
-                    // Đảm bảo role được lưu đúng cách
-                    const normalizedRole = String(response.role).trim();
+                    // Đảm bảo role được lưu đúng cách - với đúng đặt hoa/thường
+                    let normalizedRole = String(response.role).trim();
+                    
+                    // Chuẩn hóa vai trò
+                    if (normalizedRole.toLowerCase() === 'manager') {
+                        normalizedRole = 'Manager';
+                    } else if (normalizedRole.toLowerCase() === 'admin') {
+                        normalizedRole = 'Admin';
+                    } else if (normalizedRole.toLowerCase() === 'staff') {
+                        normalizedRole = 'Staff';
+                    } else if (normalizedRole.toLowerCase() === 'customer') {
+                        normalizedRole = 'Customer';
+                    }
+                    
                     response.role = normalizedRole;
                     console.log('Normalized role:', normalizedRole);
                 }
                 
-                // Lưu thông tin người dùng vào localStorage
-                localStorage.setItem('user', JSON.stringify(response));
-                console.log('User data saved to localStorage:', response);
-                
-                // Lưu role riêng để dễ debug
-                if (response.role) {
-                    localStorage.setItem('user_role', response.role);
+                try {
+                    // Lưu thông tin người dùng vào localStorage
+                    localStorage.setItem('user', JSON.stringify(response));
+                    console.log('User data saved to localStorage:', response);
+                    
+                    // Lưu role riêng để dễ debug
+                    if (response.role) {
+                        localStorage.setItem('user_role', response.role);
+                    }
+                } catch (storageError) {
+                    console.error('Lỗi khi lưu thông tin người dùng vào localStorage:', storageError);
                 }
             }
             
@@ -293,6 +311,44 @@ const userService = {
         } catch (error) {
             console.error('Error requesting order cancellation:', error);
             throw error;
+        }
+    },
+    // Hàm mới: kiểm tra và sửa role người dùng nếu cần
+    fixUserRole: () => {
+        try {
+            const userStr = localStorage.getItem('user');
+            if (!userStr) return null;
+            
+            const user = JSON.parse(userStr);
+            if (!user || !user.role) return null;
+            
+            // Kiểm tra xem role có đúng định dạng không
+            const currentRole = user.role;
+            let correctedRole = currentRole;
+            
+            // Chuẩn hóa vai trò - giữ nguyên chữ hoa/thường
+            if (currentRole.toLowerCase() === 'manager') {
+                correctedRole = 'Manager';
+            } else if (currentRole.toLowerCase() === 'admin') {
+                correctedRole = 'Admin';
+            } else if (currentRole.toLowerCase() === 'staff') {
+                correctedRole = 'Staff';
+            } else if (currentRole.toLowerCase() === 'customer') {
+                correctedRole = 'Customer';
+            }
+            
+            // Nếu role đã thay đổi, cập nhật lại trong localStorage
+            if (correctedRole !== currentRole) {
+                console.log(`Đang sửa vai trò từ "${currentRole}" thành "${correctedRole}"`);
+                user.role = correctedRole;
+                localStorage.setItem('user', JSON.stringify(user));
+                localStorage.setItem('user_role', correctedRole);
+            }
+            
+            return correctedRole;
+        } catch (error) {
+            console.error('Lỗi khi sửa vai trò người dùng:', error);
+            return null;
         }
     }
 };

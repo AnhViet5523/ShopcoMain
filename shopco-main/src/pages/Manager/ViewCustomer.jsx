@@ -19,7 +19,7 @@ const ViewCustomer = () => {
     { id: 'staff', name: 'Nhân viên', icon: '👤' },
     { id: 'viewOrder', name: 'Đơn hàng', icon: '📋' },
     { id: 'product', name: 'Sản phẩm', icon: '📦' },
-    { id: 'viewCustomer', name: 'Hồ sơ khách hàng', icon: '📝' },
+    { id: 'viewCustomer', name: 'Hồ sơ người dùng', icon: '📝' },
     { id: 'viewSupport', name: 'Đơn hỗ trợ', icon: '📫' },
     { id: 'voucher', name: 'Vouchers', icon: '🎫' },
     { id: 'feedback', name: 'Feedback', icon: '📢' },
@@ -174,7 +174,7 @@ const ViewCustomer = () => {
           
           {/* Dashboard Title and Actions */}
           <div className="dashboard-title-bar">
-            <h1>Hồ sơ khách hàng</h1>
+            <h1>Hồ sơ người dùng</h1>
             <div style={{ marginLeft: 'auto', display: 'flex', gap: '10px' }}>
               {searchTerm && customers.length > 0 && (
                 <div style={{ color: '#666', fontSize: '14px', alignSelf: 'center' }}>
