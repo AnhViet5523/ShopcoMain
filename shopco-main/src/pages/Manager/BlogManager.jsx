@@ -212,7 +212,7 @@ const BlogManager = () => {
             )}
             <button 
               className="btn-create-payment"
-              onClick={() => navigate('/create-post')}
+              onClick={() => navigate("/Blog/CreateEditPost/CreatePost")}
             >
               <FaPlus /> Tạo bài viết
             </button>
@@ -316,7 +316,7 @@ const BlogManager = () => {
                       </button>
                       <button 
                         className="btn-edit"
-                        onClick={() => navigate(`/edit-post/${post.id}`)}
+                        onClick={() => navigate(`/blogManager/${post.id}`)}
                         style={{
                           padding: '5px 10px',
                           backgroundColor: '#2196F3',

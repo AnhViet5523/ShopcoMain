@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { Box, Container, Typography, Paper, CircularProgress, Button, List, ListItem, ListItemIcon, ListItemText } from '@mui/material';
-import { ArrowBack } from '@mui/icons-material';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { Box, Container, Typography, Paper, CircularProgress, Button, List, ListItem, ListItemIcon, ListItemText, TextField, IconButton, Divider } from '@mui/material';
+import { ArrowBack, Edit, Save, Cancel, CloudUpload } from '@mui/icons-material';
 import ArrowRightIcon from '@mui/icons-material/ArrowRight';
 import DOMPurify from 'dompurify';
 import Header from '../../components/Header';
@@ -12,10 +12,20 @@ import './Blog.css';
 const BlogDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const [post, setPost] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [sections, setSections] = useState([]);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editedPost, setEditedPost] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState(null);
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+  
+  // Kiểm tra nếu đang truy cập từ trang quản lý
+  const isFromAdmin = location.pathname.includes('/blogManager/');
   
   // Tạo refs cho các section
   const sectionRefs = useRef({});
@@ -63,6 +73,8 @@ const BlogDetail = () => {
         };
         
         setPost(processedPost);
+        // Khởi tạo dữ liệu cho form chỉnh sửa
+        setEditedPost(processedPost);
         
         // Tự động tạo các section từ nội dung
         if (processedPost.content) {
@@ -240,6 +252,92 @@ const BlogDetail = () => {
     fetchPost();
   };
 
+  // Hàm để lưu thay đổi
+  const handleSave = async () => {
+    if (!editedPost) return;
+    
+    try {
+      setSaving(true);
+      setSaveError(null);
+      
+      const numericId = parseInt(id);
+      if (isNaN(numericId)) {
+        throw new Error('Blog ID phải là số');
+      }
+      
+      // Dữ liệu để gửi đi
+      const postData = {
+        title: editedPost.title,
+        content: editedPost.content,
+        imageUrl: editedPost.imageUrl,
+        userId: editedPost.userId || 1,
+        image: imageFile // Thêm file ảnh nếu có
+      };
+      
+      console.log('Updating post with data:', postData);
+      
+      // Gọi API cập nhật
+      const response = await blogService.updatePost(numericId, postData);
+      console.log('Update response:', response);
+      
+      // Cập nhật state
+      setPost({
+        ...editedPost,
+        // Nếu đã upload ảnh mới, cập nhật URL từ response
+        imageUrl: response?.imageUrl || editedPost.imageUrl
+      });
+      setIsEditMode(false);
+      
+      // Hiển thị thông báo thành công
+      alert('Cập nhật bài viết thành công!');
+      
+      // Reset các state liên quan đến ảnh
+      setImageFile(null);
+      setImagePreview(null);
+      
+      setSaving(false);
+    } catch (error) {
+      console.error('Error saving post:', error);
+      setSaveError(`Không thể lưu bài viết. Lỗi: ${error.message}`);
+      setSaving(false);
+    }
+  };
+  
+  // Hàm xử lý khi chọn file ảnh
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setImageFile(file);
+      
+      // Tạo URL xem trước cho ảnh
+      const previewUrl = URL.createObjectURL(file);
+      setImagePreview(previewUrl);
+      
+      // Nếu đang có imageUrl, xóa đi vì sẽ sử dụng file ảnh
+      setEditedPost(prev => ({
+        ...prev,
+        imageUrl: ''
+      }));
+    }
+  };
+  
+  // Hàm xử lý thay đổi dữ liệu form
+  const handleInputChange = (field, value) => {
+    setEditedPost(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+  
+  // Hàm hủy chỉnh sửa
+  const handleCancelEdit = () => {
+    setEditedPost(post);
+    setIsEditMode(false);
+    setSaveError(null);
+    setImageFile(null);
+    setImagePreview(null);
+  };
+
   if (loading) {
     return (
       <Box sx={{ bgcolor: "#f0f0f0", minHeight: "100vh", width:'99vw', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
@@ -337,34 +435,97 @@ const BlogDetail = () => {
             mb: 4
           }}
         >
-          {post.imageUrl ? (
-            <Box
-              component="img"
-              src={post.imageUrl}
-              alt={post.title}
-              sx={{
-                width: '100%',
-                maxWidth: '1200px',
-                height: 'auto',
-                objectFit: 'contain'
-              }}
-              onError={(e) => {
-                console.log('Image failed to load, using fallback');
-                e.target.src = '/images/blog-placeholder.jpg';
-              }}
-            />
+          {isEditMode ? (
+            <Box sx={{ width: '100%', maxWidth: '1200px', textAlign: 'center' }}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mb: 2 }}>
+                <Button
+                  variant="outlined"
+                  component="label"
+                  startIcon={<CloudUpload />}
+                  sx={{ 
+                    alignSelf: 'center',
+                    borderColor: '#059669', 
+                    color: '#059669', 
+                    '&:hover': { 
+                      borderColor: '#047857', 
+                      color: '#047857' 
+                    }
+                  }}
+                >
+                  Tải ảnh mới lên
+                  <input
+                    type="file"
+                    hidden
+                    accept="image/*"
+                    onChange={handleImageChange}
+                  />
+                </Button>
+                
+                <Divider sx={{ my: 1 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    Hoặc
+                  </Typography>
+                </Divider>
+                
+                <TextField
+                  fullWidth
+                  label="URL Ảnh bìa"
+                  variant="outlined"
+                  value={editedPost.imageUrl || ''}
+                  onChange={(e) => handleInputChange('imageUrl', e.target.value)}
+                  helperText="Nhập URL hình ảnh cho bài viết (không bắt buộc)"
+                />
+              </Box>
+              
+              {/* Hiển thị xem trước ảnh */}
+              {(imagePreview || editedPost.imageUrl) && (
+                <Box
+                  component="img"
+                  src={imagePreview || editedPost.imageUrl}
+                  alt="Xem trước ảnh bìa"
+                  sx={{
+                    width: '100%',
+                    maxWidth: '800px',
+                    height: 'auto',
+                    objectFit: 'contain'
+                  }}
+                  onError={(e) => {
+                    console.log('Preview image failed to load');
+                    e.target.src = '/images/blog-placeholder.jpg';
+                  }}
+                />
+              )}
+            </Box>
           ) : (
-            <Box
-              component="img"
-              src="/images/blog-placeholder.jpg"
-              alt="Ảnh mặc định"
-              sx={{
-                width: '100%',
-                maxWidth: '1200px',
-                height: 'auto',
-                objectFit: 'contain'
-              }}
-            />
+            post.imageUrl ? (
+              <Box
+                component="img"
+                src={post.imageUrl}
+                alt={post.title}
+                sx={{
+                  width: '100%',
+                  maxWidth: '1200px',
+                  height: 'auto',
+                  objectFit: 'contain'
+                }}
+                onError={(e) => {
+                  console.log('Image failed to load, using fallback');
+                  e.target.src = '/images/blog-placeholder.jpg';
+                }}
+              />
+            ) : (
+              <Box
+                component="img"
+                src="/images/blog-placeholder.jpg"
+                alt="Ảnh mặc định"
+                sx={{
+                  width: '100%',
+                  maxWidth: '1200px',
+                  height: 'auto',
+                  objectFit: 'contain'
+                }}
+              />
+            )
           )}
         </Box>
 
@@ -392,29 +553,88 @@ const BlogDetail = () => {
               >
                 Quay lại
               </Button>
-              <Typography variant="body2" color="text.secondary">
-                Ngày đăng: {formatDate(post.createdAt)}
-              </Typography>
+              
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                {/* Hiển thị nút chỉnh sửa nếu đang truy cập từ trang quản lý */}
+                {isFromAdmin && !isEditMode && (
+                  <Button
+                    variant="contained"
+                    startIcon={<Edit />}
+                    onClick={() => setIsEditMode(true)}
+                    sx={{ bgcolor: '#2196F3', '&:hover': { bgcolor: '#1976D2' } }}
+                  >
+                    Chỉnh sửa
+                  </Button>
+                )}
+                
+                {/* Hiển thị nút lưu và hủy khi đang ở chế độ chỉnh sửa */}
+                {isEditMode && (
+                  <>
+                    <Button
+                      variant="contained"
+                      color="error"
+                      startIcon={<Cancel />}
+                      onClick={handleCancelEdit}
+                      sx={{ mr: 1 }}
+                      disabled={saving}
+                    >
+                      Hủy
+                    </Button>
+                    <Button
+                      variant="contained"
+                      startIcon={<Save />}
+                      onClick={handleSave}
+                      sx={{ bgcolor: '#4CAF50', '&:hover': { bgcolor: '#388E3C' } }}
+                      disabled={saving}
+                    >
+                      {saving ? 'Đang lưu...' : 'Lưu'}
+                    </Button>
+                  </>
+                )}
+                
+                {!isEditMode && (
+                  <Typography variant="body2" color="text.secondary">
+                    Ngày đăng: {formatDate(post.createdAt)}
+                  </Typography>
+                )}
+              </Box>
             </Box>
             
-            <Typography variant="h4" component="h1" gutterBottom 
-              sx={{ 
-                fontWeight: 'bold', 
-                mb: 3, 
-                textAlign: 'center',
-                color: '#059669',
-                background: 'linear-gradient(to right, #059669, #10b981)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                textShadow: '0px 1px 2px rgba(0,0,0,0.1)',
-                fontSize: { xs: '1.8rem', sm: '2.2rem', md: '2.5rem' }
-              }}
-            >
-              {post.title || 'Không có tiêu đề'}
-            </Typography>
+            {saveError && (
+              <Box sx={{ bgcolor: '#ffebee', color: '#c62828', p: 2, mb: 3, borderRadius: 1 }}>
+                <Typography variant="body2">{saveError}</Typography>
+              </Box>
+            )}
             
-            {/* Phần mục lục - chỉ hiển thị nếu có sections */}
-            {sections.length > 0 && (
+            {isEditMode ? (
+              <TextField
+                fullWidth
+                label="Tiêu đề bài viết"
+                variant="outlined"
+                value={editedPost.title || ''}
+                onChange={(e) => handleInputChange('title', e.target.value)}
+                sx={{ mb: 3 }}
+              />
+            ) : (
+              <Typography variant="h4" component="h1" gutterBottom 
+                sx={{ 
+                  fontWeight: 'bold', 
+                  mb: 3, 
+                  textAlign: 'center',
+                  color: '#059669',
+                  background: 'linear-gradient(to right, #059669, #10b981)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  textShadow: '0px 1px 2px rgba(0,0,0,0.1)',
+                  fontSize: { xs: '1.8rem', sm: '2.2rem', md: '2.5rem' }
+                }}
+              >
+                {post.title || 'Không có tiêu đề'}
+              </Typography>
+            )}
+            
+            {/* Phần mục lục - chỉ hiển thị nếu có sections và không ở chế độ chỉnh sửa */}
+            {sections.length > 0 && !isEditMode && (
               <Paper 
                 elevation={1} 
                 sx={{ 
@@ -455,18 +675,31 @@ const BlogDetail = () => {
             )}
             
             {/* Nội dung bài viết */}
-            <div 
-              className="blog-content" 
-              dangerouslySetInnerHTML={createMarkup(post.content)}
-              style={{
-                lineHeight: 1.8,
-                fontSize: '1rem',
-                color: '#333'
-              }}
-            />
+            {isEditMode ? (
+              <TextField
+                fullWidth
+                label="Nội dung bài viết"
+                variant="outlined"
+                multiline
+                rows={15}
+                value={editedPost.content || ''}
+                onChange={(e) => handleInputChange('content', e.target.value)}
+                sx={{ mb: 2 }}
+              />
+            ) : (
+              <div 
+                className="blog-content" 
+                dangerouslySetInnerHTML={createMarkup(post.content)}
+                style={{
+                  lineHeight: 1.8,
+                  fontSize: '1rem',
+                  color: '#333'
+                }}
+              />
+            )}
 
             {/* Thông tin tác giả nếu có */}
-            {post.userId && (
+            {post.userId && !isEditMode && (
               <Box sx={{ mt: 4, pt: 3, borderTop: '1px solid #eaeaea' }}>
                 <Typography variant="body2" color="text.secondary">
                   Người viết: ID {post.userId}

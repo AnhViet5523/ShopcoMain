@@ -21,7 +21,9 @@ const excludeFromCancellation = [
     '/api/Products',
     '/api/Photos/product',
     '/api/Payments/', // Thêm Payments vào danh sách loại trừ
-    '/api/feedbacks/' // Thêm feedbacks vào danh sách loại trừ để tránh hủy requests
+    '/api/feedbacks/', // Thêm feedbacks vào danh sách loại trừ để tránh hủy requests
+    '/api/Quiz/', // Thêm Quiz vào danh sách loại trừ để tránh hủy requests quiz
+    '/api/QuizAnswers' // Thêm QuizAnswers vào danh sách loại trừ
 ];
 
 // Hàm kiểm tra xem một endpoint có nên được loại trừ khỏi cơ chế hủy không

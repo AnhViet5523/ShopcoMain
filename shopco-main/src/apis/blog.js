@@ -69,7 +69,26 @@ const blogService = {
 
     createPost: async (postData) => {
         try {
-            const response = await axiosClient.post('/api/Post', postData);
+            // Tạo đối tượng FormData để gửi cả dữ liệu văn bản và tệp
+            const formData = new FormData();
+            formData.append('Title', postData.title);
+            formData.append('Content', postData.content);
+            formData.append('UserId', postData.userId || 1);
+            
+            // Nếu postData.image là File, thêm vào FormData
+            if (postData.image && postData.image instanceof File) {
+                formData.append('Image', postData.image);
+            } 
+            // Nếu chỉ có URL ảnh, thêm vào FormData
+            else if (postData.imageUrl) {
+                formData.append('ImageUrl', postData.imageUrl);
+            }
+            
+            const response = await axiosClient.post('/api/Post', formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data'
+                }
+            });
             return response;
         } catch (error) {
             console.error('Error creating post:', error);
@@ -79,7 +98,26 @@ const blogService = {
 
     updatePost: async (id, postData) => {
         try {
-            const response = await axiosClient.put(`/api/Post/${id}`, postData);
+            // Tạo đối tượng FormData để gửi cả dữ liệu văn bản và tệp
+            const formData = new FormData();
+            formData.append('PostId', id);
+            formData.append('Title', postData.title);
+            formData.append('Content', postData.content);
+            
+            // Nếu postData.image là File, thêm vào FormData
+            if (postData.image && postData.image instanceof File) {
+                formData.append('Image', postData.image);
+            } 
+            // Nếu chỉ có URL ảnh, thêm vào FormData
+            else if (postData.imageUrl) {
+                formData.append('ImageUrl', postData.imageUrl);
+            }
+            
+            const response = await axiosClient.put(`/api/Post/${id}`, formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data'
+                }
+            });
             return response;
         } catch (error) {
             console.error(`Error updating post with ID ${id}:`, error);

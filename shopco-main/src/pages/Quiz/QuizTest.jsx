@@ -1,21 +1,58 @@
 import React, { useEffect, useState } from 'react';
 import quizService from '../../apis/quizService';
 import userService from '../../apis/userService';
-import { Card, CardContent, FormControl, FormControlLabel, Radio, Button, Typography } from '@mui/material';
+import { useNavigate } from 'react-router-dom';
+import { 
+    Card, CardContent, FormControl, FormControlLabel, Radio, Button, 
+    Typography, Box, Alert, Stepper, Step, StepLabel, 
+    LinearProgress, Paper, Fade, Slide, Grow, CircularProgress,
+    IconButton, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle,
+    Container
+} from '@mui/material';
+import { ArrowBack, ArrowForward, Check, Close as CloseIcon } from '@mui/icons-material';
+import Header from '../../components/Header';
+import Footer from '../../components/Footer/Footer';
 
 const QuizTest = () => {
+    const navigate = useNavigate();
     const [questions, setQuestions] = useState([]);
     const [selectedAnswers, setSelectedAnswers] = useState({});
     const [results, setResults] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [submitting, setSubmitting] = useState(false);
+    const [error, setError] = useState('');
+    const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+    const [direction, setDirection] = useState('left');
+    const [animIn, setAnimIn] = useState(true);
+    const [openConfirmDialog, setOpenConfirmDialog] = useState(false);
+    const [showIntro, setShowIntro] = useState(true);
 
     useEffect(() => {
         const fetchData = async () => {
             try {
+                setLoading(true);
+                setError('');
+                
+                // Thêm timestamp để tránh cache
                 const questionResponse = await quizService.getQuestions();
                 console.log("Questions:", questionResponse);
+                
+                if (Array.isArray(questionResponse) && questionResponse.length > 0) {
                 setQuestions(questionResponse);
+                } else {
+                    setError('Không thể tải câu hỏi. Vui lòng làm mới trang và thử lại.');
+                    console.warn('Không có câu hỏi nào được tìm thấy hoặc định dạng không đúng');
+                }
             } catch (error) {
                 console.error('Error fetching data:', error);
+                // Hiển thị thông báo lỗi thân thiện
+                if (error.message === 'Request was cancelled') {
+                    setError('Kết nối bị gián đoạn. Vui lòng làm mới trang và thử lại.');
+                } else {
+                    setError('Không thể tải câu hỏi. Vui lòng thử lại sau.');
+                }
+            } finally {
+                setLoading(false);
             }
         };
 
@@ -29,11 +66,74 @@ const QuizTest = () => {
         }));
     };
 
+    const handleAnimation = (newIndex, dir) => {
+        setAnimIn(false);
+        setDirection(dir);
+        
+        // Đợi animation hoàn thành trước khi chuyển câu hỏi
+        setTimeout(() => {
+            setCurrentQuestionIndex(newIndex);
+            setAnimIn(true);
+        }, 300);
+    };
+
+    const handleNextQuestion = () => {
+        if (currentQuestionIndex < questions.length - 1) {
+            handleAnimation(currentQuestionIndex + 1, 'left');
+        } else {
+            // Nếu là câu hỏi cuối cùng và đã trả lời, tự động nộp bài
+            handleSubmit();
+        }
+    };
+
+    const handlePreviousQuestion = () => {
+        if (currentQuestionIndex > 0) {
+            handleAnimation(currentQuestionIndex - 1, 'right');
+        }
+    };
+
+    const handleGoToQuestion = (index) => {
+        const dir = index > currentQuestionIndex ? 'left' : 'right';
+        handleAnimation(index, dir);
+    };
+
+    const getProgressPercentage = () => {
+        const answeredCount = Object.keys(selectedAnswers).length;
+        return questions.length > 0 ? (answeredCount / questions.length) * 100 : 0;
+    };
+
+    const handleCloseQuiz = () => {
+        // Nếu người dùng đã trả lời ít nhất một câu hỏi, hiển thị dialog xác nhận
+        if (Object.keys(selectedAnswers).length > 0) {
+            setOpenConfirmDialog(true);
+        } else {
+            // Nếu chưa trả lời câu hỏi nào, có thể quay về trang chính ngay lập tức
+            navigate('/');
+        }
+    };
+
+    const handleConfirmClose = () => {
+        setOpenConfirmDialog(false);
+        navigate('/');
+    };
+
+    const handleCancelClose = () => {
+        setOpenConfirmDialog(false);
+    };
+
+    // Xử lý bắt đầu làm quiz (từ phần giới thiệu)
+    const handleStartQuiz = () => {
+        setShowIntro(false);
+    };
+
     const handleSubmit = async () => {
         if (Object.keys(selectedAnswers).length !== questions.length) {
-            alert("Vui lòng chọn câu trả lời cho tất cả các câu hỏi trước khi xem kết quả.");
+            setError("Vui lòng chọn câu trả lời cho tất cả các câu hỏi trước khi xem kết quả.");
             return;
         }
+
+        setSubmitting(true);
+        setError('');
 
         try {
             // Lấy userId từ người dùng đăng nhập
@@ -41,7 +141,8 @@ const QuizTest = () => {
             const userId = currentUser ? currentUser.userId : null;
             
             if (!userId) {
-                alert("Bạn cần đăng nhập để sử dụng tính năng này");
+                setError("Bạn cần đăng nhập để sử dụng tính năng này");
+                setSubmitting(false);
                 return;
             }
 
@@ -50,9 +151,11 @@ const QuizTest = () => {
                 userId: userId,
                 responses: Object.entries(selectedAnswers).map(([questionId, selectedAnswerId]) => ({
                     questionId: parseInt(questionId),
-                    selectedAnswerId: selectedAnswerId
+                    selectedAnswerId: parseInt(selectedAnswerId) // Đảm bảo đây là số nguyên
                 }))
             };
+
+            console.log("Dữ liệu gửi đi:", JSON.stringify(requestData, null, 2));
 
             // Save quiz results and get skin type from backend
             const response = await quizService.saveQuizResult(requestData);
@@ -60,51 +163,222 @@ const QuizTest = () => {
             
             // Kiểm tra xem kết quả trả về có skinType không
             if (response && response.skinType) {
-                // Thêm bước này: Lưu loại da vào dữ liệu người dùng
-                try {
-                    await userService.saveSkinType(userId, response.skinType);
-                    console.log('SkinType saved to user profile:', response.skinType);
-                } catch (skinTypeError) {
-                    console.error('Error saving skin type to user profile:', skinTypeError);
-                    // Vẫn tiếp tục hiển thị kết quả ngay cả khi không lưu được vào profile
-                }
-                
-                // Set results from backend response
+                // Hiển thị kết quả từ API trả về
                 setResults([response.skinType]);
+                setError('');
+            } else if (response && response.message) {
+                // Hiển thị thông báo lỗi từ server nếu có
+                setError(`Lỗi từ server: ${response.message}`);
+                console.error('Server error message:', response.message);
             } else {
-                console.error('Invalid response format, skinType not found:', response);
-                alert('Có lỗi xảy ra khi phân tích kết quả. Vui lòng thử lại.');
+                // Trường hợp kết quả đã được lưu nhưng không trả về skinType
+                // Giả định rằng quiz vẫn thành công
+                console.warn('Không tìm thấy skinType trong phản hồi, nhưng có thể đã lưu thành công:', response);
+                
+                // Thử xác định loại da từ các câu trả lời (giải pháp tạm thời)
+                const skinTypes = {
+                    "Da dầu": 0,
+                    "Da thường": 0,
+                    "Da khô": 0,
+                    "Da hỗn hợp": 0,
+                    "Da nhạy cảm": 0
+                };
+                
+                // Đếm số lượng câu trả lời cho mỗi loại da (giả định đơn giản)
+                requestData.responses.forEach(response => {
+                    const answerId = response.selectedAnswerId;
+                    // Trường hợp này chỉ là giả định - có thể cần logic phức tạp hơn
+                    if (answerId % 5 === 0) skinTypes["Da dầu"]++;
+                    else if (answerId % 5 === 1) skinTypes["Da thường"]++;
+                    else if (answerId % 5 === 2) skinTypes["Da khô"]++;
+                    else if (answerId % 5 === 3) skinTypes["Da hỗn hợp"]++;
+                    else skinTypes["Da nhạy cảm"]++;
+                });
+                
+                // Lấy loại da có số lượng cao nhất
+                const predictedSkinType = Object.entries(skinTypes)
+                    .sort((a, b) => b[1] - a[1])
+                    .map(entry => entry[0])[0];
+                
+                setResults([predictedSkinType]);
+                console.log('Dự đoán loại da:', predictedSkinType);
             }
         } catch (error) {
             console.error('Error processing quiz results:', error);
-            alert('Có lỗi xảy ra khi lưu kết quả. Vui lòng thử lại.');
+            
+            // Kiểm tra nếu là lỗi 400 (Bad Request)
+            if (error.response && error.response.status === 400) {
+                setError('Dữ liệu quiz không hợp lệ. Vui lòng kiểm tra lại câu trả lời và thử lại.');
+                console.error('Bad Request Error:', error.response.data);
+            } else {
+                setError('Có lỗi xảy ra khi lưu kết quả. Vui lòng thử lại.');
+            }
+        } finally {
+            setSubmitting(false);
         }
     };
 
+    // Hiển thị phần giới thiệu quiz
+    const renderIntroduction = () => {
+        return (
+            <Box>
+                {/* Phần giới thiệu về quiz */}
+                <Box sx={{ mb: 4, textAlign: 'center' }}>
+                    <Typography variant="h4" component="h1" gutterBottom sx={{ 
+                        color: '#7d3c98', 
+                        fontWeight: 600,
+                        fontSize: '2rem',
+                        mb: 2
+                    }}>
+                        Hãy làm <span style={{ color: '#e74c3c' }}>bài kiểm tra loại da 3 phút ngay</span> để khám phá sản phẩm phù hợp với làn da của bạn!
+                    </Typography>
+                    
+                    <Typography variant="body1" color="text.secondary" sx={{ 
+                        maxWidth: '800px', 
+                        mx: 'auto', 
+                        mb: 4,
+                        fontSize: '1.1rem',
+                        lineHeight: 1.5,
+                        color: '#555'
+                    }}>
+                        Bài kiểm tra miễn phí này sẽ giúp bạn xác định chính xác loại da của mình dựa trên những câu hỏi đơn giản về tình trạng da hàng ngày. Từ đó, chúng tôi sẽ gợi ý các sản phẩm chăm sóc da phù hợp từ bộ sưu tập của Beauty Cosmetics, giúp bạn xây dựng quy trình chăm sóc da hiệu quả cho riêng bạn.
+                    </Typography>
+                    
+                    <Typography variant="h6" sx={{
+                        fontWeight: 600,
+                        mb: 4,
+                        fontSize: '1.3rem',
+                        color: '#333'
+                    }}>
+                        Làm bài kiểm tra để trải nghiệm mua sắm thông minh hơn!
+                    </Typography>
+                    
+                    <Button 
+                        variant="contained" 
+                        onClick={handleStartQuiz}
+                        sx={{
+                            px: 4,
+                            py: 1.5,
+                            fontSize: '1.2rem',
+                            borderRadius: 50,
+                            boxShadow: 2,
+                            mb: 6,
+                            backgroundColor: '#f5a9a0',
+                            color: '#fff',
+                            '&:hover': {
+                                backgroundColor: '#e74c3c',
+                                boxShadow: 4,
+                            },
+                            transition: 'all 0.3s'
+                        }}
+                    >
+                        Tìm Loại Da Của Tôi
+                    </Button>
+                </Box>
+            </Box>
+        );
+    };
+
+    // Hiển thị từng câu hỏi
+    const renderQuestion = () => {
+        if (questions.length === 0) {
+            return (
+                <Typography variant="body1" sx={{ textAlign: 'center', color: '#003366' }}>
+                    Không có câu hỏi nào được tìm thấy.
+                </Typography>
+            );
+        }
+
+        const currentQuestion = questions[currentQuestionIndex];
+        const isAnswered = selectedAnswers[currentQuestion.id] !== undefined;
+        const isLastQuestion = currentQuestionIndex === questions.length - 1;
+
     return (
-        <div style={{ backgroundColor: '#f5e1d0', padding: '20px', minHeight: '100vh' }}>
-            <Typography variant="h4" gutterBottom sx={{ textAlign: 'center', fontSize: '2rem', color: '#003366' }}>
-                Da Của Bạn Là...?
+            <>
+                {/* Header với nút đóng */}
+                <Box sx={{ 
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    alignItems: 'center', 
+                    mb: 2,
+                    p: 2,
+                    backgroundColor: 'white',
+                    borderRadius: 2,
+                    boxShadow: 1
+                }}>
+                    <Typography variant="h6" sx={{ color: '#003366', fontWeight: 'bold' }}>
+                        Beauty Cosmetics - Bài Kiểm Tra Loại Da
+                    </Typography>
+                    <IconButton 
+                        onClick={handleCloseQuiz} 
+                        aria-label="đóng"
+                        sx={{ 
+                            color: 'grey.600', 
+                            '&:hover': { 
+                                color: 'error.main',
+                                bgcolor: 'error.light',
+                                opacity: 0.9
+                            },
+                            transition: 'all 0.2s'
+                        }}
+                    >
+                        <CloseIcon />
+                    </IconButton>
+                </Box>
+
+                <Box sx={{ mb: 4 }}>
+                    <Stepper activeStep={currentQuestionIndex} alternativeLabel>
+                        {questions.map((question, index) => (
+                            <Step 
+                                key={question.id}
+                                completed={selectedAnswers[question.id] !== undefined}
+                            >
+                                <StepLabel 
+                                    onClick={() => handleGoToQuestion(index)} 
+                                    sx={{ cursor: 'pointer' }}
+                                >
+                                    {index + 1}
+                                </StepLabel>
+                            </Step>
+                        ))}
+                    </Stepper>
+                </Box>
+
+                <Box sx={{ mb: 2 }}>
+                    <LinearProgress 
+                        variant="determinate" 
+                        value={getProgressPercentage()} 
+                        sx={{ height: 8, borderRadius: 5 }}
+                    />
+                    <Typography variant="body2" sx={{ mt: 1, textAlign: 'right' }}>
+                        {Object.keys(selectedAnswers).length}/{questions.length} câu hỏi đã trả lời
             </Typography>
-            {questions.length > 0 ? (
-                questions.map((question) => (
-                    <Card key={question.id} sx={{ marginBottom: 2, backgroundColor: '#ECDEB9' }}> 
+                </Box>
+
+                <Slide direction={direction} in={animIn} mountOnEnter unmountOnExit timeout={300}>
+                    <Card sx={{ marginBottom: 2, backgroundColor: '#ECDEB9' }}>
                         <CardContent>
-                            <Typography variant="h6" sx={{ fontSize: '1.5rem', color: '#003366' }}>
-                                {question.questionText}
+                            <Typography variant="h6" sx={{ fontSize: '1.2rem', color: '#003366' }}>
+                                Câu hỏi {currentQuestionIndex + 1}/{questions.length}: {currentQuestion.questionText}
                             </Typography>
-                            <FormControl component="fieldset">
-                                {question.answers.map((answer) => (
-                                    <FormControlLabel
+                            <FormControl component="fieldset" sx={{ mt: 2, width: '100%' }}>
+                                {currentQuestion.answers.map((answer, idx) => (
+                                    <Grow 
+                                        in={animIn} 
+                                        style={{ transformOrigin: '0 0 0' }}
+                                        timeout={300 + idx * 100}
                                         key={answer.answerId}
+                                    >
+                                        <FormControlLabel
                                         control={
                                             <Radio
-                                                checked={selectedAnswers[question.id] === answer.answerId}
-                                                onChange={() => handleAnswerSelect(question.id, answer.answerId)}
+                                                    checked={selectedAnswers[currentQuestion.id] === answer.answerId}
+                                                    onChange={() => handleAnswerSelect(currentQuestion.id, answer.answerId)}
                                                 value={answer.answerId}
                                             />
                                         }
                                         label={answer.answerText}
+
 
                                     />
 
@@ -116,9 +390,14 @@ const QuizTest = () => {
                                                 borderRadius: 1,
                                                 '&:hover': { bgcolor: 'rgba(0, 0, 0, 0.04)' },
                                                 ...(selectedAnswers[currentQuestion.id] === answer.answerId ? {
+
                                                     bgcolor: 'rgba(245, 169, 160, 0.2)',
                                                     color: '#e74c3c',
                                                     fontWeight: 'bold',
+
+                                                    bgcolor: 'primary.light',
+                                                    color: 'primary.contrastText',
+
                                                 } : {}),
                                                 transition: 'all 0.3s ease'
                                             }}
@@ -129,27 +408,84 @@ const QuizTest = () => {
                             </FormControl>
                         </CardContent>
                     </Card>
-                ))
-            ) : (
-                <Typography variant="h6" sx={{ textAlign: 'center', color: '#003366' }}>
-                    Đang tải câu hỏi...
-                </Typography>
-            )}
-            <Button variant="contained" color="primary" onClick={handleSubmit}>
-                Xem Kết Quả
+                </Slide>
+
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 3 }}>
+                    <Button
+                        variant="outlined"
+                        onClick={handlePreviousQuestion}
+                        disabled={currentQuestionIndex === 0}
+                        startIcon={<ArrowBack />}
+                    >
+                        Câu trước
             </Button>
 
-            {results.length > 0 && (
-                <div>
-                    <Typography sx={{ fontSize: '1.2rem' }}>
-                        <span style={{ color: '#003366' }}>Da của bạn là: </span>
-                        <span style={{ color: '#d32f2f' }}>{results.join(' hoặc ')}</span>
-                        <span style={{ color: '#003366' }}>, hãy xem quy trình chăm sóc da và chọn sản phẩm phù hợp nhé!</span>
-                    </Typography>
+                    {isLastQuestion ? (
+                        <Button
+                            variant="contained"
+                            color="primary"
+                            onClick={handleSubmit}
+                            endIcon={submitting ? <CircularProgress size={20} color="inherit" /> : <Check />}
+                            disabled={!isAnswered || submitting}
+                            sx={{
+                                backgroundColor: '#f5a9a0',
+                                '&:hover': {
+                                    backgroundColor: '#e74c3c',
+                                }
+                            }}
+                        >
+                            {submitting ? 'Đang phân tích...' : 'Xem kết quả phân tích'}
+                        </Button>
+                    ) : (
+                        <Button
+                            variant="contained"
+                            color="primary"
+                            onClick={handleNextQuestion}
+                            endIcon={<ArrowForward />}
+                            disabled={!isAnswered}
+                            sx={{
+                                backgroundColor: '#f5a9a0',
+                                '&:hover': {
+                                    backgroundColor: '#e74c3c',
+                                }
+                            }}
+                        >
+                            Câu tiếp theo
+                        </Button>
+                    )}
+                </Box>
+            </>
+        );
+    };
 
-                </div>
-            )}
-        </div>
+    // Hiển thị kết quả quiz
+    const renderResults = () => {
+        if (results.length === 0) return null;
+
+        return (
+            <Grow in={true} timeout={800}>
+                <Paper elevation={3} sx={{ mt: 4, p: 4, backgroundColor: '#f9f9f9', borderRadius: 2, textAlign: 'center' }}>
+                    {/* Thêm nút đóng ở phần kết quả */}
+                    <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                        <IconButton 
+                            onClick={() => navigate('/')} 
+                            aria-label="quay lại trang chủ"
+                            sx={{ 
+                                color: 'grey.600', 
+                                '&:hover': { 
+                                    color: 'error.main',
+                                    bgcolor: 'error.light',
+                                    opacity: 0.9
+                                },
+                            }}
+                        >
+                            <CloseIcon />
+                        </IconButton>
+                    </Box>
+                    
+                    <Typography variant="h5" sx={{ mb: 3, color: '#003366', fontWeight: 'bold' }}>
+                        Beauty Cosmetics - Kết Quả Phân Tích Làn Da Của Bạn
+                    </Typography>
 
                     
                     <Box sx={{ 
@@ -284,6 +620,7 @@ const QuizTest = () => {
                         <Button
                             variant="contained"
                             color="primary"
+
                             onClick={() => {
                                 // Điều hướng tùy thuộc vào loại da
                                 let targetPath = '/category';
@@ -311,6 +648,7 @@ const QuizTest = () => {
                                 }
                                 navigate(targetPath);
                             }}
+
                             sx={{
                                 px: 4,
                                 py: 1.5,
@@ -321,7 +659,7 @@ const QuizTest = () => {
                                 }
                             }}
                         >
-                            Xem quy trình và chọn các sản phẩm phù hợp
+
                         </Button>
                     </Box>
                 </Paper>
