@@ -471,7 +471,7 @@ const Checkout = () => {
     // Nếu người dùng chuyển từ VNPAY sang COD sau khi quay lại, cần reset một số trạng thái
     if (paymentPending && newPaymentMethod === 'Thanh toán khi nhận hàng (COD)') {
       console.log("Đã chuyển từ VNPAY sang COD, đang reset trạng thái...");
-      // Reset trạng thái đơn hàng VNPAY
+      // Reset trạng thái để cho phép áp dụng voucher
       setSentToVnpay(false);
       setPaymentPending(false); // Reset trạng thái thanh toán đang chờ
       
@@ -683,23 +683,6 @@ const Checkout = () => {
       } else {
         // Thanh toán COD - hiển thị dialog cảm ơn ngay lập tức, không cần kiểm tra gì thêm
         setThankYouDialogOpen(true);
-        
-        // Đánh dấu đơn hàng đã thanh toán trên server nếu là COD
-        try {
-          await orderService.markOrderAsPaid(order.orderId);
-          console.log("Đã đánh dấu đơn hàng COD là đã thanh toán");
-          
-          // Xóa giỏ hàng ngay sau khi thanh toán COD thành công
-          const user = JSON.parse(localStorage.getItem('user'));
-          if (user && user.userId) {
-            localStorage.setItem('cart', JSON.stringify([]));
-            await orderService.clearCartAfterPayment(user.userId);
-            window.dispatchEvent(new CustomEvent('cartUpdated'));
-          }
-        } catch (markError) {
-          console.error("Lỗi khi đánh dấu đơn hàng đã thanh toán:", markError);
-        }
-        
         setIsProcessing(false);
       }
     } catch (error) {
@@ -713,31 +696,6 @@ const Checkout = () => {
     setThankYouDialogOpen(false);
     // Xóa pendingOrderId khi thanh toán COD thành công
     localStorage.removeItem('pendingOrderId');
-    
-    // Thêm xử lý xóa giỏ hàng sau khi thanh toán COD thành công
-    try {
-      // Lấy userId từ localStorage để xóa giỏ hàng trên server
-      const user = JSON.parse(localStorage.getItem('user'));
-      if (user && user.userId) {
-        // Xóa giỏ hàng trên localStorage
-        localStorage.setItem('cart', JSON.stringify([]));
-        
-        // Gọi API để xóa giỏ hàng trên server (không cần await vì sẽ chuyển trang)
-        orderService.clearCartAfterPayment(user.userId)
-          .then(() => {
-            console.log("Đã xóa giỏ hàng sau khi thanh toán COD thành công");
-          })
-          .catch(error => {
-            console.error("Lỗi khi xử lý xóa giỏ hàng:", error);
-          });
-        
-        // Kích hoạt sự kiện để cập nhật lại số lượng giỏ hàng trên Header
-        window.dispatchEvent(new CustomEvent('cartUpdated'));
-      }
-    } catch (error) {
-      console.error("Lỗi khi xử lý xóa giỏ hàng:", error);
-    }
-    
     // Redirect to home page
     navigate('/');
   };

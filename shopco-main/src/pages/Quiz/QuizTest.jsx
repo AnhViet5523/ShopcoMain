@@ -378,6 +378,10 @@ const QuizTest = () => {
                                             />
                                         }
                                         label={answer.answerText}
+
+
+                                    />
+
                                             sx={{ 
                                                 py: 1,
                                                 px: 2, 
@@ -386,13 +390,20 @@ const QuizTest = () => {
                                                 borderRadius: 1,
                                                 '&:hover': { bgcolor: 'rgba(0, 0, 0, 0.04)' },
                                                 ...(selectedAnswers[currentQuestion.id] === answer.answerId ? {
+
+                                                    bgcolor: 'rgba(245, 169, 160, 0.2)',
+                                                    color: '#e74c3c',
+                                                    fontWeight: 'bold',
+
                                                     bgcolor: 'primary.light',
                                                     color: 'primary.contrastText',
+
                                                 } : {}),
                                                 transition: 'all 0.3s ease'
                                             }}
                                         />
                                     </Grow>
+
                                 ))}
                             </FormControl>
                         </CardContent>
@@ -475,6 +486,7 @@ const QuizTest = () => {
                     <Typography variant="h5" sx={{ mb: 3, color: '#003366', fontWeight: 'bold' }}>
                         Beauty Cosmetics - Kết Quả Phân Tích Làn Da Của Bạn
                     </Typography>
+
                     
                     <Box sx={{ 
                         p: 3, 
@@ -605,55 +617,50 @@ const QuizTest = () => {
                             </Box>
                         )}
                         
-                        <Box sx={{ display: 'flex', flexDirection: {xs: 'column', md: 'row'}, justifyContent: 'center', gap: 2, mt: 4 }}>
-                            <Button
-                                variant="contained"
-                                color="primary"
-                                onClick={() => {
-                                    // Chuyển hướng đến trang sản phẩm với loại da đã xác định
-                                    const skinType = results[0];
-                                    // Tạo tham số URL để lọc sản phẩm theo loại da
-                                    const params = new URLSearchParams();
-                                    params.append('skinType', skinType);
-                                    navigate(`/category?${params.toString()}`);
-                                }}
-                                sx={{
-                                    px: 4,
-                                    py: 1.5,
-                                    borderRadius: 2,
-                                    backgroundColor: '#f5a9a0',
-                                    fontWeight: 'bold',
-                                    '&:hover': {
-                                        backgroundColor: '#e74c3c',
+                        <Button
+                            variant="contained"
+                            color="primary"
+
+                            onClick={() => {
+                                // Điều hướng tùy thuộc vào loại da
+                                let targetPath = '/category';
+                                if (results && results.length > 0) {
+                                    switch(results[0]) {
+                                        case "Da dầu":
+                                            targetPath = '/da-dau';
+                                            break;
+                                        case "Da hỗn hợp":
+                                            targetPath = '/da-hon-hop';
+                                            break;
+                                        case "Da khô":
+                                            targetPath = '/da-kho';
+                                            break;
+                                        case "Da nhạy cảm":
+                                            targetPath = '/da-nhay-cam';
+                                            break;
+                                        case "Da thường":
+                                            targetPath = '/da-thuong';
+                                            break;
+                                        default:
+                                            targetPath = '/category';
+                                            break;
                                     }
-                                }}
-                                startIcon={<i className="fas fa-search" />}
-                            >
-                                Xem sản phẩm phù hợp với làn da của bạn
-                            </Button>
-                            
-                            <Button
-                                variant="outlined"
-                                onClick={() => {
-                                    // Lưu kết quả vào localStorage để sử dụng sau này
-                                    localStorage.setItem('userSkinType', results[0]);
-                                    navigate('/');
-                                }}
-                                sx={{
-                                    px: 4,
-                                    py: 1.5,
-                                    borderRadius: 2,
-                                    borderColor: '#f5a9a0',
-                                    color: '#e74c3c',
-                                    '&:hover': {
-                                        borderColor: '#e74c3c',
-                                        backgroundColor: 'rgba(231, 76, 60, 0.04)',
-                                    }
-                                }}
-                            >
-                                Quay lại trang chủ
-                            </Button>
-                        </Box>
+                                }
+                                navigate(targetPath);
+                            }}
+
+                            sx={{
+                                px: 4,
+                                py: 1.5,
+                                borderRadius: 2,
+                                backgroundColor: '#f5a9a0',
+                                '&:hover': {
+                                    backgroundColor: '#e74c3c',
+                                }
+                            }}
+                        >
+
+                        </Button>
                     </Box>
                 </Paper>
             </Grow>
@@ -736,6 +743,7 @@ const QuizTest = () => {
             
             <Footer />
         </Box>
+
     );
 };
 
