@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { FaFilter, FaFileExport, FaPlus } from 'react-icons/fa';
-import { Box, Dialog, DialogActions, DialogContent, DialogTitle, TextField, Button } from '@mui/material';
+import { Box, Dialog, DialogActions, DialogContent, DialogTitle, TextField, Button, Typography, Pagination } from '@mui/material';
 import './Manager.css';
 import { useState, useEffect } from 'react';
 import feedbackService from '../../apis/feedbackService';
@@ -19,6 +19,8 @@ const ViewSupport = () => {
   const [selectedDetailRequest, setSelectedDetailRequest] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all'); // 'all', 'pending', 'replied'
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize] = useState(10);
 
   const sidebarItems = [
     { id: 'revenue', name: 'Doanh thu', icon: '📊' },
@@ -153,6 +155,26 @@ const ViewSupport = () => {
       return matchesSearch;
     });
   };
+
+  // Lấy tổng số trang dựa trên số lượng yêu cầu hỗ trợ được lọc và kích thước trang
+  const filteredRequests = getFilteredRequests();
+  const totalPages = Math.ceil(filteredRequests.length / pageSize);
+
+  // Hàm xử lý khi thay đổi trang
+  const handlePageChange = (event, value) => {
+    setCurrentPage(value);
+  };
+
+  // Lấy mảng yêu cầu hỗ trợ cho trang hiện tại
+  const getCurrentPageItems = () => {
+    const startIndex = (currentPage - 1) * pageSize;
+    return filteredRequests.slice(startIndex, startIndex + pageSize);
+  };
+
+  // Khi từ khóa tìm kiếm hoặc bộ lọc thay đổi, reset lại trang hiện tại
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filterStatus]);
 
   // Thêm styles cho component
   const styles = {
@@ -319,14 +341,14 @@ const ViewSupport = () => {
                     Đang tải dữ liệu...
                   </td>
                 </tr>
-              ) : getFilteredRequests().length === 0 ? (
+              ) : filteredRequests.length === 0 ? (
                 <tr>
                   <td colSpan="9" className="empty-data-message">
                     Không tìm thấy đơn hỗ trợ nào
                   </td>
                 </tr>
               ) : (
-                getFilteredRequests().map((request) => {
+                getCurrentPageItems().map((request) => {
                   if (!request || !request.messages || request.messages.length === 0) {
                     return null;
                   }
@@ -373,6 +395,26 @@ const ViewSupport = () => {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination */}
+        {filteredRequests.length > 0 && (
+          <div style={{ 
+            display: 'flex', 
+            justifyContent: 'center', 
+            marginTop: '20px',
+            marginBottom: '20px'
+          }}>
+            <Pagination 
+              count={totalPages} 
+              page={currentPage} 
+              onChange={handlePageChange} 
+              variant="outlined" 
+              color="primary" 
+              showFirstButton 
+              showLastButton
+            />
+          </div>
+        )}
       </div>
     </div>
 

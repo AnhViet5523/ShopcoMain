@@ -454,7 +454,7 @@ const Feedback = () => {
             </tbody>
           </table>
           
-          {/* Phân trang */}
+          {/* Pagination */}
           <div style={{ display: 'flex', justifyContent: 'center', marginTop: '20px' }}>
             <Pagination
               count={Math.ceil(reviews.length / pageSize)}

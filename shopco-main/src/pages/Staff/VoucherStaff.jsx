@@ -1,11 +1,9 @@
 import { useNavigate } from 'react-router-dom';
-import { Box } from '@mui/material';
+import { Box, Dialog, DialogActions, DialogContent, DialogTitle, TextField, Button, Typography, Pagination } from '@mui/material';
 import './Manager.css';
 import { useState, useEffect } from 'react';
 import voucherService from '../../apis/voucherService';
-import { Dialog, DialogActions, DialogContent, DialogTitle, TextField, Button } from '@mui/material';
-import { DatePicker } from '@mui/x-date-pickers';
-import { LocalizationProvider } from '@mui/x-date-pickers';
+import { DatePicker, LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import dayjs from 'dayjs';
 
@@ -17,6 +15,11 @@ const VoucherStaff = () => {
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [originalVouchers, setOriginalVouchers] = useState([]);
+  const [activeTab, setActiveTab] = useState('Tất cả');
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [selectedVoucher, setSelectedVoucher] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize] = useState(10);
 
   // State cho dialog thêm voucher
   const [openDialog, setOpenDialog] = useState(false);
@@ -221,6 +224,80 @@ const VoucherStaff = () => {
     }
   };
 
+  // Thêm hàm formatDate để định dạng ngày tháng
+  const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('vi-VN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      });
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return 'N/A';
+    }
+  };
+
+  // Hàm lọc voucher dựa trên từ khóa tìm kiếm và tab đang chọn
+  const getFilteredVouchers = () => {
+    let filtered = vouchers;
+    
+    // Lọc theo tab
+    if (activeTab === 'Đang hoạt động') {
+      filtered = filtered.filter(voucher => {
+        const startDate = new Date(voucher.startDate);
+        const endDate = new Date(voucher.endDate);
+        const now = new Date();
+        return now >= startDate && now <= endDate;
+      });
+    } else if (activeTab === 'Hết hạn') {
+      filtered = filtered.filter(voucher => {
+        const endDate = new Date(voucher.endDate);
+        const now = new Date();
+        return now > endDate;
+      });
+    } else if (activeTab === 'Sắp diễn ra') {
+      filtered = filtered.filter(voucher => {
+        const startDate = new Date(voucher.startDate);
+        const now = new Date();
+        return now < startDate;
+      });
+    }
+    
+    // Lọc theo từ khóa tìm kiếm
+    if (searchTerm.trim()) {
+      const searchTermLower = searchTerm.toLowerCase();
+      filtered = filtered.filter(voucher => 
+        voucher.voucherCode.toLowerCase().includes(searchTermLower) ||
+        voucher.description.toLowerCase().includes(searchTermLower)
+      );
+    }
+    
+    return filtered;
+  };
+
+  // Lấy tổng số trang dựa trên số lượng voucher được lọc và kích thước trang
+  const filteredVouchers = getFilteredVouchers();
+  const totalPages = Math.ceil(filteredVouchers.length / pageSize);
+
+  // Hàm xử lý khi thay đổi trang
+  const handlePageChange = (event, value) => {
+    setCurrentPage(value);
+  };
+
+  // Lấy voucher cho trang hiện tại
+  const getCurrentPageItems = () => {
+    const startIndex = (currentPage - 1) * pageSize;
+    return filteredVouchers.slice(startIndex, startIndex + pageSize);
+  };
+
+  // Reset trang về 1 khi thay đổi từ khóa tìm kiếm hoặc tab
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, activeTab]);
+
   return (
     <Box sx={{ bgcolor: "#f0f0f0", minHeight: "100vh", width:'99vw' }}>
       <div className="manager-container">
@@ -310,9 +387,9 @@ const VoucherStaff = () => {
           <div className="dashboard-title-bar">
             <h1>Vouchers</h1>
             <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-              {searchTerm && vouchers.length > 0 && (
+              {searchTerm && filteredVouchers.length > 0 && (
                 <div style={{ color: '#666', fontSize: '14px', alignSelf: 'center' }}>
-                  Tìm thấy: {vouchers.length} voucher
+                  Tìm thấy: {filteredVouchers.length} voucher
                 </div>
               )}
               <button
@@ -341,83 +418,110 @@ const VoucherStaff = () => {
               <thead>
                 <tr>
                   <th>ID</th>
-                  <th>TÊN VOUCHER</th>
-                  <th>GIẢM GIÁ (%)</th>
-                  <th>ĐƠN TỐI THIỂU</th>
+                  <th>MÃ VOUCHER</th>
+                  <th>MÔ TẢ</th>
+                  <th>GIẢM GIÁ</th>
                   <th>NGÀY BẮT ĐẦU</th>
                   <th>NGÀY KẾT THÚC</th>
-                  <th>SỐ LƯỢNG</th>
                   <th>TRẠNG THÁI</th>
-                  <th>MÔ TẢ</th>
                   <th>THAO TÁC</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan="10" className="empty-data-message">
-                      Đang tải dữ liệu voucher...
+                    <td colSpan="8" className="empty-data-message">
+                      Đang tải dữ liệu...
                     </td>
                   </tr>
-                ) : error ? (
+                ) : filteredVouchers.length === 0 ? (
                   <tr>
-                    <td colSpan="10" className="empty-data-message error-message">
-                      {error}
+                    <td colSpan="8" className="empty-data-message">
+                      Không tìm thấy voucher nào
                     </td>
                   </tr>
-                ) : vouchers.length > 0 ? (
-                  vouchers.map((voucher) => (
-                    <tr key={voucher.voucherId}>
-                      <td>{voucher.voucherId}</td>
-                      <td>{voucher.voucherName}</td>
-                      <td>{voucher.discountPercent}%</td>
-                      <td>{voucher.minOrderAmount ? voucher.minOrderAmount.toLocaleString() : 0}đ</td>
-                      <td>{new Date(voucher.startDate).toLocaleDateString('vi-VN')}</td>
-                      <td>{new Date(voucher.endDate).toLocaleDateString('vi-VN')}</td>
-                      <td>{voucher.quantity}</td>
-                      <td>{voucher.status}</td>
-                      <td>{voucher.description}</td>
-                      <td style={{ whiteSpace: 'nowrap' }}>
-                        <button
-                          onClick={() => handleEdit(voucher.voucherId)}
-                          style={{
-                            padding: '5px 10px',
-                            backgroundColor: '#007bff',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '3px',
-                            cursor: 'pointer',
-                            marginRight: '5px'
-                          }}
-                        >
-                          Sửa
-                        </button>
-                        <button
-                          onClick={() => handleDelete(voucher.voucherId)}
-                          style={{
-                            padding: '5px 10px',
-                            backgroundColor: '#dc3545',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '3px',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          Thay đổi trạng thái
-                        </button>
-                      </td>
-                    </tr>
-                  ))
                 ) : (
-                  <tr>
-                    <td colSpan="10" className="empty-data-message">
-                      Không có dữ liệu voucher
-                    </td>
-                  </tr>
+                  getCurrentPageItems().map((voucher) => {
+                    const startDate = new Date(voucher.startDate);
+                    const endDate = new Date(voucher.endDate);
+                    const now = new Date();
+                    let status = "Chưa bắt đầu";
+                    let statusColor = "#f39c12"; // Màu vàng cho chưa bắt đầu
+                    
+                    if (now >= startDate && now <= endDate) {
+                      status = "Đang hoạt động";
+                      statusColor = "#2ecc71"; // Màu xanh lá cho đang hoạt động
+                    } else if (now > endDate) {
+                      status = "Hết hạn";
+                      statusColor = "#e74c3c"; // Màu đỏ cho hết hạn
+                    }
+                    
+                    return (
+                      <tr key={voucher.voucherId}>
+                        <td>{voucher.voucherId}</td>
+                        <td>{voucher.voucherCode}</td>
+                        <td style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {voucher.description}
+                        </td>
+                        <td>{voucher.discountPercentage}%</td>
+                        <td>{formatDate(voucher.startDate)}</td>
+                        <td>{formatDate(voucher.endDate)}</td>
+                        <td>
+                          <span style={{
+                            padding: '6px 10px',
+                            borderRadius: '4px',
+                            backgroundColor: statusColor,
+                            color: 'white',
+                            fontSize: '12px',
+                            fontWeight: 'bold'
+                          }}>
+                            {status}
+                          </span>
+                        </td>
+                        <td>
+                          <div style={{ display: 'flex', gap: '5px' }}>
+                            <button
+                              onClick={() => handleEdit(voucher.voucherId)}
+                              style={{
+                                padding: '5px 10px',
+                                backgroundColor: '#3498db',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '5px',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              Chi tiết
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>
           </div>
+
+          {/* Pagination */}
+          {filteredVouchers.length > 0 && (
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'center', 
+              marginTop: '20px',
+              marginBottom: '20px'
+            }}>
+              <Pagination 
+                count={totalPages} 
+                page={currentPage} 
+                onChange={handlePageChange} 
+                variant="outlined" 
+                color="primary" 
+                showFirstButton 
+                showLastButton
+              />
+            </div>
+          )}
         </div>
       </div>
 

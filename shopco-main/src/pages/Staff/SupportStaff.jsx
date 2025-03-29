@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { FaFilter, FaFileExport, FaPlus } from 'react-icons/fa';
-import { Box, Dialog, DialogActions, DialogContent, DialogTitle, TextField, Button } from '@mui/material';
+import { Box, Dialog, DialogActions, DialogContent, DialogTitle, TextField, Button, Typography, Pagination } from '@mui/material';
 import './Manager.css';
 import { useState, useEffect } from 'react';
 import feedbackService from '../../apis/feedbackService';
@@ -19,6 +19,8 @@ const  SupportStaff = () => {
   const [selectedDetailRequest, setSelectedDetailRequest] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all'); // 'all', 'pending', 'replied'
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize] = useState(10);
 
   const sidebarItems = [
     { id: 'orderStaff', name: 'Đơn hàng', icon: '📋' },
@@ -152,6 +154,26 @@ const  SupportStaff = () => {
       return matchesSearch;
     });
   };
+
+  // Lấy tổng số trang dựa trên số lượng hỗ trợ và số lượng hiển thị mỗi trang
+  const filteredRequests = getFilteredRequests();
+  const totalPages = Math.ceil(filteredRequests.length / pageSize);
+
+  // Hàm xử lý khi thay đổi trang
+  const handlePageChange = (event, value) => {
+    setCurrentPage(value);
+  };
+
+  // Lấy mảng yêu cầu hỗ trợ cho trang hiện tại
+  const getCurrentPageItems = () => {
+    const startIndex = (currentPage - 1) * pageSize;
+    return filteredRequests.slice(startIndex, startIndex + pageSize);
+  };
+
+  // Khi từ khóa tìm kiếm hoặc bộ lọc thay đổi, reset lại trang hiện tại
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filterStatus]);
 
   // Thêm styles cho component
   const styles = {
@@ -302,76 +324,114 @@ const  SupportStaff = () => {
             <thead>
               <tr>
                 <th>ID</th>
-                <th>TÊN NGƯỜI DÙNG</th>
-                <th>EMAIL</th>
-                <th>SỐ ĐIỆN THOẠI</th>
+                <th>TÊN NGƯỜI GỬI</th>
+                <th>NGÀY GỬI</th>
+                <th>TIÊU ĐỀ</th>
                 <th>NỘI DUNG</th>
-                <th>HÌNH ẢNH</th>
-                <th>THỜI GIAN GỬI</th>
-                <th>HÀNH ĐỘNG</th>
+                <th>TRẠNG THÁI</th>
+                <th>THAO TÁC</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan="9" className="empty-data-message">
+                  <td colSpan="7" className="empty-data-message">
                     Đang tải dữ liệu...
                   </td>
                 </tr>
-              ) : getFilteredRequests().length === 0 ? (
+              ) : filteredRequests.length > 0 ? (
+                getCurrentPageItems().map((request) => (
+                  <tr key={request.conversationId || request.id}>
+                    <td>{request.conversationId || request.id}</td>
+                    <td>{request.userName}</td>
+                    <td>{formatDateTime(request.timestamp)}</td>
+                    <td>{request.title || "Không có tiêu đề"}</td>
+                    <td>
+                      <div style={{ 
+                        maxWidth: '300px', 
+                        overflow: 'hidden', 
+                        textOverflow: 'ellipsis', 
+                        whiteSpace: 'nowrap'
+                      }}>
+                        {request.content}
+                      </div>
+                    </td>
+                    <td>
+                      <span style={{
+                        padding: '6px 10px',
+                        borderRadius: '4px',
+                        backgroundColor: request.status === 'Pending' ? '#ff9800' : '#4caf50',
+                        color: 'white',
+                        fontSize: '12px',
+                        fontWeight: 'bold'
+                      }}>
+                        {request.status === 'Pending' ? 'Chưa phản hồi' : 'Đã phản hồi'}
+                      </span>
+                    </td>
+                    <td>
+                      <div style={{ display: 'flex', gap: '5px' }}>
+                        <button 
+                          onClick={() => handleViewDetail(request)}
+                          style={{
+                            padding: '5px 10px',
+                            backgroundColor: '#007bff',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '5px',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Chi tiết
+                        </button>
+                        {request.status === 'Pending' && (
+                          <button 
+                            onClick={() => handleReply(request)}
+                            style={{
+                              padding: '5px 10px',
+                              backgroundColor: '#28a745',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '5px',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            Trả lời
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              ) : (
                 <tr>
-                  <td colSpan="9" className="empty-data-message">
-                    Không tìm thấy đơn hỗ trợ nào
+                  <td colSpan="7" className="empty-data-message">
+                    Không tìm thấy yêu cầu hỗ trợ phù hợp
                   </td>
                 </tr>
-              ) : (
-                getFilteredRequests().map((request) => {
-                  if (!request || !request.messages || request.messages.length === 0) {
-                    return null;
-                  }
-
-                  const firstMessage = request.messages[0];
-                  return (
-                    <tr key={request.conversationId}>
-                      <td>{firstMessage?.messageId || 'N/A'}</td>
-                      <td>{request.userName || 'N/A'}</td>
-                      <td>{firstMessage?.email || 'N/A'}</td>
-                      <td>{firstMessage?.phoneNumber || 'N/A'}</td>
-                      <td className="message-content">{firstMessage?.messageContent || 'N/A'}</td>
-                      <td>
-                        {firstMessage?.imageUrl ? (
-                          <span className="has-image" style={{ color: 'green', fontWeight: 'bold' }}>
-                            Có ảnh đính kèm
-                          </span>
-                        ) : (
-                          <span className="no-image">Không có ảnh</span>
-                        )}
-                      </td>
-                      <td>{firstMessage?.sendTime ? formatDateTime(firstMessage.sendTime) : 'N/A'}</td>
-                      <td>
-                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
-                          <button 
-                            className="detail-button"
-                            onClick={() => handleViewDetail(request)}
-                          >
-                            Chi tiết
-                          </button>
-                          <button 
-                            className={`reply-button ${request.status === 'Pending' ? 'active' : 'disabled'}`}
-                            onClick={() => handleReply(request)}
-                            disabled={request.status !== 'Pending'}
-                          >
-                            {request.status === 'Pending' ? 'Phản hồi' : 'Đã phản hồi'}
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
               )}
             </tbody>
           </table>
         </div>
+
+        {/* Pagination */}
+        {filteredRequests.length > 0 && (
+          <div style={{ 
+            display: 'flex', 
+            justifyContent: 'center', 
+            marginTop: '20px',
+            marginBottom: '20px'
+          }}>
+            <Pagination 
+              count={totalPages} 
+              page={currentPage} 
+              onChange={handlePageChange} 
+              variant="outlined" 
+              color="primary" 
+              showFirstButton 
+              showLastButton
+            />
+          </div>
+        )}
       </div>
     </div>
 

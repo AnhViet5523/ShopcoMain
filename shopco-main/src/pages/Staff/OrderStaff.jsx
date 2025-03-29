@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaFilter } from 'react-icons/fa';
-import { Box } from '@mui/material';
+import { Box, Pagination } from '@mui/material';
 import adminService from '../../apis/adminService'; 
 import userService from '../../apis/userService'; // Import userService
+import orderService from '../../apis/orderService'; // Import orderService
 import './Manager.css';
 
 const OrderStaff = () => {
@@ -14,6 +15,8 @@ const OrderStaff = () => {
   const [orderItems, setOrderItems] = useState([]);
   const [searchKey, setSearchKey] = useState(''); 
   const [cancelledOrders, setCancelledOrders] = useState([]); // Thêm state để lưu trữ các đơn hàng bị hủy
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize] = useState(10);
   const navigate = useNavigate();
 
   const sidebarItems = [
@@ -113,6 +116,26 @@ const OrderStaff = () => {
 
     return filtered; // Trả về danh sách đơn hàng đã lọc
   };
+
+  // Lấy tổng số trang dựa trên số lượng đơn hàng và số lượng hiển thị mỗi trang
+  const totalPages = Math.ceil(filteredOrders().length / pageSize);
+
+  // Hàm xử lý khi thay đổi trang
+  const handlePageChange = (event, value) => {
+    setCurrentPage(value);
+  };
+
+  // Lấy mảng đơn hàng cho trang hiện tại
+  const getCurrentPageItems = () => {
+    const filteredItems = filteredOrders();
+    const startIndex = (currentPage - 1) * pageSize;
+    return filteredItems.slice(startIndex, startIndex + pageSize);
+  };
+
+  // Khi tab thay đổi, reset lại trang hiện tại
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeTab, searchKey]);
 
   const handleClearSearch = () => {
     setSearchKey(''); // Xóa từ khóa tìm kiếm
@@ -359,7 +382,7 @@ const OrderStaff = () => {
                     </td>
                   </tr>
                 ) : filteredOrders().length > 0 ? (
-                  filteredOrders().map((order, index) => (
+                  getCurrentPageItems().map((order, index) => (
                     activeTab === 'Đơn hàng bị hủy' ? (
                       <tr key={order.cancelRequestId}>
                         <td>{order.cancelRequestId}</td>
@@ -453,6 +476,26 @@ const OrderStaff = () => {
               </tbody>
             </table>
           </div>
+
+          {/* Pagination */}
+          {filteredOrders().length > 0 && (
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'center', 
+              marginTop: '20px',
+              marginBottom: '20px'
+            }}>
+              <Pagination 
+                count={totalPages} 
+                page={currentPage} 
+                onChange={handlePageChange} 
+                variant="outlined" 
+                color="primary" 
+                showFirstButton 
+                showLastButton
+              />
+            </div>
+          )}
         </div>
       </div>
     </Box>

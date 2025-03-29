@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaFilter, FaFileExport, FaPlus } from 'react-icons/fa';
-import { Box } from '@mui/material';
+import { Box, Dialog, DialogActions, DialogContent, DialogTitle, TextField, Button, Typography, Pagination } from '@mui/material';
+import { Editor } from '@tinymce/tinymce-react';
 import './Manager.css';
 import adminService from '../../apis/adminService';
 
@@ -13,6 +14,8 @@ const BlogManager = () => {
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredCount, setFilteredCount] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize] = useState(10);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -110,6 +113,40 @@ const BlogManager = () => {
     setPosts(originalPosts);
     setFilteredCount(0);
   };
+
+  // Hàm lọc blog dựa trên từ khóa tìm kiếm
+  const getFilteredBlogs = () => {
+    if (!searchTerm.trim()) {
+      return posts;
+    }
+    
+    const searchTermLower = searchTerm.toLowerCase();
+    return posts.filter(post => 
+      post.title.toLowerCase().includes(searchTermLower) ||
+      post.content.toLowerCase().includes(searchTermLower) ||
+      post.userId.toLowerCase().includes(searchTermLower)
+    );
+  };
+
+  // Lấy tổng số trang dựa trên số lượng blog và kích thước trang
+  const filteredBlogs = getFilteredBlogs();
+  const totalPages = Math.ceil(filteredBlogs.length / pageSize);
+
+  // Hàm xử lý khi thay đổi trang
+  const handlePageChange = (event, value) => {
+    setCurrentPage(value);
+  };
+
+  // Lấy blog cho trang hiện tại
+  const getCurrentPageItems = () => {
+    const startIndex = (currentPage - 1) * pageSize;
+    return filteredBlogs.slice(startIndex, startIndex + pageSize);
+  };
+
+  // Reset trang về 1 khi thay đổi từ khóa tìm kiếm
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
 
   const sidebarItems = [
     { id: 'revenue', name: 'Doanh thu', icon: '📊' },
@@ -259,7 +296,7 @@ const BlogManager = () => {
                   </td>
                 </tr>
               ) : posts.length > 0 ? (
-                posts.map((post, index) => (
+                getCurrentPageItems().map((post, index) => (
                   <tr 
                     key={post.id}
                     style={{ 
@@ -352,6 +389,26 @@ const BlogManager = () => {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination */}
+        {posts.length > 0 && (
+          <div style={{ 
+            display: 'flex', 
+            justifyContent: 'center', 
+            marginTop: '20px',
+            marginBottom: '20px'
+          }}>
+            <Pagination 
+              count={totalPages} 
+              page={currentPage} 
+              onChange={handlePageChange} 
+              variant="outlined" 
+              color="primary" 
+              showFirstButton 
+              showLastButton
+            />
+          </div>
+        )}
       </div>
     </div>
     </Box>
