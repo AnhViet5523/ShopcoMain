@@ -114,39 +114,6 @@ const BlogManager = () => {
     setFilteredCount(0);
   };
 
-  // Hàm lọc blog dựa trên từ khóa tìm kiếm
-  const getFilteredBlogs = () => {
-    if (!searchTerm.trim()) {
-      return posts;
-    }
-    
-    const searchTermLower = searchTerm.toLowerCase();
-    return posts.filter(post => 
-      post.title.toLowerCase().includes(searchTermLower) ||
-      post.content.toLowerCase().includes(searchTermLower) ||
-      post.userId.toLowerCase().includes(searchTermLower)
-    );
-  };
-
-  // Lấy tổng số trang dựa trên số lượng blog và kích thước trang
-  const filteredBlogs = getFilteredBlogs();
-  const totalPages = Math.ceil(filteredBlogs.length / pageSize);
-
-  // Hàm xử lý khi thay đổi trang
-  const handlePageChange = (event, value) => {
-    setCurrentPage(value);
-  };
-
-  // Lấy blog cho trang hiện tại
-  const getCurrentPageItems = () => {
-    const startIndex = (currentPage - 1) * pageSize;
-    return filteredBlogs.slice(startIndex, startIndex + pageSize);
-  };
-
-  // Reset trang về 1 khi thay đổi từ khóa tìm kiếm
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm]);
 
   const sidebarItems = [
     { id: 'revenue', name: 'Doanh thu', icon: '📊' },

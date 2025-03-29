@@ -64,7 +64,7 @@ function PaymentResult() {
         return () => clearTimeout(timer);
     }, [orderId, vnp_ResponseCode]);
 
-    const handleContinueShopping = () => {
+    const handleNavigateHome = () => {
         navigate('/');
     };
 
@@ -155,19 +155,19 @@ function PaymentResult() {
                 
                 <Button 
                     variant="contained" 
-                    onClick={handleContinueShopping}
+                    onClick={orderStatus === 'success' ? () => navigate('/orders') : handleNavigateHome}
                     sx={{ 
-                        backgroundColor: 'darkgreen', 
+                        backgroundColor: orderStatus === 'success' ? 'darkgreen' : 'darkgreen', 
                         color: 'white', 
                         fontWeight: 'bold',
                         padding: '10px 24px',
                         fontSize: '16px',
                         '&:hover': {
-                            backgroundColor: '#005000',
+                            backgroundColor: orderStatus === 'success' ? '#005000' : '#005000',
                         }
                     }}
                 >
-                    {orderStatus === 'success' ? 'Tiếp tục mua sắm' : 'Quay lại trang chủ'}
+                    {orderStatus === 'success' ? 'Xem đơn hàng' : 'Quay lại trang chủ'}
                 </Button>
             </Box>
         </Box>

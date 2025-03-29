@@ -370,18 +370,14 @@ const QuizTest = () => {
                                         key={answer.answerId}
                                     >
                                         <FormControlLabel
-                                        control={
-                                            <Radio
+                                            control={
+                                                <Radio
                                                     checked={selectedAnswers[currentQuestion.id] === answer.answerId}
                                                     onChange={() => handleAnswerSelect(currentQuestion.id, answer.answerId)}
-                                                value={answer.answerId}
-                                            />
-                                        }
-                                        label={answer.answerText}
-
-
-                                    />
-
+                                                    value={answer.answerId}
+                                                />
+                                            }
+                                            label={answer.answerText}
                                             sx={{ 
                                                 py: 1,
                                                 px: 2, 
@@ -390,20 +386,16 @@ const QuizTest = () => {
                                                 borderRadius: 1,
                                                 '&:hover': { bgcolor: 'rgba(0, 0, 0, 0.04)' },
                                                 ...(selectedAnswers[currentQuestion.id] === answer.answerId ? {
-
                                                     bgcolor: 'rgba(245, 169, 160, 0.2)',
                                                     color: '#e74c3c',
                                                     fontWeight: 'bold',
-
-                                                    bgcolor: 'primary.light',
-                                                    color: 'primary.contrastText',
-
+                                                    border: '1px solid #f5a9a0',
+                                                    boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
                                                 } : {}),
                                                 transition: 'all 0.3s ease'
                                             }}
                                         />
                                     </Grow>
-
                                 ))}
                             </FormControl>
                         </CardContent>
@@ -620,7 +612,6 @@ const QuizTest = () => {
                         <Button
                             variant="contained"
                             color="primary"
-
                             onClick={() => {
                                 // Điều hướng tùy thuộc vào loại da
                                 let targetPath = '/category';
@@ -648,7 +639,6 @@ const QuizTest = () => {
                                 }
                                 navigate(targetPath);
                             }}
-
                             sx={{
                                 px: 4,
                                 py: 1.5,
@@ -659,7 +649,7 @@ const QuizTest = () => {
                                 }
                             }}
                         >
-
+                            Xem quy trình và chọn sản phẩm phù hợp
                         </Button>
                     </Box>
                 </Paper>

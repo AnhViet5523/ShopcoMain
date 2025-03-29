@@ -15,8 +15,10 @@ const OrderStaff = () => {
   const [orderItems, setOrderItems] = useState([]);
   const [searchKey, setSearchKey] = useState(''); 
   const [cancelledOrders, setCancelledOrders] = useState([]); // Thêm state để lưu trữ các đơn hàng bị hủy
+
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(10);
+
   const navigate = useNavigate();
 
   const sidebarItems = [
@@ -89,13 +91,18 @@ const OrderStaff = () => {
   const filteredOrders = () => {
     let filtered = orders;
 
-    // Lọc theo trạng thái
+    // Lọc theo trạng thái tab
     if (activeTab === 'Đơn hàng vận chuyển') {
       filtered = filtered.filter(order => order.orderStatus === 'Paid' && order.deliveryStatus === 'Not Delivered');
     } else if (activeTab === 'Đơn hàng bị hủy') {
       filtered = cancelledOrders;
     } else if (activeTab === 'Giao thành công') {
       filtered = filtered.filter(order => order.orderStatus === 'Completed');
+    }
+
+    // Lọc theo trạng thái đơn hàng từ filter menu
+    if (filterStatus && filterStatus !== 'Tất cả') {
+      filtered = filtered.filter(order => order.orderStatus === filterStatus);
     }
 
     // Lọc theo từ khóa tìm kiếm
@@ -210,6 +217,32 @@ const OrderStaff = () => {
     }
   };
 
+  // Function to toggle filter menu and handle status selection
+  const toggleFilterMenu = () => {
+    setShowFilterMenu(!showFilterMenu);
+  };
+
+  const handleFilterStatusChange = (status) => {
+    setFilterStatus(status);
+    setShowFilterMenu(false);
+  };
+
+  // Function to count orders by status
+  const getOrderCountByStatus = (status) => {
+    if (!orders || !orders.length) return 0;
+    
+    if (status === '') {
+      return orders.length; // Total count for "Tất cả"
+    } else {
+      return orders.filter(order => order.orderStatus === status).length;
+    }
+  };
+
+  // Get count of cancelled orders
+  const getCancelledOrdersCount = () => {
+    return cancelledOrders?.length || 0;
+  };
+
   return (
     <Box sx={{ bgcolor: "#f0f0f0", minHeight: "100vh", width:'99vw' }}>
       <div className="manager-container">
@@ -293,21 +326,195 @@ const OrderStaff = () => {
           <div className="dashboard-title-bar">
             <h1>Đơn Hàng</h1>
             <div className="dashboard-actions">
-              <button
-                style={{
-                  padding: '10px 15px',
-                  backgroundColor: '#f8f9fa',
-                  border: '1px solid #dee2e6',
-                  borderRadius: '5px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '5px',
-                  color: '#495057'
-                }}
-              >
-                <span>Lọc</span>
-              </button>
+              <div style={{ position: 'relative' }}>
+                <button
+                  onClick={toggleFilterMenu}
+                  style={{
+                    padding: '10px 15px',
+                    backgroundColor: '#f8f9fa',
+                    border: '1px solid #dee2e6',
+                    borderRadius: '5px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    color: '#495057'
+                  }}
+                >
+                  <FaFilter />
+                  <span>Lọc: {filterStatus || 'Tất cả'}</span>
+                  {filterStatus && (
+                    <span style={{
+                      backgroundColor: '#dc3545',
+                      color: 'white',
+                      borderRadius: '50%',
+                      width: '20px',
+                      height: '20px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '12px',
+                      marginLeft: '5px'
+                    }}>
+                      {filterStatus === '' 
+                        ? getOrderCountByStatus('') 
+                        : filterStatus === 'Cancelled' 
+                          ? getCancelledOrdersCount() 
+                          : getOrderCountByStatus(filterStatus)
+                      }
+                    </span>
+                  )}
+                </button>
+                
+                {showFilterMenu && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '100%',
+                    right: 0,
+                    backgroundColor: 'white',
+                    boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
+                    borderRadius: '5px',
+                    zIndex: 10,
+                    width: '200px',
+                    marginTop: '5px'
+                  }}>
+                    <div 
+                      style={{
+                        padding: '10px 15px',
+                        borderBottom: '1px solid #eee',
+                        cursor: 'pointer',
+                        backgroundColor: filterStatus === '' ? '#f0f0f0' : 'transparent',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center'
+                      }}
+                      onClick={() => handleFilterStatusChange('')}
+                    >
+                      <span>Tất cả</span>
+                      <span style={{
+                        backgroundColor: '#dc3545',
+                        color: 'white',
+                        borderRadius: '50%',
+                        width: '20px',
+                        height: '20px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '12px'
+                      }}>
+                        {getOrderCountByStatus('')}
+                      </span>
+                    </div>
+                    <div 
+                      style={{
+                        padding: '10px 15px',
+                        borderBottom: '1px solid #eee',
+                        cursor: 'pointer',
+                        backgroundColor: filterStatus === 'Completed' ? '#f0f0f0' : 'transparent',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center'
+                      }}
+                      onClick={() => handleFilterStatusChange('Completed')}
+                    >
+                      <span>Completed</span>
+                      <span style={{
+                        backgroundColor: '#28a745',
+                        color: 'white',
+                        borderRadius: '50%',
+                        width: '20px',
+                        height: '20px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '12px'
+                      }}>
+                        {getOrderCountByStatus('Completed')}
+                      </span>
+                    </div>
+                    <div 
+                      style={{
+                        padding: '10px 15px',
+                        borderBottom: '1px solid #eee',
+                        cursor: 'pointer',
+                        backgroundColor: filterStatus === 'Pending' ? '#f0f0f0' : 'transparent',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center'
+                      }}
+                      onClick={() => handleFilterStatusChange('Pending')}
+                    >
+                      <span>Pending</span>
+                      <span style={{
+                        backgroundColor: '#ffc107',
+                        color: 'white',
+                        borderRadius: '50%',
+                        width: '20px',
+                        height: '20px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '12px'
+                      }}>
+                        {getOrderCountByStatus('Pending')}
+                      </span>
+                    </div>
+                    <div 
+                      style={{
+                        padding: '10px 15px',
+                        borderBottom: '1px solid #eee',
+                        cursor: 'pointer',
+                        backgroundColor: filterStatus === 'Paid' ? '#f0f0f0' : 'transparent',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center'
+                      }}
+                      onClick={() => handleFilterStatusChange('Paid')}
+                    >
+                      <span>Paid</span>
+                      <span style={{
+                        backgroundColor: '#17a2b8',
+                        color: 'white',
+                        borderRadius: '50%',
+                        width: '20px',
+                        height: '20px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '12px'
+                      }}>
+                        {getOrderCountByStatus('Paid')}
+                      </span>
+                    </div>
+                    <div 
+                      style={{
+                        padding: '10px 15px',
+                        cursor: 'pointer',
+                        backgroundColor: filterStatus === 'Cancelled' ? '#f0f0f0' : 'transparent',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center'
+                      }}
+                      onClick={() => handleFilterStatusChange('Cancelled')}
+                    >
+                      <span>Cancelled</span>
+                      <span style={{
+                        backgroundColor: '#dc3545',
+                        color: 'white',
+                        borderRadius: '50%',
+                        width: '20px',
+                        height: '20px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '12px'
+                      }}>
+                        {getCancelledOrdersCount()}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
           
