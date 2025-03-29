@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaFilter, FaFileExport, FaPlus } from 'react-icons/fa';
-import { Box } from '@mui/material';
+import { Box, Pagination } from '@mui/material';
 import './Manager.css';
 import adminService from '../../apis/adminService';
 
@@ -13,6 +13,8 @@ const BlogStaff = () => {
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredCount, setFilteredCount] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize] = useState(10);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -110,6 +112,40 @@ const BlogStaff = () => {
     setPosts(originalPosts);
     setFilteredCount(0);
   };
+
+  // Hàm lọc blog dựa trên từ khóa tìm kiếm
+  const getFilteredPosts = () => {
+    if (!searchTerm.trim()) {
+      return posts;
+    }
+    
+    const searchTermLower = searchTerm.toLowerCase().trim();
+    return posts.filter(post => {
+      const titleMatches = post.title.toLowerCase().includes(searchTermLower);
+      const contentMatches = post.content.toLowerCase().includes(searchTermLower);
+      return titleMatches || contentMatches;
+    });
+  };
+
+  // Lấy tổng số trang dựa trên số lượng blog và kích thước trang
+  const filteredPosts = getFilteredPosts();
+  const totalPages = Math.ceil(filteredPosts.length / pageSize);
+
+  // Hàm xử lý khi thay đổi trang
+  const handlePageChange = (event, value) => {
+    setCurrentPage(value);
+  };
+
+  // Lấy blog cho trang hiện tại
+  const getCurrentPageItems = () => {
+    const startIndex = (currentPage - 1) * pageSize;
+    return filteredPosts.slice(startIndex, startIndex + pageSize);
+  };
+
+  // Reset trang về 1 khi thay đổi từ khóa tìm kiếm
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
 
   const sidebarItems = [
     { id: 'orderStaff', name: 'Đơn hàng', icon: '📋' },
@@ -257,7 +293,7 @@ const BlogStaff = () => {
                   </td>
                 </tr>
               ) : posts.length > 0 ? (
-                posts.map((post, index) => (
+                getCurrentPageItems().map((post, index) => (
                   <tr 
                     key={post.id}
                     style={{ 
@@ -350,6 +386,26 @@ const BlogStaff = () => {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination */}
+        {posts.length > 0 && (
+          <div style={{ 
+            display: 'flex', 
+            justifyContent: 'center', 
+            marginTop: '20px',
+            marginBottom: '20px'
+          }}>
+            <Pagination 
+              count={totalPages} 
+              page={currentPage} 
+              onChange={handlePageChange} 
+              variant="outlined" 
+              color="primary" 
+              showFirstButton 
+              showLastButton
+            />
+          </div>
+        )}
       </div>
     </div>
     </Box>

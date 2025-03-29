@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaFilter, FaFileExport, FaPlus } from 'react-icons/fa';
-import { Box } from '@mui/material';
+import { Box, Dialog, DialogActions, DialogContent, DialogTitle, TextField, Button, Typography, Pagination } from '@mui/material';
+import { Editor } from '@tinymce/tinymce-react';
 import './Manager.css';
 import adminService from '../../apis/adminService';
 
@@ -13,6 +14,8 @@ const BlogManager = () => {
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredCount, setFilteredCount] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize] = useState(10);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -111,7 +114,7 @@ const BlogManager = () => {
     setFilteredCount(0);
   };
 
-  
+
   const sidebarItems = [
     { id: 'revenue', name: 'Doanh thu', icon: '📊' },
     { id: 'staff', name: 'Nhân viên', icon: '👤' },
@@ -260,7 +263,7 @@ const BlogManager = () => {
                   </td>
                 </tr>
               ) : posts.length > 0 ? (
-                posts.map((post, index) => (
+                getCurrentPageItems().map((post, index) => (
                   <tr 
                     key={post.id}
                     style={{ 
@@ -353,6 +356,26 @@ const BlogManager = () => {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination */}
+        {posts.length > 0 && (
+          <div style={{ 
+            display: 'flex', 
+            justifyContent: 'center', 
+            marginTop: '20px',
+            marginBottom: '20px'
+          }}>
+            <Pagination 
+              count={totalPages} 
+              page={currentPage} 
+              onChange={handlePageChange} 
+              variant="outlined" 
+              color="primary" 
+              showFirstButton 
+              showLastButton
+            />
+          </div>
+        )}
       </div>
     </div>
     </Box>

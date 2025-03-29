@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Box } from '@mui/material';
+import { Box, Pagination } from '@mui/material';
 import './Manager.css';
 import { useState, useEffect } from 'react';
 import userService from '../../apis/userService';
@@ -12,6 +12,8 @@ const ViewCustomer = () => {
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [originalCustomers, setOriginalCustomers] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize] = useState(10);
 
   
   const sidebarItems = [
@@ -88,9 +90,41 @@ const ViewCustomer = () => {
     setCustomers(filteredCustomers);
   }, [searchTerm, originalCustomers]);
 
+  // Lọc danh sách khách hàng dựa trên từ khóa tìm kiếm
+  const filteredCustomers = customers.filter(customer => {
+    if (!searchTerm) return true;
+    
+    const searchLower = searchTerm.toLowerCase();
+    return (
+      (customer.name && customer.name.toLowerCase().includes(searchLower)) ||
+      (customer.fullName && customer.fullName.toLowerCase().includes(searchLower)) ||
+      (customer.email && customer.email.toLowerCase().includes(searchLower)) ||
+      (customer.phone && customer.phone.toLowerCase().includes(searchLower)) ||
+      (customer.address && customer.address.toLowerCase().includes(searchLower))
+    );
+  });
+
+  // Lấy tổng số trang dựa trên số lượng khách hàng và số lượng hiển thị mỗi trang
+  const totalPages = Math.ceil(filteredCustomers.length / pageSize);
+
+  // Hàm xử lý khi thay đổi trang
+  const handlePageChange = (event, value) => {
+    setCurrentPage(value);
+  };
+
+  // Lấy mảng khách hàng cho trang hiện tại
+  const getCurrentPageItems = () => {
+    const startIndex = (currentPage - 1) * pageSize;
+    return filteredCustomers.slice(startIndex, startIndex + pageSize);
+  };
+
+  // Khi từ khóa tìm kiếm thay đổi, reset lại trang hiện tại
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
+
   const handleClear = () => {
     setSearchTerm('');
-    setCustomers(originalCustomers);
   };
 
   return (
@@ -213,8 +247,8 @@ const ViewCustomer = () => {
                       {error}
                     </td>
                   </tr>
-                ) : customers.length > 0 ? (
-                  customers.map((customer, index) => (
+                ) : filteredCustomers.length > 0 ? (
+                  getCurrentPageItems().map((customer, index) => (
                     <tr key={customer.userId || index}>
                       <td>{customer.userId || '-'}</td>
                       <td>{customer.name || '-'}</td>
@@ -237,6 +271,26 @@ const ViewCustomer = () => {
               </tbody>
             </table>
           </div>
+
+          {/* Pagination */}
+          {filteredCustomers.length > 0 && (
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'center', 
+              marginTop: '20px',
+              marginBottom: '20px'
+            }}>
+              <Pagination 
+                count={totalPages} 
+                page={currentPage} 
+                onChange={handlePageChange} 
+                variant="outlined" 
+                color="primary" 
+                showFirstButton 
+                showLastButton
+              />
+            </div>
+          )}
         </div>
       </div>
     </Box>
