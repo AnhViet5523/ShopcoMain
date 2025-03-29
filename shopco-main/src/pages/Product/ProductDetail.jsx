@@ -101,6 +101,9 @@ export default function ProductDetail() {
   const [comparedProducts, setComparedProducts] = useState([]);
   const [availableProductsToCompare, setAvailableProductsToCompare] = useState([]);
   const [isCompareModalOpen, setIsCompareModalOpen] = useState(false);
+  const [isReplyModalOpen, setIsReplyModalOpen] = useState(false);
+  const [selectedReview, setSelectedReview] = useState(null);
+  const [replyContent, setReplyContent] = useState('');
 
   useEffect(() => {
     isMounted.current = true;
@@ -204,10 +207,18 @@ export default function ProductDetail() {
 
   const fetchUsernames = async () => {
     try {
+      console.log('Đang tải thông tin người dùng cho các đánh giá...');
+      
       const reviewsWithNames = await Promise.all(
         reviews.map(async (review) => {
           try {
             const userProfile = await userService.getUserProfile(review.userId);
+            console.log(`Thông tin người dùng cho đánh giá ${review.reviewId}:`, {
+              userId: review.userId,
+              username: userProfile?.username || userProfile?.fullName,
+              hasStaffResponse: !!review.staffResponse
+            });
+            
             return {
               ...review,
               userName: userProfile?.username || userProfile?.fullName || `Người dùng ${review.userId}`
@@ -218,6 +229,8 @@ export default function ProductDetail() {
           }
         })
       );
+      
+      console.log('Cập nhật danh sách đánh giá với thông tin người dùng:', reviewsWithNames.length);
       setReviewsWithUsernames(reviewsWithNames);
     } catch (error) {
       console.error('Error fetching usernames:', error);
@@ -451,6 +464,89 @@ export default function ProductDetail() {
     
     // Chuyển đến trang so sánh
     navigate('/compare-products');
+  };
+
+  const handleOpenReplyModal = (review) => {
+    setSelectedReview(review);
+    setIsReplyModalOpen(true);
+  };
+
+  const handleCloseReplyModal = () => {
+    setSelectedReview(null);
+    setIsReplyModalOpen(false);
+  };
+
+  const handleReplySubmit = async () => {
+    if (!replyContent.trim()) {
+      alert('Vui lòng nhập phản hồi');
+      return;
+    }
+    try {
+      // Lấy thông tin người dùng từ localStorage để kiểm tra quyền
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const isStaffOrManager = user && (user.role === 'Staff' || user.role === 'Manager' || user.role === 'Admin');
+      
+      console.log('Thông tin người dùng khi gửi phản hồi:', {
+        userId: user?.userId,
+        role: user?.role,
+        isStaffOrManager
+      });
+      
+      // Kiểm tra quyền trước khi gửi phản hồi
+      if (!isStaffOrManager) {
+        alert('Bạn không có quyền gửi phản hồi cho đánh giá');
+        return;
+      }
+      
+      // Gọi API với đúng format và endpoint
+      console.log(`Đang gửi phản hồi cho đánh giá ID: ${selectedReview.reviewId}`);
+      console.log(`Dữ liệu gửi lên: ${JSON.stringify({ Response: replyContent })}`);
+      
+      // Gọi API endpoint PUT /api/Reviews/{id}/response với body chính xác
+      const response = await reviewService.postReply(selectedReview.reviewId, replyContent);
+      console.log('Phản hồi từ server:', response);
+      
+      // Cập nhật danh sách đánh giá để hiển thị phản hồi mới
+      console.log('Đang cập nhật danh sách đánh giá...');
+      const updatedReviews = await reviewService.getReviewsProductId(id);
+      console.log('Đánh giá đã cập nhật:', updatedReviews);
+      setReviews(updatedReviews);
+      
+      // Gọi lại fetchUsernames để cập nhật tên người dùng cho phần hiển thị
+      await fetchUsernames();
+      
+      // Thông báo thành công và đóng modal
+      alert('Phản hồi đã được gửi thành công');
+      setReplyContent('');
+      handleCloseReplyModal();
+    } catch (error) {
+      console.error('Lỗi khi gửi phản hồi:', error);
+      
+      // Ghi log chi tiết về lỗi
+      if (error.response) {
+        console.error('Chi tiết lỗi từ API:', {
+          status: error.response.status,
+          statusText: error.response.statusText,
+          data: error.response.data,
+          headers: error.response.headers
+        });
+        
+        // Xử lý các lỗi cụ thể
+        if (error.response.status === 401) {
+          alert('Bạn không có quyền gửi phản hồi. Vui lòng đăng nhập với tài khoản có quyền Staff hoặc Manager.');
+        } else if (error.response.status === 404) {
+          alert('Không tìm thấy đánh giá này.');
+        } else {
+          alert(`Có lỗi xảy ra khi gửi phản hồi: ${error.response.data?.message || 'Vui lòng thử lại sau'}`);
+        }
+      } else if (error.request) {
+        console.error('Không nhận được phản hồi từ server:', error.request);
+        alert('Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối mạng và thử lại sau.');
+      } else {
+        console.error('Lỗi cấu hình request:', error.message);
+        alert('Có lỗi xảy ra khi gửi phản hồi. Vui lòng thử lại sau.');
+      }
+    }
   };
 
   return (
@@ -862,72 +958,441 @@ export default function ProductDetail() {
               
               {tabValue === 1 && (
                 <Box sx={{ p: 2 }}>
-                  {reviewsWithUsernames.length > 0 ? 
-                    reviewsWithUsernames.map((review, index) => (
-                      <Paper key={index} sx={{ p: 2, mb: 2 }}>
-                        <Box sx={{ mb: 1 }}>
-                          <Typography variant="body1" fontWeight="bold">
-                            {review.userName}
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            {new Date(review.reviewDate).toLocaleDateString()}
-                          </Typography>
-                        </Box>
-                        <Rating value={review.rating} readOnly size="small" />
-                        <Typography variant="body1" sx={{ mt: 1 }}>
-                          {review?.reviewComment}
+                  {/* Phần hiển thị thống kê đánh giá */}
+                  <Paper sx={{ p: 3, mb: 4, borderRadius: '10px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+                    <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' } }}>
+                      {/* Phần hiển thị điểm trung bình */}
+                      <Box sx={{ 
+                        display: 'flex', 
+                        flexDirection: 'column', 
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        p: 2,
+                        borderRight: { xs: 'none', md: '1px solid #eee' },
+                        borderBottom: { xs: '1px solid #eee', md: 'none' },
+                        minWidth: { xs: '100%', md: '250px' },
+                        mb: { xs: 2, md: 0 }
+                      }}>
+                        <Typography variant="h3" component="div" fontWeight="bold" color="#f57224" sx={{ mb: 1 }}>
+                          {reviews.length > 0 
+                            ? (reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length).toFixed(1) 
+                            : '0.0'}
                         </Typography>
-                      </Paper>
-                    )) : reviews.length > 0 ? (
-                      reviews.map((review, index) => (
-                        <Paper key={index} sx={{ p: 2, mb: 2 }}>
-                          <Box sx={{ mb: 1 }}>
-                            <Typography variant="body1" fontWeight="bold">
-                              Người dùng {review.userId || "không xác định"}
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary">
-                              {new Date(review.reviewDate).toLocaleDateString()}
-                            </Typography>
+                        <Rating 
+                          value={reviews.length > 0 
+                            ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length 
+                            : 0
+                          } 
+                          precision={0.5} 
+                          readOnly 
+                          sx={{ mb: 1 }}
+                        />
+                        <Typography variant="body2" color="text.secondary">
+                          {reviews.length} {reviews.length === 1 ? 'đánh giá' : 'đánh giá'}
+                        </Typography>
+                      </Box>
+                      
+                      {/* Phần hiển thị phân bố đánh giá theo số sao */}
+                      <Box sx={{ flexGrow: 1, pl: { xs: 0, md: 3 }, pt: { xs: 2, md: 0 } }}>
+                        {[5, 4, 3, 2, 1].map(star => {
+                          const count = reviews.filter(review => Math.round(review.rating) === star).length;
+                          const percentage = reviews.length > 0 ? (count / reviews.length) * 100 : 0;
+                          
+                          return (
+                            <Box key={star} sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                              <Box sx={{ display: 'flex', alignItems: 'center', width: '40px' }}>
+                                <Typography variant="body2" sx={{ mr: 0.5 }}>{star}</Typography>
+                                <Box component="span" sx={{ color: '#faaf00', fontSize: '16px' }}>★</Box>
+                              </Box>
+                              <Box sx={{ flexGrow: 1, mx: 2 }}>
+                                <Box sx={{ 
+                                  width: '100%', 
+                                  bgcolor: '#f0f0f0', 
+                                  height: 8, 
+                                  borderRadius: 4 
+                                }}>
+                                  <Box
+                                    sx={{
+                                      width: `${percentage}%`,
+                                      bgcolor: '#faaf00',
+                                      height: 8,
+                                      borderRadius: 4
+                                    }}
+                                  />
+                                </Box>
+                              </Box>
+                              <Typography variant="body2" sx={{ minWidth: '40px' }}>
+                                {count} ({percentage.toFixed(0)}%)
+                              </Typography>
+                            </Box>
+                          );
+                        })}
+                      </Box>
+                    </Box>
+                  </Paper>
+                  
+                  {/* Phần hiển thị danh sách đánh giá */}
+                  {reviewsWithUsernames.length > 0 ? 
+                    reviewsWithUsernames.map((review, index) => {
+                      // Biến để kiểm tra xem người dùng hiện tại có phải là staff hoặc manager không
+                      const user = JSON.parse(localStorage.getItem('user') || '{}');
+                      const isStaffOrManager = user && (user.role === 'Staff' || user.role === 'Manager' || user.role === 'Admin');
+                      const canReply = isStaffOrManager && !review.staffResponse;
+                      
+                      return (
+                        <Paper key={index} sx={{ p: 3, mb: 3, borderRadius: '10px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                              <Avatar 
+                                sx={{ 
+                                  bgcolor: `hsl(${(review.userId * 40) % 360}, 70%, 50%)`,
+                                  mr: 1.5
+                                }}
+                              >
+                                {review.userName ? review.userName.charAt(0).toUpperCase() : 'U'}
+                              </Avatar>
+                              <Box>
+                                <Typography variant="subtitle1" fontWeight="bold">
+                                  {review.userName}
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                  {new Date(review.reviewDate).toLocaleDateString('vi-VN', { 
+                                    year: 'numeric', 
+                                    month: 'long', 
+                                    day: 'numeric'
+                                  })}
+                                </Typography>
+                              </Box>
+                            </Box>
+                            <Box>
+                              <Rating value={review.rating} readOnly size="small" precision={0.5} />
+                            </Box>
                           </Box>
-                          <Rating value={review.rating} readOnly size="small" />
-                          <Typography variant="body1" sx={{ mt: 1 }}>
-                            {review?.reviewComment}
-                          </Typography>
+                          
+                          <Box sx={{ ml: 6.5, mt: 1 }}>
+                            <Typography variant="body1" sx={{ mb: 2, fontStyle: review.reviewComment ? 'normal' : 'italic' }}>
+                              {review.reviewComment || 'Người dùng chỉ đánh giá sao, không để lại bình luận.'}
+                            </Typography>
+                            
+                            {/* Hiển thị phản hồi của staff nếu có */}
+                            {review.staffResponse && (
+                              <Box 
+                                sx={{ 
+                                  bgcolor: '#f5f5f5', 
+                                  p: 2, 
+                                  borderRadius: '8px',
+                                  borderLeft: '4px solid #28a745',
+                                  mt: 2
+                                }}
+                              >
+                                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                                  <Avatar sx={{ 
+                                    bgcolor: '#28a745', 
+                                    width: 28, 
+                                    height: 28,
+                                    mr: 1,
+                                    fontSize: '0.8rem'
+                                  }}>
+                                    S
+                                  </Avatar>
+                                  <Typography variant="subtitle2" fontWeight="bold" color="#28a745">
+                                    Phản hồi từ Shop
+                                  </Typography>
+                                </Box>
+                                <Typography variant="body2" sx={{ ml: 4.5 }}>
+                                  {review.staffResponse}
+                                </Typography>
+                              </Box>
+                            )}
+                            
+                            {/* Hiển thị nút Trả lời cho staff/manager nếu chưa có phản hồi */}
+                            {canReply && (
+                              <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
+                                <Button 
+                                  variant="outlined" 
+                                  color="success" 
+                                  size="small"
+                                  onClick={() => handleOpenReplyModal(review)}
+                                >
+                                  Trả lời
+                                </Button>
+                              </Box>
+                            )}
+                          </Box>
                         </Paper>
-                      ))
+                      );
+                    }) : reviews.length > 0 ? (
+                      reviews.map((review, index) => {
+                        // Biến để kiểm tra xem người dùng hiện tại có phải là staff hoặc manager không
+                        const user = JSON.parse(localStorage.getItem('user') || '{}');
+                        const isStaffOrManager = user && (user.role === 'Staff' || user.role === 'Manager' || user.role === 'Admin');
+                        const canReply = isStaffOrManager && !review.staffResponse;
+                        
+                        return (
+                          <Paper key={index} sx={{ p: 3, mb: 3, borderRadius: '10px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                <Avatar 
+                                  sx={{ 
+                                    bgcolor: `hsl(${(review.userId * 40) % 360}, 70%, 50%)`,
+                                    mr: 1.5
+                                  }}
+                                >
+                                  {`U${review.userId}`}
+                                </Avatar>
+                                <Box>
+                                  <Typography variant="subtitle1" fontWeight="bold">
+                                    Người dùng {review.userId || "không xác định"}
+                                  </Typography>
+                                  <Typography variant="body2" color="text.secondary">
+                                    {new Date(review.reviewDate).toLocaleDateString('vi-VN', { 
+                                      year: 'numeric', 
+                                      month: 'long', 
+                                      day: 'numeric'
+                                    })}
+                                  </Typography>
+                                </Box>
+                              </Box>
+                              <Box>
+                                <Rating value={review.rating} readOnly size="small" precision={0.5} />
+                              </Box>
+                            </Box>
+                            
+                            <Box sx={{ ml: 6.5, mt: 1 }}>
+                              <Typography variant="body1" sx={{ mb: 2, fontStyle: review.reviewComment ? 'normal' : 'italic' }}>
+                                {review.reviewComment || 'Người dùng chỉ đánh giá sao, không để lại bình luận.'}
+                              </Typography>
+                              
+                              {/* Hiển thị phản hồi của staff nếu có */}
+                              {review.staffResponse && (
+                                <Box 
+                                  sx={{ 
+                                    bgcolor: '#f5f5f5', 
+                                    p: 2, 
+                                    borderRadius: '8px',
+                                    borderLeft: '4px solid #28a745',
+                                    mt: 2
+                                  }}
+                                >
+                                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                                    <Avatar sx={{ 
+                                      bgcolor: '#28a745', 
+                                      width: 28, 
+                                      height: 28,
+                                      mr: 1,
+                                      fontSize: '0.8rem'
+                                    }}>
+                                      S
+                                    </Avatar>
+                                    <Typography variant="subtitle2" fontWeight="bold" color="#28a745">
+                                      Phản hồi từ Shop
+                                    </Typography>
+                                  </Box>
+                                  <Typography variant="body2" sx={{ ml: 4.5 }}>
+                                    {review.staffResponse}
+                                  </Typography>
+                                </Box>
+                              )}
+                              
+                              {/* Hiển thị nút Trả lời cho staff/manager nếu chưa có phản hồi */}
+                              {canReply && (
+                                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
+                                  <Button 
+                                    variant="outlined" 
+                                    color="success" 
+                                    size="small"
+                                    onClick={() => handleOpenReplyModal(review)}
+                                  >
+                                    Trả lời
+                                  </Button>
+                                </Box>
+                              )}
+                            </Box>
+                          </Paper>
+                        );
+                      })
                     ) : (
-                      <Typography>Chưa có đánh giá nào</Typography>
+                      <Box sx={{ 
+                        display: 'flex', 
+                        flexDirection: 'column', 
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        py: 5
+                      }}>
+                        <Box 
+                          component="img"
+                          src="/images/no-reviews.png"
+                          alt="Không có đánh giá"
+                          sx={{ 
+                            width: 120, 
+                            height: 120, 
+                            opacity: 0.7,
+                            mb: 2
+                          }}
+                          onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.src = 'https://cdn-icons-png.flaticon.com/512/1455/1455095.png';
+                          }}
+                        />
+                        <Typography variant="h6" color="text.secondary" textAlign="center">
+                          Chưa có đánh giá nào
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary" textAlign="center" sx={{ mt: 1 }}>
+                          Hãy là người đầu tiên đánh giá sản phẩm này
+                        </Typography>
+                      </Box>
                     )}
+                  
                   <Button 
                     variant="contained" 
                     color="primary" 
                     onClick={handleOpenModal}
-                    sx={{ mt: 2 }}
+                    sx={{ 
+                      mt: 3,
+                      px: 4,
+                      py: 1,
+                      borderRadius: '25px',
+                      boxShadow: '0 4px 10px rgba(0,0,0,0.15)'
+                    }}
+                    startIcon={<AddIcon />}
                   >
                     Viết đánh giá
                   </Button>
+                  
+                  {/* Modal đánh giá */}
                   <Modal open={isModalOpen} onClose={handleCloseModal}>
-                    <Box sx={{ p: 4, bgcolor: 'background.paper', borderRadius: 1, boxShadow: 24, maxWidth: 400, mx: 'auto', mt: 4 }}>
-                     <Box>
-                     <Typography variant="h6" gutterBottom>Viết đánh giá</Typography>
+                    <Box sx={{ 
+                      p: 4, 
+                      bgcolor: 'background.paper', 
+                      borderRadius: 2, 
+                      boxShadow: 24, 
+                      maxWidth: 500, 
+                      mx: 'auto', 
+                      mt: 8 
+                    }}>
+                      <Typography variant="h6" component="h2" gutterBottom fontWeight="bold">
+                        Viết đánh giá của bạn
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                        Hãy chia sẻ trải nghiệm của bạn với sản phẩm này
+                      </Typography>
+                      
+                      <Box sx={{ mb: 3, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                        <Typography variant="body1" fontWeight="500" sx={{ mb: 1, alignSelf: 'flex-start' }}>
+                          Đánh giá của bạn:
+                        </Typography>
+                        <Rating
+                          value={reviewRating}
+                          onChange={(e, newValue) => setReviewRating(newValue)}
+                          size="large"
+                          sx={{ fontSize: '2.5rem', mb: 1 }}
+                        />
+                        <Typography variant="body2" color="text.secondary">
+                          {reviewRating === 5 ? "Rất hài lòng" :
+                           reviewRating === 4 ? "Hài lòng" :
+                           reviewRating === 3 ? "Bình thường" :
+                           reviewRating === 2 ? "Không hài lòng" :
+                           reviewRating === 1 ? "Rất không hài lòng" : "Chọn đánh giá"}
+                        </Typography>
+                      </Box>
+                      
                       <TextField
                         fullWidth
                         multiline
                         rows={4}
                         variant="outlined"
                         label="Nhận xét của bạn"
+                        placeholder="Chia sẻ trải nghiệm của bạn với sản phẩm này..."
                         value={reviewContent}
                         onChange={(e) => setReviewContent(e.target.value)}
-                        sx={{ mb: 2 }}
+                        sx={{ mb: 3 }}
                       />
-                      <Typography variant="body2" sx={{ mb: 1 }}>Đánh giá của bạn:</Typography>
-                      <Rating
-                        value={reviewRating}
-                        onChange={(e, newValue) => setReviewRating(newValue)}
-                        sx={{ mb: 2 }}
+                      
+                      <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
+                        <Button variant="outlined" onClick={handleCloseModal}>
+                          Hủy
+                        </Button>
+                        <Button 
+                          variant="contained" 
+                          color="primary" 
+                          onClick={handleReviewSubmit}
+                          disabled={reviewRating <= 0}
+                        >
+                          Gửi đánh giá
+                        </Button>
+                      </Box>
+                    </Box>
+                  </Modal>
+                  
+                  {/* Modal trả lời đánh giá cho staff/manager */}
+                  <Modal 
+                    open={isReplyModalOpen} 
+                    onClose={handleCloseReplyModal}
+                  >
+                    <Box sx={{ 
+                      p: 4, 
+                      bgcolor: 'background.paper', 
+                      borderRadius: 2, 
+                      boxShadow: 24, 
+                      maxWidth: 500, 
+                      mx: 'auto', 
+                      mt: 8 
+                    }}>
+                      <Typography variant="h6" component="h2" gutterBottom fontWeight="bold">
+                        Trả lời đánh giá
+                      </Typography>
+                      
+                      {selectedReview && (
+                        <Box sx={{ mb: 3, p: 2, bgcolor: '#f8f8f8', borderRadius: 1 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                            <Avatar 
+                              sx={{ 
+                                bgcolor: `hsl(${(selectedReview.userId * 40) % 360}, 70%, 50%)`,
+                                mr: 1.5,
+                                width: 28,
+                                height: 28
+                              }}
+                            >
+                              {selectedReview.userName ? selectedReview.userName.charAt(0).toUpperCase() : `U${selectedReview.userId}`}
+                            </Avatar>
+                            <Typography variant="body2" fontWeight="medium">
+                              {selectedReview.userName || `Người dùng ${selectedReview.userId}`}
+                            </Typography>
+                            <Box sx={{ ml: 'auto' }}>
+                              <Rating value={selectedReview.rating} readOnly size="small" />
+                            </Box>
+                          </Box>
+                          <Typography variant="body2" sx={{ ml: 4.5, fontStyle: selectedReview.reviewComment ? 'normal' : 'italic' }}>
+                            {selectedReview.reviewComment || 'Người dùng chỉ đánh giá sao, không để lại bình luận.'}
+                          </Typography>
+                        </Box>
+                      )}
+                      
+                      <TextField
+                        fullWidth
+                        multiline
+                        rows={4}
+                        variant="outlined"
+                        label="Phản hồi từ Shop"
+                        placeholder="Nhập phản hồi của bạn cho đánh giá này..."
+                        value={replyContent}
+                        onChange={(e) => setReplyContent(e.target.value)}
+                        sx={{ mb: 3 }}
                       />
-                     </Box>
-                      <Button variant="contained" color="primary" onClick={handleReviewSubmit}>Xác nhận</Button>
+                      
+                      <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
+                        <Button variant="outlined" onClick={handleCloseReplyModal}>
+                          Hủy
+                        </Button>
+                        <Button 
+                          variant="contained" 
+                          color="success" 
+                          onClick={handleReplySubmit}
+                          disabled={!replyContent.trim()}
+                        >
+                          Gửi phản hồi
+                        </Button>
+                      </Box>
                     </Box>
                   </Modal>
                 </Box>

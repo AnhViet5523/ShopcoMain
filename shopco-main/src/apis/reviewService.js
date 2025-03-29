@@ -79,6 +79,20 @@ const reviewService = {
             console.error('Error fetching user:', error);
             throw error; 
         }
+    },
+
+    // Phương thức gửi phản hồi cho đánh giá từ staff
+    postReply: async (reviewId, replyContent) => {
+        try {
+            // Gửi PUT request đến endpoint chính xác với cấu trúc dữ liệu phù hợp với ReviewResponseDto
+            const response = await axiosClient.put(`/api/Reviews/${reviewId}/response`, {
+                Response: replyContent
+            });
+            return response.data;
+        } catch (error) {
+            console.error('Error posting reply to review:', error);
+            throw error;
+        }
     }
 };
 
