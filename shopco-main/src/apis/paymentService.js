@@ -36,6 +36,7 @@ const paymentService = {
   // Xác nhận thanh toán COD
   confirmCodPayment: async (paymentData) => {
     try {
+      // Đảm bảo gửi đúng dữ liệu để lưu vào bảng Payments
       const response = await axiosClient.post('/api/Payments/confirmCodPayment', paymentData);
       return response;
     } catch (error) {
