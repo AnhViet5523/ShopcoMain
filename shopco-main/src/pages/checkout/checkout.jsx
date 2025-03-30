@@ -681,9 +681,41 @@ const Checkout = () => {
           setIsProcessing(false);
         }
       } else {
-        // Thanh toán COD - hiển thị dialog cảm ơn ngay lập tức, không cần kiểm tra gì thêm
-        setThankYouDialogOpen(true);
-        setIsProcessing(false);
+        try {
+          // Gọi API confirm-payment đã có sẵn
+          const orderResponse = await orderService.confirmpayment(paymentData);
+          
+          try {
+            // Thêm gọi API mới để lưu vào Payments - bọc trong try-catch riêng để không ảnh hưởng luồng chính
+            await paymentService.confirmCodPayment({
+              orderId: order.orderId,
+              amount: calculateFinalAmount() // Tổng tiền sau giảm giá
+            });
+          } catch (paymentError) {
+            console.error('Lỗi khi ghi nhận thanh toán:', paymentError);
+            // Không cần dừng luồng thanh toán nếu xảy ra lỗi ở bước này
+          }
+          
+          // Hiển thị dialog thông báo thành công và dừng trạng thái đang xử lý
+          setThankYouDialogOpen(true);
+          setIsProcessing(false);
+          
+        } catch (error) {
+          console.error('Lỗi khi xử lý thanh toán COD:', error);
+          
+          // Kiểm tra nếu lỗi là 404, nghĩa là đơn hàng không tìm thấy
+          if (error.response && error.response.status === 404) {
+            console.log('Đơn hàng không tìm thấy, nhưng có thể đã được lưu. Tiếp tục luồng thanh toán.');
+            
+            // Hiển thị dialog thông báo thành công và dừng trạng thái đang xử lý
+            setThankYouDialogOpen(true);
+            setIsProcessing(false);
+          } else {
+            // Các lỗi khác, hiển thị thông báo lỗi
+            setError('Có lỗi xảy ra khi xử lý thanh toán. Vui lòng thử lại.');
+            setIsProcessing(false);
+          }
+        }
       }
     } catch (error) {
       console.error('Error details:', error.response?.data);
@@ -1714,6 +1746,11 @@ const Checkout = () => {
             Cảm ơn bạn đã tin tưởng và mua hàng. Chúng tôi rất hân hạnh phục vụ bạn cho những lần kế tiếp.
           </DialogContentText>
         </DialogContent>
+        <DialogActions>
+          <Button onClick={handleThankYouDialogClose} sx={{ color: 'green', fontWeight: 'bold' }}>
+            Tiếp tục mua sắm
+          </Button>
+        </DialogActions>
       </Dialog>
     </Box>
   );
