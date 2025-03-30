@@ -19,8 +19,8 @@ const  SupportStaff = () => {
   const [selectedDetailRequest, setSelectedDetailRequest] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all'); // 'all', 'pending', 'replied'
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize] = useState(10);
+  const [page, setPage] = useState(1);
+  const pageSize = 15;
 
   const sidebarItems = [
     { id: 'orderStaff', name: 'Đơn hàng', icon: '📋' },
@@ -199,24 +199,24 @@ const  SupportStaff = () => {
     });
   };
 
-  // Lấy tổng số trang dựa trên số lượng hỗ trợ và số lượng hiển thị mỗi trang
+  // Lấy tổng số trang dựa trên số lượng yêu cầu hỗ trợ được lọc và kích thước trang
   const filteredRequests = getFilteredRequests();
   const totalPages = Math.ceil(filteredRequests.length / pageSize);
 
   // Hàm xử lý khi thay đổi trang
   const handlePageChange = (event, value) => {
-    setCurrentPage(value);
+    setPage(value);
   };
 
   // Lấy mảng yêu cầu hỗ trợ cho trang hiện tại
   const getCurrentPageItems = () => {
-    const startIndex = (currentPage - 1) * pageSize;
+    const startIndex = (page - 1) * pageSize;
     return filteredRequests.slice(startIndex, startIndex + pageSize);
   };
 
   // Khi từ khóa tìm kiếm hoặc bộ lọc thay đổi, reset lại trang hiện tại
   useEffect(() => {
-    setCurrentPage(1);
+    setPage(1);
   }, [searchTerm, filterStatus]);
   
   // Thêm effect để kiểm tra lại supportRequests khi thay đổi
@@ -493,7 +493,7 @@ const  SupportStaff = () => {
           }}>
             <Pagination 
               count={totalPages} 
-              page={currentPage} 
+              page={page} 
               onChange={handlePageChange} 
               variant="outlined" 
               color="primary" 

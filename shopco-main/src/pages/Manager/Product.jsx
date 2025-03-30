@@ -1,22 +1,36 @@
-import { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { 
+  Box, Button, Container, Typography, Table, TableBody, TableCell, 
+  TableContainer, TableHead, TableRow, Paper, Dialog, DialogTitle, 
+  DialogContent, DialogActions, TextField, Select, MenuItem, FormControl,
+  InputLabel, IconButton, Grid, InputAdornment, Tabs, Tab, Card, CardContent,
+  CardMedia, CardActions, Divider, CircularProgress, FormControlLabel, Switch,
+  Chip, DialogContentText, useMediaQuery, Tooltip, Pagination, FormGroup,
+  Checkbox, Badge, Accordion, AccordionSummary, AccordionDetails
+} from '@mui/material';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { useTheme } from '@mui/material/styles';
+import { styled } from '@mui/material/styles';
+import CloseIcon from '@mui/icons-material/Close';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
+import FilterListIcon from '@mui/icons-material/FilterList';
 import { FaFilter, FaSearch } from 'react-icons/fa';
-import { Box, Dialog, DialogTitle, DialogContent, DialogActions, Button, Select, MenuItem, Pagination, CircularProgress, TextField, Typography, Grid, IconButton } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
+import dayjs from 'dayjs';
 import './Manager.css';
 import productService from '../../apis/productService';
 import categoryService from '../../apis/categoryService';
 import adminService from '../../apis/adminService';
-import { DatePicker } from '@mui/x-date-pickers';
-import { LocalizationProvider } from '@mui/x-date-pickers';
-import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
-import dayjs from 'dayjs';
 import productImageService from '../../apis/productImageService';
 import { MdClose } from 'react-icons/md';
 
 
 const Product = () => {
-  const [activeTab, setActiveTab] = useState('Tất cả');
   const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState('Tất cả');
   const [products, setProducts] = useState([]);
   const [filteredCount, setFilteredCount] = useState(0);
   const [openFilterDialog, setOpenFilterDialog] = useState(false);
@@ -48,8 +62,8 @@ const Product = () => {
     description: '',
     ingredients: '',
     usageInstructions: '',
-    manufactureDate: new Date().toISOString().split('T')[0],
-    importDate: new Date().toISOString().split('T')[0]
+    manufactureDate: null,
+    importDate: null
   });
 
   // Thêm state cho prefixMessage
@@ -75,11 +89,13 @@ const Product = () => {
   const [editingProductId, setEditingProductId] = useState(null);
 
   // Thêm state cho chức năng sửa ảnh
-  const [openEditImagesDialog, setOpenEditImagesDialog] = useState(false);
+  const [openEditImageDialog, setOpenEditImageDialog] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
   const [newImageFile, setNewImageFile] = useState(null);
   const [reorderedImages, setReorderedImages] = useState([]);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [reorderChanged, setReorderChanged] = useState(false);
+  const [draggedItem, setDraggedItem] = useState(null);
 
   // Thêm state cho chức năng nhập kho
   const [openImportDialog, setOpenImportDialog] = useState(false);
@@ -286,8 +302,44 @@ const Product = () => {
       const processedProducts = processProducts(productsArray, categoryData);
       console.log('Sản phẩm đã xử lý:', processedProducts);
       
-      setProducts(processedProducts);
-      setOriginalProducts(processedProducts);
+      // Sắp xếp sản phẩm theo ngày nhập kho (mới nhất lên đầu)
+      // Đảm bảo sử dụng Date object để so sánh và xử lý các trường hợp đặc biệt
+      const sortedProducts = [...processedProducts].sort((a, b) => {
+        // Nếu không có ImportDate, sản phẩm đó xếp sau
+        if (!a.ImportDate) return 1;
+        if (!b.ImportDate) return -1;
+        
+        // Chuyển đổi thành đối tượng Date để so sánh
+        const dateA = new Date(a.ImportDate);
+        const dateB = new Date(b.ImportDate);
+        
+        // Kiểm tra ngày hợp lệ
+        const isValidDateA = !isNaN(dateA.getTime());
+        const isValidDateB = !isNaN(dateB.getTime());
+        
+        if (!isValidDateA) return 1;
+        if (!isValidDateB) return -1;
+        
+        // So sánh theo thời gian (mới nhất trước)
+        const dateCompare = dateB.getTime() - dateA.getTime();
+        
+        // Nếu cùng ngày nhập, sắp xếp theo ID (ID cao hơn = mới hơn)
+        if (dateCompare === 0) {
+          return b.ProductID - a.ProductID;
+        }
+        
+        return dateCompare;
+      });
+      
+      console.log('Sản phẩm đã sắp xếp theo ngày nhập kho:', sortedProducts.map(p => ({ 
+        id: p.ProductID,
+        code: p.ProductCode, 
+        name: p.ProductName, 
+        importDate: p.ImportDate 
+      })));
+      
+      setProducts(sortedProducts);
+      setOriginalProducts(sortedProducts);
       setLoading(false);
     } catch (error) {
       console.error('Error fetching products:', error);
@@ -345,7 +397,7 @@ const Product = () => {
     
     // Lọc theo tab
     if (activeTab === 'Hàng sắp hết') {
-      filtered = products.filter(product => product.Quantity < 9);
+      filtered = products.filter(product => product.Quantity < 10);
       console.log(`Lọc sản phẩm sắp hết: ${filtered.length} sản phẩm`);
     } else if (activeTab === 'Hàng mới nhập') {
       // Lấy ngày hiện tại
@@ -361,12 +413,42 @@ const Product = () => {
         
         // Chuyển ngày nhập kho thành đối tượng Date
         const importDate = new Date(product.ImportDate);
+        if (isNaN(importDate.getTime())) return false;
         
         // So sánh ngày nhập kho với 7 ngày trước
         return importDate >= sevenDaysAgo;
       });
       
+      // Sắp xếp sản phẩm mới nhập theo ngày nhập kho mới nhất và ID cao nhất
+      filtered.sort((a, b) => {
+        if (!a.ImportDate) return 1;
+        if (!b.ImportDate) return -1;
+        
+        const dateA = new Date(a.ImportDate);
+        const dateB = new Date(b.ImportDate);
+        
+        if (isNaN(dateA.getTime())) return 1;
+        if (isNaN(dateB.getTime())) return -1;
+        
+        // So sánh theo timestamp để đảm bảo chính xác đến mili giây
+        const dateCompare = dateB.getTime() - dateA.getTime();
+        
+        // Nếu cùng ngày nhập, sắp xếp theo ID (ID cao hơn = mới hơn)
+        if (dateCompare === 0) {
+          return b.ProductID - a.ProductID;
+        }
+        
+        return dateCompare;
+      });
+      
       console.log(`Lọc sản phẩm mới nhập: ${filtered.length} sản phẩm`);
+      console.log('Sản phẩm trong tab Hàng mới nhập (sắp xếp theo ngày nhập):', filtered.map(p => ({
+        code: p.ProductCode,
+        name: p.ProductName,
+        importDate: p.ImportDate,
+        importDateObj: new Date(p.ImportDate),
+        id: p.ProductID
+      })));
     }
     
     // Phân trang ở client (nếu API không hỗ trợ phân trang)
@@ -424,44 +506,76 @@ const Product = () => {
       alert('Vui lòng nhập giá sản phẩm (phải là số)');
       return;
     }
-    if (!newProduct.categoryId) {
-      alert('Vui lòng chọn danh mục sản phẩm');
-      return;
-    }
-
+    
+    // Lấy thông tin sản phẩm gốc
+    const originalProduct = products.find(p => p.ProductID === editingProductId);
+    
     try {
-      // Chỉ gửi các trường được phép cập nhật theo cấu trúc DB
+      // Log thông tin sản phẩm gốc để debug
+      console.log('Sản phẩm gốc trước khi cập nhật:', originalProduct);
+      
+      // Lấy ngày hiện tại cho ngày nhập kho mới
+      const currentDate = new Date().toISOString();
+
+      // Xây dựng dữ liệu cập nhật từ sản phẩm gốc, đảm bảo tất cả trường bắt buộc được giữ lại
       const productData = {
         productName: newProduct.productName,
-        categoryId: parseInt(newProduct.categoryId),
+        // Đảm bảo CategoryId luôn có giá trị hợp lệ
+        categoryId: newProduct.categoryId ? parseInt(newProduct.categoryId) : (originalProduct.CategoryID || 1),
         quantity: parseInt(newProduct.quantity),
-        capacity: newProduct.capacity || "50g",
+        capacity: newProduct.capacity || originalProduct.Capacity || "50g",
         price: parseFloat(newProduct.price),
-        brand: newProduct.brand || "Việt",
-        origin: newProduct.origin || "Việt",
-        status: newProduct.status || "Available",
-        imgUrl: newProduct.imgURL || "15",
-        skinType: newProduct.skinType || "Da nhạy cảm",
-        description: newProduct.description || "",
-        ingredients: newProduct.ingredients || "",
-        usageInstructions: newProduct.usageInstructions || "",
-        manufactureDate: newProduct.manufactureDate || new Date().toISOString()
+        brand: newProduct.brand || originalProduct.Brand || "",
+        origin: newProduct.origin || originalProduct.Origin || "",
+        status: newProduct.status || originalProduct.Status || "Available",
+        imgUrl: newProduct.imgURL || originalProduct.ImgURL || "",
+        skinType: newProduct.skinType || originalProduct.SkinType || "",
+        description: newProduct.description || originalProduct.Description || "",
+        ingredients: newProduct.ingredients || originalProduct.Ingredients || "",
+        usageInstructions: newProduct.usageInstructions || originalProduct.UsageInstructions || "",
+        manufactureDate: originalProduct.ManufactureDate || currentDate,
+        importDate: currentDate
       };
 
-      // Không gửi các trường không được phép cập nhật
-      // ProductID - tự động tăng
-      // ProductCode - được tạo tự động
-      // ImportDate - được cập nhật tự động
-
-      console.log('Dữ liệu gửi đi:', JSON.stringify(productData, null, 2));
+      console.log('Dữ liệu sản phẩm cập nhật được gửi đi:', productData);
       
-      await adminService.updateProduct(editingProductId, productData);
-      alert('Đã cập nhật sản phẩm thành công');
-      handleDialogClose();
-      fetchProducts();
+      const response = await adminService.updateProduct(editingProductId, productData);
+      
+      console.log('Phản hồi từ API cập nhật sản phẩm:', response);
+      
+      // Cập nhật UI
+      await fetchProducts();
+      
+      // Đóng hộp thoại
+      setOpenAddDialog(false);
+      
+      // Xóa dữ liệu form
+      setNewProduct({});
+      
+      setEditingProductId(null);
+      
+      // Thông báo thành công
+      alert('Cập nhật sản phẩm thành công!');
     } catch (error) {
       console.error('Lỗi khi cập nhật sản phẩm:', error);
-      alert(`Không thể cập nhật sản phẩm: ${error.message || 'Lỗi không xác định'}`);
+      
+      // Hiển thị thông báo lỗi chi tiết hơn
+      if (error.response) {
+        // Xử lý lỗi ràng buộc khóa ngoại từ danh mục không tồn tại
+        if (error.response.status === 500 && 
+            error.response.data && 
+            error.response.data.details && 
+            error.response.data.details.toLowerCase().includes('foreign key')) {
+          alert('Lỗi: Danh mục sản phẩm không tồn tại hoặc đã bị xóa. Vui lòng chọn danh mục khác.');
+          return;
+        }
+      
+        const errorData = error.response.data;
+        const errorMessage = errorData && (errorData.error || errorData.message || JSON.stringify(errorData));
+        alert(`Lỗi: ${errorMessage || 'Không thể cập nhật sản phẩm'}`);
+      } else {
+        alert(`Lỗi: ${error.message || 'Không thể cập nhật sản phẩm'}`);
+      }
     }
   };
 
@@ -469,14 +583,19 @@ const Product = () => {
     try {
       // Hiển thị xác nhận trước khi thay đổi trạng thái
       if (window.confirm('Bạn có chắc chắn muốn thay đổi trạng thái sản phẩm này?')) {
-        // Gọi API để thay đổi trạng thái
-        const response = await adminService.toggleProductStatus(productId);
+        // Gọi API để thay đổi trạng thái với ngày nhập kho mới
+        const currentDate = new Date().toISOString();
+        const response = await adminService.toggleProductStatus(productId, currentDate);
         
         // Hiển thị thông báo thành công với trạng thái mới
         alert(`Đã thay đổi trạng thái sản phẩm thành công! Trạng thái mới: ${response.newStatus}`);
         
         // Tải lại danh sách sản phẩm để cập nhật UI
-        fetchProducts();
+        await fetchProducts();
+        
+        // Chuyển đến tab Hàng mới nhập để xem sản phẩm vừa cập nhật
+        setActiveTab('Hàng mới nhập');
+        setPage(1); // Đặt về trang đầu tiên
       }
     } catch (error) {
       console.error('Lỗi khi thay đổi trạng thái sản phẩm:', error);
@@ -566,18 +685,33 @@ const Product = () => {
 
   // Cập nhật hàm handleAdd
   const handleAdd = () => {
+    setEditingProductId(null);
+    // Đặt giá trị mặc định cho các trường khi thêm sản phẩm mới
+    setNewProduct({
+      productCode: '',
+      productName: '',
+      categoryId: '',
+      quantity: '',
+      capacity: '',
+      price: '',
+      brand: '',
+      origin: '',
+      status: 'Available', // Đặt trạng thái mặc định là Available
+      imgURL: '',
+      skinType: '',
+      description: '',
+      ingredients: '',
+      usageInstructions: '',
+      manufactureDate: null,
+    });
     setOpenAddDialog(true);
+    setProductImages([]);
+    setPrefixMessage('');
   };
   
   // Thêm hàm để đóng dialog
   const handleDialogClose = () => {
     setOpenAddDialog(false);
-    setPrefixMessage(''); // Reset prefixMessage
-    setPreviewImage(null); // Reset previewImage
-    setProductImageFile(null); // Reset productImageFile
-    setProductImageFiles([]); // Reset productImageFiles
-    setPreviewImages([]); // Reset previewImages
-    setMainImageIndex(0); // Reset mainImageIndex
     setNewProduct({
       productCode: '',
       productName: '',
@@ -593,9 +727,17 @@ const Product = () => {
       description: '',
       ingredients: '',
       usageInstructions: '',
-      manufactureDate: new Date().toISOString().split('T')[0],
-      importDate: new Date().toISOString().split('T')[0]
+      manufactureDate: null,
+      importDate: null
     });
+    setEditingProductId(null);
+    
+    // Reset các state liên quan đến ảnh
+    setPreviewImage(null);
+    setProductImageFile(null);
+    setProductImageFiles([]);
+    setPreviewImages([]);
+    setMainImageIndex(0);
   };
   
   // Thêm hàm xử lý thay đổi input
@@ -625,41 +767,46 @@ const Product = () => {
         
         let prefix = "";
         
-        // Ánh xạ trực tiếp cho các trường hợp đặc biệt
-        if (categoryType === "Dụng Cụ/Phụ Kiện Chăm Sóc Da") {
-          prefix = "PKCSD";
-        }
-        else if (categoryType === "Bộ Chăm Sóc Da Mặt") {
-          prefix = "BCSDM";
-        }
-        else if (categoryType === "Chống Nắng Da Mặt") {
-          prefix = "CNDM";
-        }
-        else if (categoryType === "Dưỡng Môi") {
-          prefix = "DM";
-        }
-        else if (categoryType === "Mặt Nạ") {
-          prefix = "MN";
-        }
-        else if (categoryType === "Vấn Đề Về Da") {
-          prefix = "VDVD";
-        }
-        // Xử lý riêng cho từng loại đặc biệt nếu cần
-        else if (categoryType.includes("/")) {
-          // Xử lý cho loại chứa dấu "/"
-          prefix = categoryType
-            .replace("/", " ")
-            .split(" ")
-            .filter((s) => s.trim() !== "")
-            .map((s) => removeDiacritics(s.charAt(0)).toUpperCase())
-            .join("");
-        } else {
-          // Cách xử lý thông thường: lấy chữ cái đầu tiên của mỗi từ trong categoryType
-          prefix = categoryType
-            .split(" ")
-            .filter((s) => s.trim() !== "")
-            .map((s) => removeDiacritics(s.charAt(0)).toUpperCase())
-            .join("");
+        // Ánh xạ trực tiếp cho các trường hợp theo quy tắc mới
+        switch (categoryType) {
+          case "Làm Sạch Da":
+            prefix = "LSD";
+            break;
+          case "Đặc Trị":
+            prefix = "ĐT";
+            break;
+          case "Dưỡng Ẩm":
+            prefix = "DA";
+            break;
+          case "Bộ Chăm Sóc Da Mặt":
+            prefix = "BCSDM";
+            break;
+          case "Chống Nắng Da Mặt":
+            prefix = "CNDM";
+            break;
+          case "Dưỡng Mắt":
+            prefix = "DM";
+            break;
+          case "Dụng Cụ/Phụ Kiện Chăm Sóc Da":
+            prefix = "PKCSD";
+            break;
+          case "Vấn Đề Về Da":
+            prefix = "VDVD";
+            break;
+          case "Dưỡng Môi":
+            prefix = "DMI";
+            break;
+          case "Mặt Nạ":
+            prefix = "MN";
+            break;
+          default:
+            // Trường hợp không xác định
+            prefix = categoryType
+              .split(" ")
+              .filter((s) => s.trim() !== "")
+              .map((s) => removeDiacritics(s.charAt(0)).toUpperCase())
+              .join("");
+            break;
         }
 
         setPrefixMessage(
@@ -695,136 +842,202 @@ const Product = () => {
 
   // Cập nhật hàm handleSubmitProduct để xử lý nhiều ảnh
   const handleSubmitProduct = async () => {
-    // Kiểm tra các trường bắt buộc
-    if (!newProduct.productName) {
-      alert('Vui lòng nhập tên sản phẩm');
-      return;
-    }
-    if (!newProduct.quantity || isNaN(parseInt(newProduct.quantity))) {
-      alert('Vui lòng nhập số lượng sản phẩm (phải là số)');
-      return;
-    }
-    if (!newProduct.price || isNaN(parseFloat(newProduct.price))) {
-      alert('Vui lòng nhập giá sản phẩm (phải là số)');
-      return;
-    }
-    if (!newProduct.categoryId) {
-      alert('Vui lòng chọn danh mục sản phẩm');
-      return;
-    }
-    
-    // Kiểm tra đủ 5 ảnh sản phẩm
-    if (productImageFiles.length !== 5) {
-      alert('Vui lòng tải lên đúng 5 ảnh sản phẩm');
-      return;
-    }
-    
+    setIsSubmitting(true);
     try {
-      setIsSubmitting(true);
+      let validationError = false;
+  
+      // Kiểm tra các trường bắt buộc
+      if (!newProduct.productName || newProduct.productName.trim() === '') {
+        alert('Vui lòng nhập tên sản phẩm');
+        validationError = true;
+      }
       
-      // Chuẩn bị dữ liệu gửi đi
-      const productData = { ...newProduct };
+      if (!newProduct.quantity || newProduct.quantity <= 0) {
+        alert('Số lượng sản phẩm phải lớn hơn 0');
+        validationError = true;
+      }
       
-      // Sử dụng adminService.addProduct thay vì productService.createProduct
-      const response = await adminService.addProduct(productData);
+      if (!newProduct.price || newProduct.price <= 0) {
+        alert('Giá sản phẩm phải lớn hơn 0');
+        validationError = true;
+      }
       
-      // Tải lên tất cả ảnh sản phẩm
-      if (response.productId) {
-        try {
-          // Sử dụng API mới để tải lên tất cả 5 ảnh cùng lúc
-          await productImageService.uploadMultipleProductPhotos(response.productId, productImageFiles);
+      if (!newProduct.categoryId) {
+        alert('Vui lòng chọn danh mục sản phẩm');
+        validationError = true;
+      }
+      
+      // Kiểm tra ảnh khi thêm mới sản phẩm
+      if (!editingProductId && (!productImageFiles || productImageFiles.length < 5)) {
+        alert('Vui lòng chọn đủ 5 ảnh cho sản phẩm');
+        validationError = true;
+      }
+  
+      if (validationError) {
+        setIsSubmitting(false);
+        return;
+      }
+  
+      if (editingProductId) {
+        // Xử lý chỉnh sửa sản phẩm (không cần upload ảnh)
+        await adminService.updateProduct(editingProductId, {
+          productName: newProduct.productName,
+          description: newProduct.description,
+          price: newProduct.price,
+          quantity: newProduct.quantity,
+          status: newProduct.status || 'Available',
+          categoryId: newProduct.categoryId,
+          skinType: newProduct.skinType,
+          brand: newProduct.brand,
+          origin: newProduct.origin,
+          volume: newProduct.volume,
+          expiry: newProduct.expiry,
+          ingredients: newProduct.ingredients,
+          usageInstructions: newProduct.usageInstructions
+        });
+        
+        alert('Cập nhật sản phẩm thành công!');
+        fetchProducts();
+        handleDialogClose();
+      } else {
+        // Xử lý thêm mới sản phẩm (bao gồm upload ảnh)
+        console.log("Submitting new product:", newProduct);
+        console.log("Number of images:", productImageFiles ? productImageFiles.length : 0);
+        
+        // Lấy ngày hiện tại cho ngày nhập kho
+        const currentDate = new Date().toISOString();
+        
+        // Đảm bảo chuẩn bị đủ dữ liệu cho API
+        const productData = {
+          productName: newProduct.productName,
+          categoryId: parseInt(newProduct.categoryId),
+          quantity: parseInt(newProduct.quantity),
+          capacity: newProduct.capacity || '',
+          price: parseFloat(newProduct.price),
+          brand: newProduct.brand || '',
+          origin: newProduct.origin || '',
+          status: 'Available', // Luôn sử dụng trạng thái Available cho sản phẩm mới
+          imgUrl: '', // Sẽ được cập nhật sau khi tải lên ảnh
+          skinType: newProduct.skinType || '',
+          description: newProduct.description || '',
+          ingredients: newProduct.ingredients || '',
+          usageInstructions: newProduct.usageInstructions || '',
+          manufactureDate: newProduct.manufactureDate 
+            ? new Date(newProduct.manufactureDate).toISOString() 
+            : new Date().toISOString(),
+          importDate: currentDate // Thêm ngày nhập kho tự động là ngày hiện tại
+        };
+        
+        console.log('Dữ liệu sản phẩm gửi đi:', productData);
+        
+        // Thêm sản phẩm
+        const response = await adminService.addProduct(productData);
+        
+        if (response && response.productId) {
+          console.log("Product added successfully:", response);
+          console.log("Product ID:", response.productId);
+          console.log("Number of images to upload:", productImageFiles.length);
           
-          // Sau khi tải lên tất cả ảnh thành công, đặt ảnh ở vị trí mainImageIndex làm ảnh đại diện
-          // Lấy danh sách ảnh vừa tải lên
-          const uploadedImages = await productImageService.getProductImages(response.productId);
-          
-          // Xử lý response để đảm bảo có được mảng ảnh
-          let allImages = [];
-          if (Array.isArray(uploadedImages)) {
-            allImages = uploadedImages;
-          } else if (uploadedImages && uploadedImages.$values && Array.isArray(uploadedImages.$values)) {
-            allImages = uploadedImages.$values;
-          } else if (uploadedImages && typeof uploadedImages === 'object') {
-            // Nếu là một object đơn lẻ, đặt vào mảng
-            allImages = [uploadedImages];
+          // Upload các ảnh sản phẩm sử dụng uploadMultipleProductPhotos từ productImageService
+          try {
+            console.log("Attempting to upload multiple images using productImageService");
+            const uploadResult = await productImageService.uploadMultipleProductPhotos(response.productId, productImageFiles);
+            console.log("Multiple image upload result:", uploadResult);
+            
+            alert('Thêm sản phẩm và tải lên tất cả ảnh thành công!');
+          } catch (uploadError) {
+            console.error("Error uploading multiple images:", uploadError);
+            
+            // Thử cách khác: upload từng ảnh một
+            console.log("Falling back to uploading images one by one");
+            const uploadPromises = productImageFiles.map(async (file, index) => {
+              try {
+                console.log(`Uploading image ${index+1}/${productImageFiles.length}`);
+                const formData = new FormData();
+                formData.append('File', file);
+                formData.append('IsMainImage', index === mainImageIndex ? 'true' : 'false');
+                
+                // Log file details for debugging
+                console.log(`File ${index} details:`, {
+                  name: file.name,
+                  type: file.type,
+                  size: file.size,
+                  isMainImage: index === mainImageIndex
+                });
+                
+                const result = await productImageService.addProductImage(response.productId, file);
+                console.log(`Image ${index+1} upload result:`, result);
+                return { success: true, result };
+              } catch (error) {
+                console.error(`Error uploading image ${index}:`, error);
+                return { success: false, error: error.message };
+              }
+            });
+            
+            // Đợi tất cả ảnh được upload xong
+            const uploadResults = await Promise.all(uploadPromises);
+            console.log("Individual image upload results:", uploadResults);
+            
+            const successfulUploads = uploadResults.filter(result => result.success).length;
+            
+            if (successfulUploads === productImageFiles.length) {
+              alert('Thêm sản phẩm và tải lên ảnh thành công!');
+            } else if (successfulUploads > 0) {
+              alert(`Thêm sản phẩm thành công nhưng chỉ tải lên được ${successfulUploads}/${productImageFiles.length} ảnh.`);
+            } else {
+              alert('Thêm sản phẩm thành công nhưng không tải lên được ảnh nào.');
+            }
           }
           
-          console.log("Ảnh đã tải lên:", allImages);
-          
-          // Tìm ảnh cần đặt làm ảnh đại diện
-          if (allImages && allImages.length > 0 && mainImageIndex >= 0 && mainImageIndex < allImages.length) {
-            // Đảm bảo mainImageIndex không vượt quá số lượng ảnh
-            const targetIndex = Math.min(mainImageIndex, allImages.length - 1);
-            
-            // Lấy ID của ảnh ở vị trí mainImageIndex
-            const mainImageId = allImages[targetIndex]?.imageID;
-            if (mainImageId) {
-              try {
-                // Đặt ảnh làm ảnh chính
-                await productImageService.setMainImage(response.productId, mainImageId);
-                console.log(`Đã đặt ảnh có ID ${mainImageId} làm ảnh đại diện`);
-              } catch (mainImageError) {
-                console.error('Lỗi khi đặt ảnh đại diện:', mainImageError);
-                
-                // Nếu không thể sử dụng API setMainImage, thì thử sắp xếp lại thủ công
-                try {
-                  // Tạo mảng sắp xếp lại với ảnh được chọn có displayOrder = 0
-                  const reorderedImages = allImages.map((img, idx) => {
-                    let newDisplayOrder;
-                    
-                    if (img.imageID === mainImageId) {
-                      // Ảnh đại diện có displayOrder = 0
-                      newDisplayOrder = 0;
-                    } else {
-                      // Các ảnh khác có displayOrder từ 1-4
-                      newDisplayOrder = idx + 1;
-                      if (idx >= targetIndex) {
-                        // Nếu vị trí >= vị trí ảnh đại diện, tăng thêm 1 để bỏ qua displayOrder = 0
-                        newDisplayOrder++;
-                      }
-                      
-                      // Đảm bảo không vượt quá 4
-                      newDisplayOrder = Math.min(newDisplayOrder, 4);
-                    }
-                    
-                    return {
-                      ...img,
-                      displayOrder: newDisplayOrder
-                    };
-                  });
-                  
-                  // Gọi API sắp xếp lại ảnh
-                  await productImageService.reorderProductImages(reorderedImages);
-                  console.log('Đã sắp xếp lại thứ tự hiển thị ảnh');
-                } catch (reorderError) {
-                  console.error('Không thể sắp xếp lại thứ tự ảnh:', reorderError);
+          // Thiết lập ảnh đại diện nếu cần
+          if (mainImageIndex >= 0 && mainImageIndex < productImageFiles.length) {
+            try {
+              console.log(`Setting image at index ${mainImageIndex} as main image`);
+              // Cần lấy danh sách ảnh mới để có imageId
+              const productImages = await productImageService.getProductImages(response.productId);
+              console.log("Retrieved product images:", productImages);
+              
+              if (productImages && productImages.length > 0) {
+                const mainImageId = productImages[mainImageIndex]?.imageID || productImages[0]?.imageID;
+                if (mainImageId) {
+                  console.log(`Setting image ${mainImageId} as main image`);
+                  await productImageService.setMainImage(response.productId, mainImageId);
+                  console.log("Main image set successfully");
                 }
               }
-            } else {
-              console.error('Không thể lấy được ID của ảnh đại diện');
+            } catch (mainImageError) {
+              console.error("Error setting main image:", mainImageError);
             }
-          } else {
-            console.log('Không có ảnh để đặt làm ảnh đại diện hoặc vị trí không hợp lệ');
           }
-        } catch (imageError) {
-          console.error('Lỗi khi tải lên ảnh sản phẩm:', imageError);
-          alert('Sản phẩm đã được tạo nhưng không thể tải lên ảnh. Bạn có thể thêm ảnh sau.');
+          
+          // Refresh danh sách sản phẩm và đóng dialog
+          fetchProducts();
+          handleDialogClose();
+          goToNewProductsTab();
+        } else {
+          alert('Thêm sản phẩm thất bại, vui lòng thử lại');
         }
       }
-
-      // Đóng dialog và hiển thị thông báo
-      alert('Thêm sản phẩm thành công');
-      handleDialogClose();
-      
-      // Refresh danh sách sản phẩm và chuyển đến tab Hàng mới nhập
-      await fetchProducts();
-      
-      // Sau khi tải lại dữ liệu, chuyển đến tab Hàng mới nhập để xem sản phẩm vừa thêm
-      setActiveTab('Hàng mới nhập');
-      setPage(1); // Đặt về trang đầu tiên
     } catch (error) {
-      console.error('Lỗi khi thêm sản phẩm:', error);
-      alert(`Lỗi khi thêm sản phẩm: ${error.message || 'Lỗi không xác định'}`);
+      console.error("Error in handleSubmitProduct:", error);
+      
+      let errorMessage = 'Đã xảy ra lỗi, vui lòng thử lại';
+      
+      if (error.response) {
+        // Lỗi từ server
+        errorMessage = error.response.data?.message || 'Lỗi từ server, vui lòng thử lại';
+        console.error("Server error:", error.response.data);
+      } else if (error.request) {
+        // Lỗi kết nối
+        errorMessage = 'Không thể kết nối đến server, vui lòng kiểm tra kết nối';
+        console.error("Connection error:", error.request);
+      } else {
+        // Lỗi khác
+        errorMessage = error.message || 'Lỗi không xác định, vui lòng thử lại';
+        console.error("Unknown error:", error.message);
+      }
+      
+      alert(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -836,7 +1049,7 @@ const Product = () => {
     fetchProducts().then(() => {
       // Sau khi tải lại dữ liệu, chuyển đến tab Hàng mới nhập
       setActiveTab('Hàng mới nhập');
-      setPage(1); // Đặt về trang đầu tiên
+      setPage(1); // Đặt về trang đầu tiên để đảm bảo sản phẩm mới hiển thị ở đầu
     });
   };
 
@@ -1011,7 +1224,8 @@ const Product = () => {
       // Cập nhật state
       setReorderedImages(newImages);
       setSelectedImage(null);
-      setOpenEditImagesDialog(true);
+      setReorderChanged(false); // Đặt lại trạng thái thay đổi khi mở dialog
+      setOpenEditImageDialog(true);
     } catch (error) {
       console.error('Lỗi khi lấy ảnh sản phẩm:', error);
       alert(`Không thể lấy danh sách ảnh: ${error.message || 'Lỗi không xác định'}`);
@@ -1055,7 +1269,7 @@ const Product = () => {
       alert('Cập nhật ảnh thành công');
       
       // Đóng dialog chỉnh sửa ảnh
-      setOpenEditImagesDialog(false);
+      setOpenEditImageDialog(false);
       
       // Cập nhật lại thông tin sản phẩm
       const productDetail = await productService.getProductById(selectedProduct.ProductID);
@@ -1125,8 +1339,11 @@ const Product = () => {
       await productImageService.reorderProductImages(updatedImages);
       alert('Cập nhật thành công');
       
+      // Reset trạng thái thay đổi
+      setReorderChanged(false);
+      
       // Đóng dialog chỉnh sửa ảnh
-      setOpenEditImagesDialog(false);
+      setOpenEditImageDialog(false);
       setOpenImageGallery(false);
       
       // Đợi một chút để đảm bảo server đã xử lý xong
@@ -1134,6 +1351,7 @@ const Product = () => {
         try {
           // Cập nhật lại thông tin sản phẩm
           const productDetail = await productService.getProductById(selectedProduct.ProductID);
+          
           
           // Xử lý hình ảnh sản phẩm
           let images = [];
@@ -1172,48 +1390,30 @@ const Product = () => {
 
   // Hàm xử lý xóa ảnh
   const handleDeleteImage = async (imageId) => {
-    if (window.confirm('Bạn có chắc chắn muốn xóa ảnh này?')) {
+    // Xác nhận trước khi xóa
+    if (window.confirm('Bạn có chắc chắn muốn xóa ảnh này không?')) {
       try {
         setUploadingImage(true);
-        await productImageService.deleteProductImage(imageId);
-        alert('Xóa ảnh thành công');
+        await productImageService.deleteProductImage(selectedProduct.ProductID, imageId);
+        alert('Đã xóa ảnh thành công!');
+        
+        // Cập nhật lại thông tin sản phẩm
+        const productDetail = await productService.getProductById(selectedProduct.ProductID);
+        setSelectedProduct(productDetail);
+        
+        // Cập nhật lại danh sách ảnh
+        const refreshedImages = await productImageService.getProductImages(selectedProduct.ProductID);
+        setReorderedImages(refreshedImages);
         
         // Đóng dialog chỉnh sửa ảnh
-        setOpenEditImagesDialog(false);
+        setOpenEditImageDialog(false);
         setOpenImageGallery(false);
         
-        // Đợi một chút để đảm bảo server đã xử lý xong
-        setTimeout(async () => {
-          try {
-            // Cập nhật lại thông tin sản phẩm
-            const productDetail = await productService.getProductById(selectedProduct.ProductID);
-            
-            // Xử lý hình ảnh sản phẩm
-            let images = [];
-            if (productDetail.images && productDetail.images.length > 0) {
-              images = productDetail.images;
-            } else if (productDetail.imgURL) {
-              images = [{ imgUrl: productDetail.imgURL }];
-            } else if (selectedProduct.ImgURL) {
-              images = [{ imgUrl: selectedProduct.ImgURL }];
-            } else {
-              images = [{ imgUrl: '/images/default-product.jpg' }];
-            }
-            
-            // Cập nhật state
-            setProductImages(images);
-            setSelectedProduct({
-              ...selectedProduct,
-              ImgURL: productDetail.imgURL || productDetail.ImgURL,
-              images: images
-            });
-          } catch (error) {
-            console.error('Lỗi khi tải lại thông tin sản phẩm:', error);
-          }
-        }, 1000);
+        // Cập nhật lại trang sản phẩm
+        await fetchProducts(categoryMapping);
       } catch (error) {
         console.error('Lỗi khi xóa ảnh:', error);
-        alert(`Không thể xóa ảnh: ${error.message || 'Lỗi không xác định'}`);
+        alert('Không thể xóa ảnh. Vui lòng thử lại sau.');
       } finally {
         setUploadingImage(false);
       }
@@ -1233,7 +1433,7 @@ const Product = () => {
       alert('Thêm ảnh thành công');
       
       // Đóng dialog chỉnh sửa ảnh
-      setOpenEditImagesDialog(false);
+      setOpenEditImageDialog(false);
       setOpenImageGallery(false);
       
       // Đợi một chút để đảm bảo server đã xử lý xong
@@ -1362,10 +1562,11 @@ const Product = () => {
     try {
       setIsImporting(true);
 
-      await adminService.importProductStock(importingProduct.ProductID, importQuantity);
-      
-      // Không cần xử lý response từ API, vì có thể không nhất quán
-      // Thay vào đó, chỉ cần fetch lại danh sách sản phẩm
+      // Lấy ngày hiện tại cho ngày nhập kho mới
+      const currentDate = new Date().toISOString();
+
+      // Gọi API nhập kho với ngày hiện tại
+      await adminService.importProductStock(importingProduct.ProductID, importQuantity, currentDate);
       
       // Đóng dialog
       handleCloseConfirmImport();
@@ -1373,13 +1574,16 @@ const Product = () => {
       
       // Hiển thị thông báo thành công
       alert("Nhập kho thành công!");
-
-      // Refresh lại danh sách sản phẩm để lấy dữ liệu mới nhất
+      
+      // Fetch lại danh sách sản phẩm để cập nhật UI
       await fetchProducts();
       
+      // Chuyển đến tab Hàng mới nhập để xem sản phẩm vừa nhập
+      setActiveTab('Hàng mới nhập');
+      setPage(1); // Đặt về trang đầu tiên
     } catch (error) {
       console.error('Lỗi khi nhập kho:', error);
-      alert(`Không thể nhập kho: ${error.response?.data || error.message || 'Lỗi không xác định'}`);
+      alert(error.response?.data?.message || "Có lỗi xảy ra khi nhập kho. Vui lòng thử lại!");
     } finally {
       setIsImporting(false);
     }
@@ -1388,146 +1592,212 @@ const Product = () => {
   // Thêm hàm xử lý thay đổi ngày
   const handleDateChange = (e) => {
     const { name, value } = e.target;
-    setNewProduct(prev => ({
-        ...prev,
-        [name]: value
-    }));
-};
-
-  // Thêm hàm loại bỏ dấu từ chuỗi tiếng Việt
+    setNewProduct({ ...newProduct, [name]: value });
+  };
+  
+  // Thêm hàm để xóa dấu trong tiếng Việt
   const removeDiacritics = (str) => {
-    if (!str) return str;
+    return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  };
+
+  // Chức năng kéo và thả để sắp xếp lại ảnh
+  // Hàm này sẽ được gọi khi bắt đầu kéo một mục
+  const handleDragStart = (e, image) => {
+    setDraggedItem(image);
+    e.dataTransfer.effectAllowed = 'move';
+    // Cần phải thiết lập dữ liệu để Firefox hoạt động
+    e.dataTransfer.setData('text/plain', '');
+  };
+
+  // Hàm này sẽ được gọi khi kéo qua một mục
+  const handleDragOver = (e, overImage) => {
+    e.preventDefault(); // Cần thiết để cho phép thả
+    if (draggedItem === null || draggedItem === overImage) return;
     
-    // Chuyển đổi chuỗi sang dạng NFD để tách dấu và ký tự cơ bản
-    return str.normalize('NFD')
-      // Loại bỏ các ký tự dấu
-      .replace(/[\u0300-\u036f]/g, '')
-      // Thay thế Đ/đ bằng D/d
-      .replace(/[Đ]/g, 'D')
-      .replace(/[đ]/g, 'd');
+    // Tạo một bản sao của mảng ảnh được sắp xếp lại
+    const newOrder = [...reorderedImages];
+    
+    // Tìm chỉ mục của mục đang được kéo và mục đang được kéo qua
+    const draggedIndex = newOrder.findIndex(img => img.imageId === draggedItem.imageId);
+    const overIndex = newOrder.findIndex(img => img.imageId === overImage.imageId);
+    
+    if (draggedIndex === -1 || overIndex === -1) return;
+    
+    // Di chuyển mục đang được kéo đến vị trí mới
+    newOrder.splice(draggedIndex, 1); // Xóa mục đang được kéo khỏi mảng
+    newOrder.splice(overIndex, 0, draggedItem); // Chèn mục đang được kéo tại vị trí mới
+    
+    // Cập nhật displayOrder cho tất cả các mục
+    const updatedOrder = newOrder.map((img, idx) => ({
+      ...img,
+      displayOrder: idx
+    }));
+    
+    // Cập nhật state
+    setReorderedImages(updatedOrder);
+    setReorderChanged(true);
   };
 
-  // Thêm hàm xử lý thay đổi ảnh sản phẩm
+  // Cập nhật handleDragEnd để đặt trạng thái kéo thả
+  const handleDragEnd = () => {
+    setDraggedItem(null); // Reset trạng thái kéo
+    // Giữ nguyên reorderChanged để biết đã có thay đổi
+  };
+
+  // Xử lý việc thả
+  const handleDrop = (e, targetImage) => {
+    e.preventDefault();
+    if (!draggedItem) return;
+    
+    // Logic để sắp xếp lại đã được xử lý trong handleDragOver
+    setDraggedItem(null);
+    // Đánh dấu là đã có thay đổi thứ tự
+    setReorderChanged(true);
+  };
+
+  // Xử lý thay đổi ảnh sản phẩm
   const handleProductImageChange = (event) => {
-    if (event.target.files && event.target.files[0]) {
-      const file = event.target.files[0];
-      
-      // Kiểm tra kích thước file (tối đa 5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        alert('Kích thước file không được vượt quá 5MB');
-        return;
-      }
-      
-      // Kiểm tra định dạng file
-      const allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
-      const fileExtension = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
-      if (!allowedExtensions.includes(fileExtension)) {
-        alert('Định dạng file không được hỗ trợ. Vui lòng sử dụng JPG, JPEG, PNG, GIF hoặc WEBP');
-        return;
-      }
-      
-      // Cập nhật state cho trường imgURL (để tương thích với code cũ)
-      setProductImageFile(file);
-      
-      // Tạo URL cho preview ảnh
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setPreviewImage(e.target.result);
-      };
-      reader.readAsDataURL(file);
+    const file = event.target.files[0];
+    
+    if (!file) {
+      console.log("No file selected");
+      return;
     }
-  };
-
-  // Thêm hàm xử lý thêm nhiều ảnh sản phẩm
-  const handleMultipleImagesChange = (event) => {
-    if (event.target.files) {
-      const selectedFiles = Array.from(event.target.files);
+    
+    console.log("Selected file:", file);
+    
+    // Kiểm tra kích thước tệp (5MB = 5 * 1024 * 1024 bytes)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Kích thước ảnh phải nhỏ hơn 5MB');
+      return;
+    }
+    
+    // Kiểm tra định dạng tệp
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    if (!validTypes.includes(file.type)) {
+      alert('Định dạng ảnh không hỗ trợ. Vui lòng sử dụng JPG, PNG, hoặc GIF');
+      return;
+    }
+    
+    setProductImageFile(file);
+    
+    // Tạo URL đối tượng cho xem trước
+    const previewUrl = URL.createObjectURL(file);
+    setPreviewImage(previewUrl);
+    
+    // Cập nhật danh sách ảnh xem trước và tệp
+    if (previewImages.length < 5) {
+      setPreviewImages(prev => [...prev, previewUrl]);
+      setProductImageFiles(prev => [...prev, file]);
       
-      // Kiểm tra số lượng ảnh đã chọn + số lượng ảnh mới
-      const totalImages = productImageFiles.length + selectedFiles.length;
-      if (totalImages > 5) {
-        alert('Chỉ được phép tải lên tối đa 5 ảnh');
-        return;
+      // Đặt ảnh đầu tiên làm ảnh chính nếu chưa có ảnh nào
+      if (previewImages.length === 0) {
+        setMainImageIndex(0);
       }
-      
-      // Lọc file không hợp lệ
-      const validFiles = selectedFiles.filter(file => {
-        // Kiểm tra kích thước file (tối đa 5MB)
-        if (file.size > 5 * 1024 * 1024) {
-          alert(`File ${file.name} vượt quá 5MB`);
-          return false;
-        }
-        
-        // Kiểm tra định dạng file
-        const allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
-        const fileExtension = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
-        if (!allowedExtensions.includes(fileExtension)) {
-          alert(`File ${file.name} không được hỗ trợ. Vui lòng sử dụng JPG, JPEG, PNG, GIF hoặc WEBP`);
-          return false;
-        }
-        
-        return true;
-      });
-      
-      // Cập nhật state cho danh sách file
-      setProductImageFiles([...productImageFiles, ...validFiles]);
-      
-      // Tạo URL cho preview ảnh
-      const newPreviewImages = [...previewImages];
-      validFiles.forEach(file => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          newPreviewImages.push(e.target.result);
-          setPreviewImages([...newPreviewImages]);
-        };
-        reader.readAsDataURL(file);
-      });
-      
-      // Nếu đây là ảnh đầu tiên được thêm, tự động đặt làm ảnh đại diện
-      if (productImageFiles.length === 0 && validFiles.length > 0) {
-        setProductImageFile(validFiles[0]);
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          setPreviewImage(e.target.result);
-        };
-        reader.readAsDataURL(validFiles[0]);
-      }
+    } else {
+      alert('Chỉ được phép tối đa 5 ảnh');
     }
   };
   
-  // Thêm hàm xóa ảnh khỏi danh sách
+  // Xử lý khi tải lên nhiều ảnh cùng lúc
+  const handleMultipleImagesChange = (event) => {
+    const files = Array.from(event.target.files);
+    
+    if (!files.length) {
+      console.log("No files selected");
+      return;
+    }
+    
+    console.log("Selected files:", files);
+    
+    // Tính toán có bao nhiêu ảnh có thể thêm vào
+    const remainingSlots = 5 - previewImages.length;
+    if (remainingSlots <= 0) {
+      alert('Đã đạt giới hạn tối đa 5 ảnh');
+      return;
+    }
+    
+    // Giới hạn số lượng tệp được chọn
+    const filesToProcess = files.slice(0, remainingSlots);
+    
+    // Kiểm tra kích thước và định dạng của từng tệp
+    const validFiles = filesToProcess.filter(file => {
+      // Kiểm tra kích thước tệp (5MB = 5 * 1024 * 1024 bytes)
+      if (file.size > 5 * 1024 * 1024) {
+        console.warn(`File ${file.name} exceeds 5MB size limit`);
+        return false;
+      }
+      
+      // Kiểm tra định dạng tệp
+      const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+      if (!validTypes.includes(file.type)) {
+        console.warn(`File ${file.name} is not a supported image format`);
+        return false;
+      }
+      
+      return true;
+    });
+    
+    if (validFiles.length < filesToProcess.length) {
+      alert(`${filesToProcess.length - validFiles.length} ảnh không hợp lệ đã bị loại bỏ (định dạng không được hỗ trợ hoặc kích thước quá lớn)`);
+    }
+    
+    if (validFiles.length === 0) {
+      return;
+    }
+    
+    // Tạo URL đối tượng cho xem trước
+    const newPreviewUrls = validFiles.map(file => URL.createObjectURL(file));
+    
+    // Cập nhật state
+    setPreviewImages(prev => [...prev, ...newPreviewUrls]);
+    setProductImageFiles(prev => [...prev, ...validFiles]);
+    
+    // Nếu đây là những ảnh đầu tiên, đặt ảnh đầu tiên làm ảnh chính
+    if (previewImages.length === 0 && newPreviewUrls.length > 0) {
+      setMainImageIndex(0);
+      setPreviewImage(newPreviewUrls[0]);
+    }
+  };
+  
+  // Xóa ảnh khỏi danh sách
   const handleRemoveImage = (index) => {
-    const updatedFiles = [...productImageFiles];
+    // Tạo bản sao của các mảng
     const updatedPreviews = [...previewImages];
+    const updatedFiles = [...productImageFiles];
     
-    updatedFiles.splice(index, 1);
+    // Xóa ảnh tại chỉ mục đã chỉ định
     updatedPreviews.splice(index, 1);
+    updatedFiles.splice(index, 1);
     
-    setProductImageFiles(updatedFiles);
+    // Cập nhật state
     setPreviewImages(updatedPreviews);
+    setProductImageFiles(updatedFiles);
     
-    // Nếu xóa ảnh đại diện, cập nhật lại ảnh đại diện
+    // Xử lý trường hợp xóa ảnh chính
     if (index === mainImageIndex) {
-      if (updatedFiles.length > 0) {
+      // Nếu còn ảnh, đặt ảnh đầu tiên làm ảnh chính
+      if (updatedPreviews.length > 0) {
         setMainImageIndex(0);
-        setProductImageFile(updatedFiles[0]);
         setPreviewImage(updatedPreviews[0]);
       } else {
+        // Nếu không còn ảnh nào
         setMainImageIndex(-1);
-        setProductImageFile(null);
         setPreviewImage(null);
       }
-    } else if (index < mainImageIndex) {
-      // Nếu xóa ảnh trước ảnh đại diện, cập nhật lại index
+    } 
+    // Nếu xóa ảnh ở vị trí trước ảnh chính, cần điều chỉnh chỉ mục
+    else if (index < mainImageIndex) {
       setMainImageIndex(mainImageIndex - 1);
     }
   };
   
-  // Thêm hàm đặt ảnh làm ảnh đại diện
+  // Đặt ảnh làm ảnh chính
   const handleSetMainImage = (index) => {
-    setMainImageIndex(index);
-    setProductImageFile(productImageFiles[index]);
-    setPreviewImage(previewImages[index]);
+    if (index >= 0 && index < previewImages.length) {
+      setMainImageIndex(index);
+      setPreviewImage(previewImages[index]);
+    }
   };
 
   return (
@@ -1620,27 +1890,7 @@ const Product = () => {
                 alignItems: 'center',
                 marginRight: '5px' 
               }}>
-                <input
-                  type="text"
-                  placeholder="Tìm kiếm sản phẩm..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  style={{
-                    padding: '10px 12px 10px 40px',
-                    border: '1px solid #ddd',
-                    borderRadius: '5px',
-                    fontSize: '14px',
-                    width: '300px',
-                    backgroundColor: '#f8f9fa',
-                    transition: 'all 0.3s'
-                  }}
-                />
-                <FaSearch style={{ 
-                  position: 'absolute', 
-                  left: '12px', 
-                  color: '#6c757d',
-                  fontSize: '16px'
-                }} />
+
                 {searchTerm && (
                   <button
                     onClick={handleClear}
@@ -2130,52 +2380,6 @@ const Product = () => {
                     <strong>Trạng thái:</strong> {selectedProduct.Status}
                   </div>
                   <div>
-                    <strong>Hình ảnh:</strong>
-                    <div style={{ marginTop: '8px' }}>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                        {productImages && productImages.length > 0 ? (
-                          productImages.slice(0, 4).map((image, index) => (
-                            <div key={index} style={{ width: '60px', height: '60px', border: '1px solid #ddd', borderRadius: '4px', overflow: 'hidden' }}>
-                              <img
-                                src={getImageUrl(image)}
-                                alt={`${selectedProduct.ProductName} - Ảnh ${index + 1}`}
-                                style={{
-                                  width: '100%',
-                                  height: '100%',
-                                  objectFit: 'cover'
-                                }}
-                                onError={(e) => {
-                                  e.target.onerror = null;
-                                  e.target.src = '/images/default-product.png';
-                                }}
-                              />
-                            </div>
-                          ))
-                        ) : (
-                          <div style={{ padding: '10px', color: '#6c757d', fontStyle: 'italic' }}>
-                            Không có ảnh
-                          </div>
-                        )}
-                        {productImages && productImages.length > 4 && (
-                          <div style={{ 
-                            width: '60px', 
-                            height: '60px', 
-                            border: '1px solid #ddd', 
-                            borderRadius: '4px', 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            justifyContent: 'center',
-                            backgroundColor: 'rgba(0,0,0,0.1)',
-                            fontSize: '12px',
-                            fontWeight: 'bold'
-                          }}>
-                            +{productImages.length - 4}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  <div>
                     <strong>Loại da:</strong> {selectedProduct.SkinType}
                   </div>
                   <div>
@@ -2285,21 +2489,92 @@ const Product = () => {
                 />
               </Grid>
               <Grid item xs={12}>
+                {/* Chỉ hiển thị thông tin danh mục ban đầu khi đã thay đổi danh mục */}
+                {editingProductId && newProduct.categoryId !== products.find(p => p.ProductID === editingProductId)?.categoryId && (
+                  <Box sx={{ mb: 1, p: 1, bgcolor: '#fff8e1', borderRadius: '4px', border: '1px solid #ffe0b2' }}>
+                    <Typography variant="caption" sx={{ display: 'flex', alignItems: 'center', color: '#ed6c02' }}>
+                      <span style={{ marginRight: '5px' }}>⚠️</span>
+                      Bạn đang thay đổi danh mục từ 
+                      <strong style={{ margin: '0 5px', color: '#2e7d32' }}>
+                        {products.find(p => p.ProductID === editingProductId)?.categoryDisplay || 'Không xác định'}
+                      </strong>
+                      sang
+                      <strong style={{ margin: '0 5px', color: '#ed6c02' }}>
+                        {categoryOptions.find(c => c.id === newProduct.categoryId)?.display || 'Không xác định'}
+                      </strong>
+                    </Typography>
+                  </Box>
+                )}
                 <Select
                   name="categoryId"
                   displayEmpty
                   fullWidth
-                  value={newProduct.categoryId}
-                  onChange={handleInputChange}
-                  label="Danh Mục *"
+                  value={newProduct.categoryId || ''}
+                  onChange={(e) => {
+                    const newValue = e.target.value;
+                    const oldValue = newProduct.categoryId;
+                    // Chỉ hiện xác nhận khi thực sự thay đổi danh mục và đang ở chế độ chỉnh sửa
+                    const originalCategoryId = editingProductId ? 
+                      products.find(p => p.ProductID === editingProductId)?.categoryId : null;
+                    
+                    if (editingProductId && originalCategoryId && newValue !== originalCategoryId) {
+                      // Hiển thị thông báo khi thay đổi từ danh mục ban đầu
+                      const oldCategory = categoryOptions.find(c => c.id === originalCategoryId)?.display || 'Không xác định';
+                      const newCategory = categoryOptions.find(c => c.id === newValue)?.display || 'Không xác định';
+                      if (window.confirm(`Bạn có chắc muốn thay đổi danh mục từ "${oldCategory}" sang "${newCategory}" không?`)) {
+                        handleInputChange(e);
+                      }
+                    } else {
+                      // Trường hợp chỉ cập nhật giá trị bình thường (thêm mới hoặc không thay đổi từ danh mục ban đầu)
+                      handleInputChange(e);
+                    }
+                  }}
+                  label="Danh Mục"
+                  error={!newProduct.categoryId && !editingProductId}
+                  sx={{
+                    '& .MuiSelect-select': {
+                      fontWeight: editingProductId && 
+                        newProduct.categoryId !== products.find(p => p.ProductID === editingProductId)?.categoryId 
+                        ? 'bold' : 'normal',
+                      color: editingProductId && 
+                        newProduct.categoryId !== products.find(p => p.ProductID === editingProductId)?.categoryId 
+                        ? '#ed6c02' : 'inherit'
+                    }
+                  }}
                 >
                   <MenuItem value=""><em>Chọn danh mục</em></MenuItem>
-                  {categoryOptions.map((category) => (
-                    <MenuItem key={category.display} value={category.id}>
-                      {category.display}
-                    </MenuItem>
-                  ))}
+                  {categoryOptions.map((category) => {
+                    // Xác định xem đây có phải là danh mục ban đầu khi đang chỉnh sửa
+                    const isOriginalCategory = editingProductId && 
+                      products.find(p => p.ProductID === editingProductId)?.categoryId === category.id;
+                    
+                    return (
+                      <MenuItem 
+                        key={category.display} 
+                        value={category.id}
+                        sx={{
+                          bgcolor: isOriginalCategory ? '#f0f7ff' : 'inherit',
+                          fontWeight: isOriginalCategory ? 'bold' : 'normal'
+                        }}
+                      >
+                        {category.display}
+                        {isOriginalCategory && 
+                          <span style={{ marginLeft: '10px', color: '#4caf50', fontSize: '0.8rem' }}>(Danh mục ban đầu)</span>
+                        }
+                      </MenuItem>
+                    );
+                  })}
                 </Select>
+                <Typography variant="caption" sx={{ mt: 0.5, display: 'block', color: '#666' }}>
+                  {editingProductId 
+                    ? "Bạn có thể giữ nguyên hoặc thay đổi danh mục nếu cần"
+                    : "Chọn danh mục sản phẩm"}
+                </Typography>
+                {!newProduct.categoryId && !editingProductId && (
+                  <Typography variant="caption" color="error" sx={{ mt: 0.5, display: 'block' }}>
+                    Danh mục là bắt buộc khi thêm sản phẩm mới
+                  </Typography>
+                )}
               </Grid>
               <Grid item xs={12}>
                 <TextField
@@ -2390,22 +2665,6 @@ const Product = () => {
                 </TextField>
               </Grid>
               <Grid item xs={12}>
-                <TextField
-                  select
-                  name="status"
-                  label="Trạng Thái"
-                  fullWidth
-                  variant="outlined"
-                  value={newProduct.status || 'Available'}
-                  onChange={handleInputChange}
-                  style={{ marginTop: '16px' }}
-                >
-                  <MenuItem value="Available">Available</MenuItem>
-                  <MenuItem value="Unavailable">Unavailable</MenuItem>
-                  <MenuItem value="OutOfStock">Out of Stock</MenuItem>
-                </TextField>
-              </Grid>
-              <Grid item xs={12}>
                 <LocalizationProvider dateAdapter={AdapterDayjs}>
                   <DatePicker 
                     label="Ngày Sản Xuất"
@@ -2437,8 +2696,8 @@ const Product = () => {
                   value={newProduct.ImportDate}
                   onChange={handleDateChange}
                   InputLabelProps={{ shrink: true }}
-                  disabled={editingProductId !== null}
-                  helperText={editingProductId !== null ? "Ngày nhập kho được cập nhật tự động khi nhập kho" : ""}
+                  disabled={true}
+                  helperText="Ngày nhập kho sẽ tự động lấy ngày hiện tại khi tạo sản phẩm mới"
                 />
               </Grid>
             </Grid>
@@ -2481,406 +2740,433 @@ const Product = () => {
                     placeholder="Nhập hướng dẫn sử dụng sản phẩm"
                 />
 
-                {/* Phần thêm ảnh sản phẩm - thiết kế giống phần hiển thị ảnh */}
-                <Typography variant="subtitle1" sx={{ mt: 3, mb: 1, fontWeight: 'bold' }}>
-                  Hình ảnh sản phẩm (Yêu cầu 5 ảnh)
-                </Typography>
-                
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, border: '1px solid #dee2e6', borderRadius: '8px', p: 2, bgcolor: '#f8f9fa' }}>
-                  <Box sx={{ display: 'flex', gap: 2 }}>
-                    {/* Phần xem trước ảnh */}
-                    <Box sx={{ width: '30%', display: 'flex', flexDirection: 'column', gap: 1 }}>
-                      {previewImages.length > 0 ? (
-                        previewImages.map((preview, index) => (
-                          <Box 
-                            key={index} 
-                            sx={{ 
-                              border: mainImageIndex === index ? '2px solid #1976d2' : '1px solid #ddd',
-                              p: 1,
-                              cursor: 'pointer',
-                              borderRadius: '4px',
-                              position: 'relative'
-                            }}
-                            onClick={() => handleSetMainImage(index)}
-                          >
-                            <img
-                              src={preview}
-                              alt={`Ảnh ${index + 1}`}
-                              style={{ 
-                                width: '100%', 
-                                height: '80px', 
-                                objectFit: 'cover' 
-                              }}
-                            />
-                            {mainImageIndex === index && (
-                              <Box
-                                sx={{
-                                  position: 'absolute',
-                                  top: 0,
-                                  left: 0,
-                                  bgcolor: '#4CAF50',
-                                  color: 'white',
-                                  p: '2px 4px',
-                                  fontSize: '10px',
-                                  borderRadius: '0 0 4px 0'
-                                }}
-                              >
-                                Chính
-                              </Box>
-                            )}
-                            <IconButton
-                              size="small"
-                              sx={{
-                                position: 'absolute',
-                                top: 0,
-                                right: 0,
-                                bgcolor: 'rgba(255,255,255,0.7)',
-                                width: '24px',
-                                height: '24px'
-                              }}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleRemoveImage(index);
-                              }}
-                            >
-                              <span style={{ fontSize: '16px' }}>✖</span>
-                            </IconButton>
-                          </Box>
-                        ))
-                      ) : (
-                        Array(5).fill(null).map((_, index) => (
-                          <Box 
-                            key={index} 
-                            sx={{ 
-                              p: 1, 
-                              border: '1px dashed #ddd', 
-                              borderRadius: '4px',
-                              textAlign: 'center',
-                              height: '60px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center'
-                            }}
-                          >
-                            <Typography variant="caption" color="text.secondary">
-                              Ảnh {index + 1}
-                            </Typography>
-                          </Box>
-                        ))
-                      )}
-                      <Box sx={{ 
-                        textAlign: 'center', 
-                        mt: 1,
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        flexDirection: 'column',
-                        gap: 1
-                      }}>
-                        <Typography variant="body2" color="primary" fontWeight="bold">
-                          {previewImages.length}/5 ảnh đã chọn
-                        </Typography>
-                      </Box>
-                    </Box>
-
-                    {/* Main Image Display */}
-                    <Box sx={{ width: '70%' }}>
-                      <Box 
-                        sx={{ 
-                          width: '100%', 
-                          height: '300px', 
-                          border: '1px solid #ddd', 
-                          borderRadius: '4px', 
-                          display: 'flex',
-                          justifyContent: 'center',
-                          alignItems: 'center',
-                          overflow: 'hidden',
-                          position: 'relative',
-                          bgcolor: 'white'
-                        }}
-                      >
-                        {previewImage ? (
-                          <>
-                            <img
-                              src={previewImage}
-                              alt="Ảnh sản phẩm"
-                              style={{ 
-                                maxWidth: '100%', 
-                                maxHeight: '100%', 
-                                objectFit: 'contain' 
-                              }}
-                            />
-                            <Box
-                              sx={{
-                                position: 'absolute',
-                                top: 0,
-                                right: 0,
-                                bgcolor: '#4CAF50',
-                                color: 'white',
-                                p: '4px 8px',
-                                fontSize: '12px',
-                                borderRadius: '0 0 0 4px',
-                                zIndex: 1
-                              }}
-                            >
-                              Ảnh đại diện
-                            </Box>
-                          </>
-                        ) : (
-                          <Typography variant="body1" color="text.secondary">
-                            Chọn ảnh từ bên trái hoặc tải lên ảnh mới
-                          </Typography>
-                        )}
-                      </Box>
-                      
-                      {/* Hướng dẫn sử dụng */}
-                      <Box sx={{ mt: 2, p: 2, bgcolor: '#e3f2fd', borderRadius: '4px' }}>
-                        <Typography variant="body2" fontWeight="medium">
-                          Hướng dẫn:
-                        </Typography>
-                        <Box component="ul" sx={{ pl: 2, m: 0, fontSize: '0.875rem' }}>
-                          <li>Chọn đúng 5 ảnh sản phẩm</li>
-                          <li>Nhấp vào ảnh để đặt làm ảnh đại diện</li>
-                          <li>Định dạng: JPG, JPEG, PNG, GIF (tối đa 5MB/ảnh)</li>
-                        </Box>
-                      </Box>
-                    </Box>
-                  </Box>
-
-                  {/* Phần upload ảnh */}
-                  <Box sx={{ p: 2, bgcolor: 'white', border: '1px dashed #ccc', borderRadius: '4px' }}>
-                    <Typography variant="body1" sx={{ fontWeight: 'bold', mb: 2 }}>
-                      Tải lên ảnh sản phẩm {previewImages.length === 5 && "(Đã đạt giới hạn 5 ảnh)"}
+                {/* Phần thêm ảnh chỉ hiển thị khi thêm sản phẩm mới, không hiển thị khi chỉnh sửa */}
+                {!editingProductId && (
+                  <>
+                    <Typography variant="subtitle1" sx={{ mt: 3, mb: 1, fontWeight: 'bold' }}>
+                      Hình ảnh sản phẩm (Yêu cầu 5 ảnh)
                     </Typography>
                     
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Button
-                          variant="contained"
-                          component="label"
-                          color="primary"
-                          disabled={previewImages.length >= 5}
-                          startIcon={<span>📁</span>}
-                          sx={{ minWidth: '180px' }}
-                        >
-                          Chọn nhiều ảnh
-                          <input
-                            type="file"
-                            hidden
-                            accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
-                            onChange={handleMultipleImagesChange}
-                            multiple
-                            disabled={previewImages.length >= 5}
-                          />
-                        </Button>
-                        <Box sx={{ flex: 1 }}>
-                          <Typography variant="body2" color={previewImages.length >= 5 ? "error" : "text.secondary"}>
-                            {previewImages.length >= 5 
-                              ? "Đã đạt giới hạn tối đa 5 ảnh" 
-                              : `Còn thiếu ${5 - previewImages.length} ảnh`}
-                          </Typography>
-                          {previewImages.length > 0 && (
-                            <Typography variant="caption" display="block" sx={{ mt: 0.5 }}>
-                              Đã chọn {previewImages.length} ảnh
-                            </Typography>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, border: '1px solid #dee2e6', borderRadius: '8px', p: 2, bgcolor: '#f8f9fa' }}>
+                      <Box sx={{ display: 'flex', gap: 2 }}>
+                        {/* Phần xem trước ảnh */}
+                        <Box sx={{ width: '30%', display: 'flex', flexDirection: 'column', gap: 1 }}>
+                          {previewImages.length > 0 ? (
+                            previewImages.map((preview, index) => (
+                              <Box 
+                                key={index} 
+                                sx={{ 
+                                  border: mainImageIndex === index ? '2px solid #1976d2' : '1px solid #ddd',
+                                  p: 1,
+                                  cursor: 'pointer',
+                                  borderRadius: '4px',
+                                  position: 'relative'
+                                }}
+                                onClick={() => handleSetMainImage(index)}
+                              >
+                                <img
+                                  src={preview}
+                                  alt={`Ảnh ${index + 1}`}
+                                  style={{ 
+                                    width: '100%', 
+                                    height: '80px', 
+                                    objectFit: 'cover' 
+                                  }}
+                                />
+                                {mainImageIndex === index && (
+                                  <Box
+                                    sx={{
+                                      position: 'absolute',
+                                      top: 0,
+                                      left: 0,
+                                      bgcolor: '#4CAF50',
+                                      color: 'white',
+                                      p: '2px 4px',
+                                      fontSize: '10px',
+                                      borderRadius: '0 0 4px 0'
+                                    }}
+                                  >
+                                    Chính
+                                  </Box>
+                                )}
+                                <IconButton
+                                  size="small"
+                                  sx={{
+                                    position: 'absolute',
+                                    top: 0,
+                                    right: 0,
+                                    bgcolor: 'rgba(255,255,255,0.7)',
+                                    width: '24px',
+                                    height: '24px'
+                                  }}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleRemoveImage(index);
+                                  }}
+                                >
+                                  <span style={{ fontSize: '16px' }}>✖</span>
+                                </IconButton>
+                              </Box>
+                            ))
+                          ) : (
+                            Array(5).fill(null).map((_, index) => (
+                              <Box 
+                                key={index} 
+                                sx={{ 
+                                  p: 1, 
+                                  border: '1px dashed #ddd', 
+                                  borderRadius: '4px',
+                                  textAlign: 'center',
+                                  height: '60px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center'
+                                }}
+                              >
+                                <Typography variant="caption" color="text.secondary">
+                                  Ảnh {index + 1}
+                                </Typography>
+                              </Box>
+                            ))
                           )}
+                          <Box sx={{ 
+                            textAlign: 'center', 
+                            mt: 1,
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            flexDirection: 'column',
+                            gap: 1
+                          }}>
+                            <Typography variant="body2" color="primary" fontWeight="bold">
+                              {previewImages.length}/5 ảnh đã chọn
+                            </Typography>
+                          </Box>
+                        </Box>
+
+                        {/* Main Image Display */}
+                        <Box sx={{ width: '70%' }}>
+                          <Box 
+                            sx={{ 
+                              width: '100%', 
+                              height: '300px', 
+                              border: '1px solid #ddd', 
+                              borderRadius: '4px', 
+                              display: 'flex',
+                              justifyContent: 'center',
+                              alignItems: 'center',
+                              overflow: 'hidden',
+                              position: 'relative',
+                              bgcolor: 'white'
+                            }}
+                          >
+                            {previewImage ? (
+                              <>
+                                <img
+                                  src={previewImage}
+                                  alt="Ảnh sản phẩm"
+                                  style={{ 
+                                    maxWidth: '100%', 
+                                    maxHeight: '100%', 
+                                    objectFit: 'contain' 
+                                  }}
+                                />
+                                <Box
+                                  sx={{
+                                    position: 'absolute',
+                                    top: 0,
+                                    right: 0,
+                                    bgcolor: '#4CAF50',
+                                    color: 'white',
+                                    p: '4px 8px',
+                                    fontSize: '12px',
+                                    borderRadius: '0 0 0 4px',
+                                    zIndex: 1
+                                  }}
+                                >
+                                  Ảnh đại diện
+                                </Box>
+                              </>
+                            ) : (
+                              <Typography variant="body1" color="text.secondary">
+                                Chọn ảnh từ bên trái hoặc tải lên ảnh mới
+                              </Typography>
+                            )}
+                          </Box>
+                          
+                          {/* Hướng dẫn sử dụng */}
+                          <Box sx={{ mt: 2, p: 2, bgcolor: '#e3f2fd', borderRadius: '4px' }}>
+                            <Typography variant="body2" fontWeight="medium">
+                              Hướng dẫn:
+                            </Typography>
+                            <Box component="ul" sx={{ pl: 2, m: 0, fontSize: '0.875rem' }}>
+                              <li>Chọn đúng 5 ảnh sản phẩm</li>
+                              <li>Nhấp vào ảnh để đặt làm ảnh đại diện</li>
+                              <li>Định dạng: JPG, JPEG, PNG, GIF (tối đa 5MB/ảnh)</li>
+                            </Box>
+                          </Box>
                         </Box>
                       </Box>
-                      
-                      <Box sx={{ 
-                        p: 1, 
-                        bgcolor: previewImages.length === 5 ? '#e8f5e9' : '#fff3e0', 
-                        borderRadius: '4px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 1
-                      }}>
-                        <Box component="span" sx={{ fontSize: '20px' }}>
-                          {previewImages.length === 5 ? '✅' : '⚠️'}
-                        </Box>
-                        <Typography variant="body2">
-                          {previewImages.length === 5 
-                            ? 'Đã đủ 5 ảnh. Sản phẩm sẵn sàng để thêm!' 
-                            : 'Lưu ý: Sản phẩm phải có đủ 5 ảnh để có thể thêm vào hệ thống'}
+
+                      {/* Phần upload ảnh */}
+                      <Box sx={{ p: 2, bgcolor: 'white', border: '1px dashed #ccc', borderRadius: '4px' }}>
+                        <Typography variant="body1" sx={{ fontWeight: 'bold', mb: 2 }}>
+                          Tải lên ảnh sản phẩm {previewImages.length === 5 && "(Đã đạt giới hạn 5 ảnh)"}
                         </Typography>
+                        
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Button
+                              variant="contained"
+                              component="label"
+                              color="primary"
+                              disabled={previewImages.length >= 5}
+                              startIcon={<span>📁</span>}
+                              sx={{ minWidth: '180px' }}
+                            >
+                              Chọn nhiều ảnh
+                              <input
+                                type="file"
+                                hidden
+                                accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                                onChange={handleMultipleImagesChange}
+                                multiple
+                                disabled={previewImages.length >= 5}
+                              />
+                            </Button>
+                            <Box sx={{ flex: 1 }}>
+                              <Typography variant="body2" color={previewImages.length >= 5 ? "error" : "text.secondary"}>
+                                {previewImages.length >= 5 
+                                  ? "Đã đạt giới hạn tối đa 5 ảnh" 
+                                  : `Còn thiếu ${5 - previewImages.length} ảnh`}
+                              </Typography>
+                              {previewImages.length > 0 && (
+                                <Typography variant="caption" display="block" sx={{ mt: 0.5 }}>
+                                  Đã chọn {previewImages.length} ảnh
+                                </Typography>
+                              )}
+                            </Box>
+                          </Box>
+                          
+                          <Box sx={{ 
+                            p: 1, 
+                            bgcolor: previewImages.length === 5 ? '#e8f5e9' : '#fff3e0', 
+                            borderRadius: '4px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 1
+                          }}>
+                            <Box component="span" sx={{ fontSize: '20px' }}>
+                              {previewImages.length === 5 ? '✅' : '⚠️'}
+                            </Box>
+                            <Typography variant="body2">
+                              {previewImages.length === 5 
+                                ? 'Đã đủ 5 ảnh. Sản phẩm sẵn sàng để thêm!' 
+                                : 'Lưu ý: Sản phẩm phải có đủ 5 ảnh để có thể thêm vào hệ thống'}
+                            </Typography>
+                          </Box>
+                        </Box>
                       </Box>
                     </Box>
-                  </Box>
-                </Box>
+                  </>
+                )}
             </div>
         </DialogContent>
         <DialogActions>
-            <Button onClick={handleDialogClose} color="primary">
-                Hủy
-            </Button>
-            <Button 
-                onClick={editingProductId ? handleSubmitEdit : handleSubmitProduct} 
-                color="primary" 
-                variant="contained"
-                disabled={!newProduct.productName || !newProduct.quantity || !newProduct.price || !newProduct.categoryId || isSubmitting}
-            >
-                {isSubmitting ? (
-                    <span>Đang xử lý...</span>
-                ) : (
-                    editingProductId ? 'Cập nhật' : 'Thêm Sản Phẩm'
-                )}
-            </Button>
+          <Button onClick={handleDialogClose} color="primary">
+            Hủy
+          </Button>
+          <Button 
+            onClick={editingProductId ? handleSubmitEdit : handleSubmitProduct} 
+            color="primary" 
+            variant="contained"
+            disabled={
+              // Luôn kiểm tra tên sản phẩm và trạng thái đang submit
+              !newProduct.productName || isSubmitting || 
+              // Khi thêm mới: kiểm tra tất cả các trường bắt buộc
+              (!editingProductId && (!newProduct.quantity || !newProduct.price || !newProduct.categoryId)) ||
+              // Khi chỉnh sửa: chỉ kiểm tra số lượng, giá
+              (editingProductId && (!newProduct.quantity || !newProduct.price))
+            }
+          >
+            {isSubmitting ? (
+                <span>Đang xử lý...</span>
+            ) : (
+                editingProductId ? 'Cập nhật' : 'Thêm Sản Phẩm'
+            )}
+          </Button>
         </DialogActions>
-    </Dialog>
+      </Dialog>
+
+      {/* Dialog nhập kho */}
+      <Dialog open={openImportDialog} onClose={handleCloseImportDialog} maxWidth="sm" fullWidth>
+        <DialogTitle>
+          Nhập Kho Sản Phẩm
+        </DialogTitle>
+        <DialogContent>
+          {importingProduct && (
+            <Box sx={{ mt: 2 }}>
+              <Typography variant="subtitle1" gutterBottom>
+                <strong>Sản phẩm:</strong> {importingProduct.ProductName}
+              </Typography>
+              <Typography variant="body2" gutterBottom>
+                <strong>Mã sản phẩm:</strong> {importingProduct.ProductCode}
+              </Typography>
+              <Typography variant="body2" gutterBottom>
+                <strong>Số lượng hiện tại:</strong> {importingProduct.Quantity}
+              </Typography>
+              <TextField
+                margin="dense"
+                label="Số lượng nhập thêm"
+                type="number"
+                fullWidth
+                variant="outlined"
+                value={importQuantity}
+                onChange={handleImportQuantityChange}
+                sx={{ mt: 2 }}
+                autoFocus
+                helperText="Nhập số lượng sản phẩm cần thêm vào kho"
+              />
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseImportDialog} color="inherit">
+            Hủy
+          </Button>
+          <Button 
+            onClick={handleOpenConfirmImport} 
+            color="primary" 
+            variant="contained"
+            disabled={isImporting || importQuantity <= 0}
+          >
+            Xác nhận
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Dialog xem tất cả ảnh */}
       <Dialog open={openImageGallery} onClose={() => setOpenImageGallery(false)} maxWidth="md" fullWidth>
-        {selectedProduct && (
-          <>
-            <DialogTitle>
-              Thư viện ảnh: {selectedProduct.ProductName}
-            </DialogTitle>
-            <DialogContent>
-              <Box sx={{ display: 'flex' }}>
-                {/* Thumbnail images */}
-                <Box sx={{ width: '20%', mr: 2 }}>
-                  {productImages && productImages.length > 0 ? (
-                    productImages.map((image, index) => (
-                      <Box 
-                        key={index} 
-                        sx={{ 
-                          mb: 1, 
-                          border: selectedImageIndex === index ? '2px solid #1976d2' : '1px solid #eee',
-                          p: 1,
-                          cursor: 'pointer'
-                        }}
-                        onClick={() => setSelectedImageIndex(index)}
-                      >
-                        <img
-                          src={getImageUrl(image)}
-                          alt={`Thumbnail ${index + 1}`}
-                          style={{ width: '100%', height: '80px', objectFit: 'cover' }}
-                          onError={(e) => {
-                            e.target.onerror = null;
-                            e.target.src = '/images/default-product.png';
-                          }}
-                        />
-                      </Box>
-                    ))
-                  ) : (
-                    <Box 
-                      sx={{ 
-                        mb: 1, 
-                        border: '1px solid #eee',
-                        p: 1
+        <DialogTitle>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Typography variant="h6">Tất Cả Ảnh Sản Phẩm</Typography>
+            <IconButton onClick={() => setOpenImageGallery(false)}>
+              <CloseIcon />
+            </IconButton>
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, p: 1 }}>
+            {selectedProduct && (
+              <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'bold' }}>
+                {selectedProduct.ProductName}
+              </Typography>
+            )}
+            
+            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 2 }}>
+              {productImages && productImages.length > 0 ? (
+                productImages.map((image, index) => (
+                  <Box 
+                    key={index} 
+                    sx={{
+                      border: '1px solid #ddd',
+                      borderRadius: '4px',
+                      overflow: 'hidden',
+                      position: 'relative'
+                    }}
+                  >
+                    <img 
+                      src={getImageUrl(image)} 
+                      alt={`Ảnh ${index + 1}`} 
+                      style={{ 
+                        width: '100%', 
+                        aspectRatio: '1/1',
+                        objectFit: 'cover',
+                        objectPosition: 'center',
+                        display: 'block'
                       }}
-                    >
+                    />
+                    {selectedProduct && selectedProduct.ImgURL && getImageUrl(image) === getImageUrl(selectedProduct.ImgURL) && (
                       <Box 
-                        sx={{ 
-                          bgcolor: '#f5f5f5', 
-                          height: 80, 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          justifyContent: 'center' 
-                        }}
-                      >
-                        <Typography variant="caption" color="text.secondary">
-                          Không có ảnh
-                        </Typography>
-                      </Box>
-                    </Box>
-                  )}
-                </Box>
-                
-                {/* Main image */}
-                <Box sx={{ width: '80%' }}>
-                  {productImages && productImages.length > 0 ? (
-                    <Box
-                      sx={{
-                        height: 400,
-                        width: '100%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        border: '1px solid #eee',
-                        overflow: 'hidden',
-                        position: 'relative'
-                      }}
-                    >
-                      {productImages[selectedImageIndex] && 
-                        productImages[selectedImageIndex].imgUrl === (selectedProduct.ImgURL || selectedProduct.imgURL) && (
-                        <div style={{
+                        sx={{
                           position: 'absolute',
-                          top: '0',
-                          right: '0',
-                          backgroundColor: '#4CAF50',
+                          top: 0,
+                          left: 0,
+                          bgcolor: '#4CAF50',
                           color: 'white',
-                          padding: '4px 8px',
+                          p: '4px 8px',
                           fontSize: '12px',
-                          borderRadius: '0 0 0 4px',
-                          zIndex: 1
-                        }}>
-                          Ảnh đại diện
-                        </div>
-                      )}
-                      <img
-                        src={getImageUrl(productImages[selectedImageIndex])}
-                        alt={selectedProduct.ProductName}
-                        style={{ 
-                          maxWidth: '100%', 
-                          maxHeight: '100%', 
-                          objectFit: 'contain' 
+                          borderRadius: '0 0 4px 0'
                         }}
-                        onError={(e) => {
-                          e.target.onerror = null;
-                          e.target.src = '/images/default-product.png';
-                        }}
-                      />
-                    </Box>
-                  ) : (
-                    <Box 
-                      sx={{ 
-                        bgcolor: '#f5f5f5', 
-                        height: 400, 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        justifyContent: 'center',
-                        border: '1px solid #eee'
-                      }}
-                    >
-                      <Typography variant="h6" color="text.secondary">
-                        Không có ảnh
-                      </Typography>
-                    </Box>
-                  )}
-                  
-                  {/* Image info */}
-                  {productImages && productImages.length > 0 && productImages[selectedImageIndex] && (
-                    <Box sx={{ mt: 2, p: 1, bgcolor: '#f8f8f8' }}>
-                      <Typography variant="body2">
-                        <strong>Thứ tự hiển thị:</strong> {productImages[selectedImageIndex].displayOrder !== undefined ? 
-                          productImages[selectedImageIndex].displayOrder : 'Chưa đặt thứ tự'}
-                      </Typography>
-                      <Typography variant="body2" sx={{ mt: 1 }}>
-                        <strong>ID ảnh:</strong> {productImages[selectedImageIndex].imageID || 'Không có thông tin'}
-                      </Typography>
-                    </Box>
-                  )}
+                      >
+                        Ảnh đại diện
+                      </Box>
+                    )}
+                  </Box>
+                ))
+              ) : (
+                <Box sx={{ gridColumn: 'span 3', p: 3, textAlign: 'center' }}>
+                  <Typography variant="body1" color="text.secondary">
+                    Không có ảnh nào cho sản phẩm này
+                  </Typography>
                 </Box>
-              </Box>
-            </DialogContent>
-            <DialogActions>
-              <Button onClick={() => setOpenImageGallery(false)} color="primary">
-                Đóng
-              </Button>
-              <Button 
-                onClick={handleOpenEditImages} 
-                color="primary" 
-                variant="contained"
-              >
-                Sửa ảnh
-              </Button>
-            </DialogActions>
-          </>
-        )}
+              )}
+            </Box>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenImageGallery(false)} color="primary">
+            Đóng
+          </Button>
+          <Button 
+            onClick={handleOpenEditImages} 
+            color="primary" 
+            variant="contained"
+          >
+            Chỉnh sửa ảnh
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Dialog xác nhận nhập kho */}
+      <Dialog open={openConfirmImport} onClose={handleCloseConfirmImport} maxWidth="xs" fullWidth>
+        <DialogTitle>
+          Xác nhận nhập kho
+        </DialogTitle>
+        <DialogContent>
+          {importingProduct && (
+            <Box sx={{ mt: 2 }}>
+              <Typography variant="body1" gutterBottom>
+                Bạn có chắc chắn muốn nhập thêm <strong>{importQuantity}</strong> sản phẩm vào kho?
+              </Typography>
+              <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
+                <strong>Sản phẩm:</strong> {importingProduct.ProductName}
+              </Typography>
+              <Typography variant="body2" color="textSecondary">
+                <strong>Số lượng hiện tại:</strong> {importingProduct.Quantity}
+              </Typography>
+              <Typography variant="body2" color="textSecondary">
+                <strong>Số lượng sau khi nhập:</strong> {importingProduct.Quantity + importQuantity}
+              </Typography>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseConfirmImport} color="inherit">
+            Hủy
+          </Button>
+          <Button 
+            onClick={handleImportStock} 
+            color="primary" 
+            variant="contained"
+            disabled={isImporting}
+          >
+            {isImporting ? 'Đang xử lý...' : 'Xác nhận'}
+          </Button>
+        </DialogActions>
       </Dialog>
 
       {/* Dialog sửa ảnh */}
-      <Dialog open={openEditImagesDialog} onClose={() => setOpenEditImagesDialog(false)} maxWidth="md" fullWidth>
+      <Dialog open={openEditImageDialog} onClose={() => setOpenEditImageDialog(false)} maxWidth="md" fullWidth>
         {selectedProduct && (
           <>
             <DialogTitle>
@@ -3093,6 +3379,7 @@ const Product = () => {
                                               // Cập nhật thứ tự hiển thị cho ảnh hiện tại
                                               newImages[imageIndex].displayOrder = newDisplayOrder;
                                               setReorderedImages(newImages);
+                                              setReorderChanged(true);
                                             }
                                           }}
                                           fullWidth
@@ -3227,105 +3514,20 @@ const Product = () => {
               )}
             </DialogContent>
             <DialogActions>
-              <Button onClick={() => setOpenEditImagesDialog(false)} color="primary">
+              <Button onClick={() => setOpenEditImageDialog(false)} color="primary">
                 Đóng
               </Button>
               <Button 
                 onClick={handleReorderImages} 
                 color="primary" 
                 variant="contained"
-                disabled={uploadingImage}
+                disabled={uploadingImage || !reorderChanged}
               >
-                Cập nhật
+                Lưu thay đổi
               </Button>
             </DialogActions>
           </>
         )}
-      </Dialog>
-
-      {/* Dialog nhập kho */}
-      <Dialog open={openImportDialog} onClose={handleCloseImportDialog} maxWidth="sm" fullWidth>
-        <DialogTitle>
-          Nhập Kho Sản Phẩm
-        </DialogTitle>
-        <DialogContent>
-          {importingProduct && (
-            <Box sx={{ mt: 2 }}>
-              <Typography variant="subtitle1" gutterBottom>
-                <strong>Sản phẩm:</strong> {importingProduct.ProductName}
-              </Typography>
-              <Typography variant="body2" gutterBottom>
-                <strong>Mã sản phẩm:</strong> {importingProduct.ProductCode}
-              </Typography>
-              <Typography variant="body2" gutterBottom>
-                <strong>Số lượng hiện tại:</strong> {importingProduct.Quantity}
-              </Typography>
-              <TextField
-                margin="dense"
-                label="Số lượng nhập thêm"
-                type="number"
-                fullWidth
-                variant="outlined"
-                value={importQuantity}
-                onChange={handleImportQuantityChange}
-                sx={{ mt: 2 }}
-                autoFocus
-                helperText="Nhập số lượng sản phẩm cần thêm vào kho"
-              />
-            </Box>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseImportDialog} color="inherit">
-            Hủy
-          </Button>
-          <Button 
-            onClick={handleOpenConfirmImport} 
-            color="primary" 
-            variant="contained"
-            disabled={isImporting || importQuantity <= 0}
-          >
-            Xác nhận
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Dialog xác nhận nhập kho */}
-      <Dialog open={openConfirmImport} onClose={handleCloseConfirmImport} maxWidth="xs" fullWidth>
-        <DialogTitle>
-          Xác nhận nhập kho
-        </DialogTitle>
-        <DialogContent>
-          {importingProduct && (
-            <Box sx={{ mt: 2 }}>
-              <Typography variant="body1" gutterBottom>
-                Bạn có chắc chắn muốn nhập thêm <strong>{importQuantity}</strong> sản phẩm vào kho?
-              </Typography>
-              <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
-                <strong>Sản phẩm:</strong> {importingProduct.ProductName}
-              </Typography>
-              <Typography variant="body2" color="textSecondary">
-                <strong>Số lượng hiện tại:</strong> {importingProduct.Quantity}
-              </Typography>
-              <Typography variant="body2" color="textSecondary">
-                <strong>Số lượng sau khi nhập:</strong> {importingProduct.Quantity + importQuantity}
-              </Typography>
-            </Box>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseConfirmImport} color="inherit">
-            Hủy
-          </Button>
-          <Button 
-            onClick={handleImportStock} 
-            color="primary" 
-            variant="contained"
-            disabled={isImporting}
-          >
-            {isImporting ? 'Đang xử lý...' : 'Xác nhận'}
-          </Button>
-        </DialogActions>
       </Dialog>
     </Box>
   );

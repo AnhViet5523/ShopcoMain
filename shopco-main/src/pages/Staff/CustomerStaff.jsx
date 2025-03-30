@@ -12,8 +12,8 @@ const CustomerStaff = () => {
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [originalCustomers, setOriginalCustomers] = useState([]);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize] = useState(10);
+  const [page, setPage] = useState(1);
+  const pageSize = 15;
 
   const sidebarItems = [
     { id: 'orderStaff', name: 'Đơn hàng', icon: '📋' },
@@ -106,18 +106,18 @@ const CustomerStaff = () => {
 
   // Hàm xử lý khi thay đổi trang
   const handlePageChange = (event, value) => {
-    setCurrentPage(value);
+    setPage(value);
   };
 
   // Lấy mảng khách hàng cho trang hiện tại
   const getCurrentPageItems = () => {
-    const startIndex = (currentPage - 1) * pageSize;
+    const startIndex = (page - 1) * pageSize;
     return filteredCustomers.slice(startIndex, startIndex + pageSize);
   };
 
   // Khi từ khóa tìm kiếm thay đổi, reset lại trang hiện tại
   useEffect(() => {
-    setCurrentPage(1);
+    setPage(1);
   }, [searchTerm]);
 
   const handleClear = () => {
@@ -279,12 +279,13 @@ const CustomerStaff = () => {
             }}>
               <Pagination 
                 count={totalPages} 
-                page={currentPage} 
+                page={page} 
                 onChange={handlePageChange} 
                 variant="outlined" 
                 color="primary" 
                 showFirstButton 
                 showLastButton
+                size="large"
               />
             </div>
           )}

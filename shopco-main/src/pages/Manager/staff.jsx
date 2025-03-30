@@ -428,14 +428,10 @@ const Staff = () => {
       console.log('Phản hồi từ server:', response);
       
       if (response) {
-        // Tạo định dạng mật khẩu hiển thị đồng nhất với mật khẩu đã có
-        // Từ hình ảnh, có vẻ như mật khẩu hiển thị dạng "tênUser1234@"
-        const displayPassword = `${newStaff.username}1234@`;
+        // Sử dụng mật khẩu thực tế mà người dùng đã nhập
+        const displayPassword = newStaff.password;
         
-        // Hoặc nếu muốn hiển thị chính xác mật khẩu người dùng nhập (không khuyến nghị)
-        // const displayPassword = newStaff.password;
-        
-        // Thêm nhân viên mới vào state với mật khẩu đã được định dạng
+        // Thêm nhân viên mới vào state với mật khẩu thực tế
         const newStaffMember = {
           ...response,
           userId: response.userId || Date.now(),
@@ -443,7 +439,7 @@ const Staff = () => {
           fullName: response.fullName || response.name || newStaff.username,
           email: response.email || newStaff.email,
           role: 'Staff',
-          password: displayPassword // Sử dụng định dạng mật khẩu thống nhất
+          password: displayPassword // Sử dụng mật khẩu thực tế người dùng đã nhập
         };
         
         console.log('Nhân viên mới được thêm vào state:', newStaffMember);

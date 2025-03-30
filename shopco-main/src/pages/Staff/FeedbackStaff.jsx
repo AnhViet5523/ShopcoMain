@@ -23,7 +23,7 @@ const FeedbackStaff = () => {
   
   // Phân trang
   const [page, setPage] = useState(1);
-  const pageSize = 10;
+  const pageSize = 15;
 
   // State cho chức năng phản hồi
   const [openReplyDialog, setOpenReplyDialog] = useState(false);
@@ -631,15 +631,21 @@ const FeedbackStaff = () => {
           </table>
           
           {/* Phân trang */}
-          <div style={{ display: 'flex', justifyContent: 'center', marginTop: '20px' }}>
+          <div style={{ 
+            display: 'flex', 
+            justifyContent: 'center', 
+            marginTop: '20px',
+            marginBottom: '20px'
+          }}>
             <Pagination
               count={Math.ceil(reviews.length / pageSize)}
               page={page}
               onChange={handlePageChange}
+              variant="outlined"
               color="primary"
-              size="large"
               showFirstButton
               showLastButton
+              size="large"
             />
           </div>
         </div>

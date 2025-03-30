@@ -8,6 +8,7 @@ import { DatePicker } from '@mui/x-date-pickers';
 import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import dayjs from 'dayjs';
+import { Pagination } from '@mui/material';
 
 const Voucher = () => {
   const navigate = useNavigate();
@@ -16,6 +17,8 @@ const Voucher = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [page, setPage] = useState(1);
+  const pageSize = 15;
   const [originalVouchers, setOriginalVouchers] = useState([]);
 
   // State cho dialog thêm voucher
@@ -223,6 +226,25 @@ const Voucher = () => {
     }
   };
 
+  // Lấy tổng số trang dựa trên số lượng voucher và kích thước trang
+  const totalPages = Math.ceil(vouchers.length / pageSize);
+
+  // Hàm xử lý khi thay đổi trang
+  const handlePageChange = (event, value) => {
+    setPage(value);
+  };
+
+  // Lấy mảng voucher cho trang hiện tại
+  const getCurrentPageItems = () => {
+    const startIndex = (page - 1) * pageSize;
+    return vouchers.slice(startIndex, startIndex + pageSize);
+  };
+
+  // Khi từ khóa tìm kiếm thay đổi, reset lại trang hiện tại
+  useEffect(() => {
+    setPage(1);
+  }, [searchTerm]);
+
   return (
     <Box sx={{ bgcolor: "#f0f0f0", minHeight: "100vh", width:'99vw' }}>
       <div className="manager-container">
@@ -362,7 +384,7 @@ const Voucher = () => {
                     </td>
                   </tr>
                 ) : vouchers.length > 0 ? (
-                  vouchers.map((voucher) => (
+                  getCurrentPageItems().map((voucher) => (
                     <tr key={voucher.voucherId}>
                       <td>{voucher.voucherId}</td>
                       <td>{voucher.voucherName}</td>
@@ -414,6 +436,27 @@ const Voucher = () => {
               </tbody>
             </table>
           </div>
+
+          {/* Pagination */}
+          {vouchers.length > 0 && (
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'center', 
+              marginTop: '20px',
+              marginBottom: '20px'
+            }}>
+              <Pagination 
+                count={totalPages} 
+                page={page} 
+                onChange={handlePageChange} 
+                variant="outlined" 
+                color="primary" 
+                showFirstButton 
+                showLastButton
+                size="large"
+              />
+            </div>
+          )}
         </div>
       </div>
 

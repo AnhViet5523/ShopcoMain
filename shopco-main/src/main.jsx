@@ -5,6 +5,7 @@ import './index.css'
 import App from './App.jsx'
 import theme from './config/theme'
 import ErrorBoundary from './components/ErrorBoundary'
+import { SnackbarProvider } from 'notistack';
 
 // Xử lý lỗi không bắt được
 window.addEventListener('error', (event) => {
@@ -20,7 +21,9 @@ createRoot(document.getElementById('root')).render(
   <StrictMode>
     <ErrorBoundary>
       <ThemeProvider theme={theme}>
-        <App />
+        <SnackbarProvider maxSnack={3} autoHideDuration={3000}>
+          <App />
+        </SnackbarProvider>
       </ThemeProvider>
     </ErrorBoundary>
   </StrictMode>,

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Box } from '@mui/material';
+import { Box, Pagination } from '@mui/material';
 import adminService from '../../apis/adminService'; 
 import userService from '../../apis/userService';
 import orderService from '../../apis/orderService';
@@ -15,7 +15,7 @@ const ViewOrder = () => {
   const [searchKey, setSearchKey] = useState(''); 
   const [cancelledOrders, setCancelledOrders] = useState([]);
   const [page, setPage] = useState(1);
-  const pageSize = 10; // Đồng nhất pageSize
+  const pageSize = 15; // Thay đổi pageSize từ 10 thành 15
   const [lastDeliveredOrderId, setLastDeliveredOrderId] = useState(null); // Lưu trữ ID đơn hàng cuối cùng được đánh dấu đã giao
   const navigate = useNavigate();
 
@@ -131,10 +131,8 @@ const ViewOrder = () => {
     return filtered;
   };
 
-  const handlePageChange = (newPage) => {
-    if (newPage >= 1 && newPage <= Math.ceil(filteredOrders().length / pageSize)) {
-      setPage(newPage);
-    }
+  const handlePageChange = (event, newPage) => {
+    setPage(newPage);
   };
 
   useEffect(() => {
@@ -218,7 +216,7 @@ const ViewOrder = () => {
               <div>COSMETICS</div>
             </div>
           </div>
-          <div className="sidebar-title">STAFF</div>
+          <div className="sidebar-title">MANAGER</div>
           <div className="sidebar-menu">
             {sidebarItems.map((item) => (
               <div 
@@ -457,82 +455,22 @@ const ViewOrder = () => {
           </div>
 
           {filteredOrders().length > 0 && (
-            <div style={{ display: 'flex', justifyContent: 'center', margin: '20px 0' }}>
-              <div style={{ display: 'flex', alignItems: 'center' }}>
-                <button
-                  onClick={() => handlePageChange(page - 1)}
-                  disabled={page === 1}
-                  style={{
-                    width: '40px',
-                    height: '40px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    border: '1px solid #ddd',
-                    backgroundColor: 'white',
-                    color: page === 1 ? '#ccc' : '#000',
-                    borderRadius: '4px',
-                    cursor: page === 1 ? 'not-allowed' : 'pointer'
-                  }}
-                >
-                  &lt;
-                </button>
-                {Array.from({ length: Math.ceil(filteredOrders().length / pageSize) }).map((_, i) => {
-                  const pageNumber = i + 1;
-                  const shouldShowPage = 
-                    pageNumber === 1 || 
-                    pageNumber === Math.ceil(filteredOrders().length / pageSize) ||
-                    (pageNumber >= page - 1 && pageNumber <= page + 1);
-                  const showEllipsisBegin = pageNumber === 2 && page > 3;
-                  const showEllipsisEnd = pageNumber === Math.ceil(filteredOrders().length / pageSize) - 1 && 
-                                         page < Math.ceil(filteredOrders().length / pageSize) - 2;
-
-                  if (shouldShowPage) {
-                    return (
-                      <button
-                        key={pageNumber}
-                        onClick={() => handlePageChange(pageNumber)}
-                        style={{
-                          width: '40px',
-                          height: '40px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          border: page === pageNumber ? 'none' : '1px solid #ddd',
-                          backgroundColor: page === pageNumber ? '#000' : 'white',
-                          color: page === pageNumber ? 'white' : 'black',
-                          borderRadius: '50%',
-                          margin: '0 5px',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        {pageNumber}
-                      </button>
-                    );
-                  } else if (showEllipsisBegin || showEllipsisEnd) {
-                    return <span key={`ellipsis-${pageNumber}`} style={{ margin: '0 5px' }}>...</span>;
-                  }
-                  return null;
-                })}
-                <button
-                  onClick={() => handlePageChange(page + 1)}
-                  disabled={page === Math.ceil(filteredOrders().length / pageSize)}
-                  style={{
-                    width: '40px',
-                    height: '40px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    border: '1px solid #ddd',
-                    backgroundColor: 'white',
-                    color: page === Math.ceil(filteredOrders().length / pageSize) ? '#ccc' : '#000',
-                    borderRadius: '4px',
-                    cursor: page === Math.ceil(filteredOrders().length / pageSize) ? 'not-allowed' : 'pointer'
-                  }}
-                >
-                  &gt;
-                </button>
-              </div>
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'center', 
+              marginTop: '20px',
+              marginBottom: '20px'
+            }}>
+              <Pagination 
+                count={Math.ceil(filteredOrders().length / pageSize)} 
+                page={page} 
+                onChange={handlePageChange} 
+                variant="outlined" 
+                color="primary" 
+                showFirstButton 
+                showLastButton
+                size="large"
+              />
             </div>
           )}
         </div>
