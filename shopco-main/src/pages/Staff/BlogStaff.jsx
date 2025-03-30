@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaFilter, FaFileExport, FaPlus } from 'react-icons/fa';
-import { Box, Pagination } from '@mui/material';
+import { FaFilter, FaFileExport, FaPlus, FaTrash } from 'react-icons/fa';
+import { Box, Dialog, DialogActions, DialogContent, DialogTitle, TextField, Button, Typography, Pagination } from '@mui/material';
+import { Editor } from '@tinymce/tinymce-react';
 import './Manager.css';
 import adminService from '../../apis/adminService';
+import blogService from '../../apis/blog';
 
 const BlogStaff = () => {
   const [activeTab, setActiveTab] = useState('Tất cả');
@@ -15,6 +17,10 @@ const BlogStaff = () => {
   const [filteredCount, setFilteredCount] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(10);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [postToDelete, setPostToDelete] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -26,6 +32,8 @@ const BlogStaff = () => {
     
     const fetchPosts = async () => {
       try {
+        setError('Đang tải dữ liệu...');
+        
         // Thêm tham số để tránh cache
         const response = await adminService.getAllPosts();
         
@@ -75,7 +83,80 @@ const BlogStaff = () => {
       } catch (error) {
         console.error('Chi tiết lỗi tải bài viết:', error);
         if (isMounted) {
-          setError(`Không thể tải bài viết: ${error.message}`);
+          // Xử lý các loại lỗi khác nhau
+          if (error.message.includes('cancelled') || error.message.includes('Không thể kết nối đến máy chủ')) {
+            setError(
+              <div>
+                Kết nối bị gián đoạn. 
+                <Button 
+                  onClick={fetchPosts} 
+                  variant="contained" 
+                  size="small" 
+                  sx={{ 
+                    ml: 2, 
+                    backgroundColor: '#059669',
+                    '&:hover': { backgroundColor: '#047857' }
+                  }}
+                >
+                  Thử lại
+                </Button>
+              </div>
+            );
+          } else if (error.message.includes('timeout') || error.message.includes('quá lâu')) {
+            setError(
+              <div>
+                Máy chủ phản hồi quá lâu. 
+                <Button 
+                  onClick={fetchPosts} 
+                  variant="contained" 
+                  size="small" 
+                  sx={{ 
+                    ml: 2, 
+                    backgroundColor: '#059669',
+                    '&:hover': { backgroundColor: '#047857' }
+                  }}
+                >
+                  Thử lại
+                </Button>
+              </div>
+            );
+          } else if (error.message.includes('Network Error') || error.message.includes('kiểm tra kết nối mạng')) {
+            setError(
+              <div>
+                Lỗi kết nối mạng. Vui lòng kiểm tra kết nối internet của bạn. 
+                <Button 
+                  onClick={fetchPosts} 
+                  variant="contained" 
+                  size="small" 
+                  sx={{ 
+                    ml: 2, 
+                    backgroundColor: '#059669',
+                    '&:hover': { backgroundColor: '#047857' }
+                  }}
+                >
+                  Thử lại
+                </Button>
+              </div>
+            );
+          } else {
+            setError(
+              <div>
+                {error.message || 'Không thể tải bài viết. Vui lòng thử lại sau.'}
+                <Button 
+                  onClick={fetchPosts} 
+                  variant="contained" 
+                  size="small" 
+                  sx={{ 
+                    ml: 2, 
+                    backgroundColor: '#059669',
+                    '&:hover': { backgroundColor: '#047857' }
+                  }}
+                >
+                  Thử lại
+                </Button>
+              </div>
+            );
+          }
         }
       }
     };
@@ -157,6 +238,48 @@ const BlogStaff = () => {
     { id: 'blogStaff', name: 'Blog', icon: '📰' }
   ];
 
+  // Hàm mở dialog xác nhận xóa
+  const handleOpenDeleteDialog = (post) => {
+    setPostToDelete(post);
+    setDeleteDialogOpen(true);
+    setDeleteError(null);
+  };
+
+  // Hàm đóng dialog xác nhận xóa
+  const handleCloseDeleteDialog = () => {
+    setDeleteDialogOpen(false);
+    setPostToDelete(null);
+    setDeleteError(null);
+  };
+
+  // Hàm xử lý xóa bài viết
+  const handleDeletePost = async () => {
+    if (!postToDelete) return;
+    
+    setIsDeleting(true);
+    setDeleteError(null);
+    
+    try {
+      await blogService.deletePost(postToDelete.id);
+      
+      // Cập nhật state sau khi xóa thành công
+      const updatedPosts = posts.filter(post => post.id !== postToDelete.id);
+      setPosts(updatedPosts);
+      setOriginalPosts(originalPosts.filter(post => post.id !== postToDelete.id));
+      
+      // Đóng dialog
+      setDeleteDialogOpen(false);
+      setPostToDelete(null);
+      
+      // Hiển thị thông báo thành công (có thể thêm toast notification ở đây)
+      console.log('Xóa bài viết thành công');
+    } catch (error) {
+      console.error('Lỗi khi xóa bài viết:', error);
+      setDeleteError(error.message || 'Đã xảy ra lỗi khi xóa bài viết');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   return (
     <Box sx={{ bgcolor: "#f0f0f0", minHeight: "100vh", width:'99vw' }}>
@@ -182,7 +305,7 @@ const BlogStaff = () => {
           </div>
         </div>
         
-        <div className="sidebar-title">MANAGER</div>
+        <div className="sidebar-title">STAFF</div>
         
         <div className="sidebar-menu">
           {sidebarItems.map((item) => (
@@ -246,7 +369,7 @@ const BlogStaff = () => {
             )}
             <button 
               className="btn-create-payment"
-              onClick={() => navigate('/create-post')}
+              onClick={() => navigate("/Blog/CreateEditPost/CreatePost")}
             >
               <FaPlus /> Tạo bài viết
             </button>
@@ -272,7 +395,7 @@ const BlogStaff = () => {
                 <th style={{ width: '350px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>NỘI DUNG</th>
                 <th style={{ width: '140px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>ẢNH</th>
                 <th style={{ width: '120px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>NGÀY TẠO</th>
-                <th style={{ width: '150px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>THAO TÁC</th>
+                <th style={{ width: '200px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>THAO TÁC</th>
               </tr>
             </thead>
             <tbody>
@@ -334,7 +457,7 @@ const BlogStaff = () => {
                     <td style={{ padding: '8px', borderBottom: '1px solid #dee2e6', fontSize: '14px', textAlign: 'center' }}>
                       <button 
                         className="btn-view"
-                        onClick={() => navigate(`/blogManager/${post.id}`)}
+                        onClick={() => navigate(`/Blog/${post.id}`)}
                         style={{
                           padding: '5px 10px',
                           marginRight: '5px',
@@ -350,9 +473,10 @@ const BlogStaff = () => {
                       </button>
                       <button 
                         className="btn-edit"
-                        onClick={() => navigate(`/edit-post/${post.id}`)}
+                        onClick={() => navigate(`/Blog/CreateEditPost/EditPost/${post.id}`)}
                         style={{
                           padding: '5px 10px',
+                          marginRight: '5px',
                           backgroundColor: '#2196F3',
                           color: 'white',
                           border: 'none',
@@ -361,6 +485,20 @@ const BlogStaff = () => {
                         }}
                       >
                         Sửa
+                      </button>
+                      <button 
+                        className="btn-delete"
+                        onClick={() => handleOpenDeleteDialog(post)}
+                        style={{
+                          padding: '5px 10px',
+                          backgroundColor: '#DC3545',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '4px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <FaTrash style={{ marginRight: '3px' }} /> Xóa
                       </button>
                     </td>
                   </tr>
@@ -407,6 +545,37 @@ const BlogStaff = () => {
           </div>
         )}
       </div>
+
+      {/* Dialog xác nhận xóa bài viết */}
+      <Dialog open={deleteDialogOpen} onClose={handleCloseDeleteDialog}>
+        <DialogTitle>Xác nhận xóa bài viết</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Bạn có chắc chắn muốn xóa bài viết "{postToDelete?.title}" không?
+          </Typography>
+          <Typography variant="body2" style={{ marginTop: '10px', color: '#dc3545' }}>
+            Lưu ý: Hành động này không thể khôi phục lại.
+          </Typography>
+          {deleteError && (
+            <Typography color="error" style={{ marginTop: '10px' }}>
+              {deleteError}
+            </Typography>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseDeleteDialog} color="primary">
+            Hủy
+          </Button>
+          <Button 
+            onClick={handleDeletePost} 
+            color="error" 
+            disabled={isDeleting}
+            variant="contained"
+          >
+            {isDeleting ? 'Đang xóa...' : 'Xác nhận xóa'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </div>
     </Box>
   );

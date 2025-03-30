@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { FaFilter } from 'react-icons/fa';
+import { FaFilter, FaSearch } from 'react-icons/fa';
 import { Box, Dialog, DialogTitle, DialogContent, DialogActions, Button, Select, MenuItem, Pagination, CircularProgress, TextField, Typography, Grid, IconButton } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import './Manager.css';
@@ -11,6 +11,7 @@ import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import dayjs from 'dayjs';
 import productImageService from '../../apis/productImageService';
+import { MdClose } from 'react-icons/md';
 
 
 const ProductStaff = () => {
@@ -481,10 +482,19 @@ const ProductStaff = () => {
     }
   };
 
+  const handleCategoryChange = (event) => {
+    setSelectedCategory(event.target.value);
+  };
+
+  const handleSkinTypeChange = (event) => {
+    setSelectedSkinType(event.target.value);
+  };
+
+  const handleClear = () => {
+    setSearchTerm('');
+  };
+
   const handleFilterClick = () => {
-    // Reset filter selections
-    setSelectedCategory('');
-    setSelectedSkinType('');
     setOpenFilterDialog(true);
   };
 
@@ -500,21 +510,28 @@ const ProductStaff = () => {
       return;
     }
     
-    // Sử dụng products thay vì originalProducts để lọc trên tập dữ liệu hiện tại
-    const dataToFilter = products;
-    
-    const filtered = dataToFilter.filter(product => {
+    // Luôn lọc từ danh sách gốc để tránh lọc trên dữ liệu đã lọc
+    const filtered = originalProducts.filter(product => {
       // Lọc theo Danh mục
       let categoryMatch = true;
       if (selectedCategory) {
         // Chuyển sang số để so sánh
         const selectedCategoryId = parseInt(selectedCategory);
         
-        // Lấy ra tất cả các trường có thể chứa categoryId
-        const productCategoryId = product.CategoryID || product.categoryId || product.categoryID;
+        // Lấy ra ID danh mục của sản phẩm
+        const productCategoryId = product.categoryId || product.CategoryID || product.categoryID;
         
-        // Nếu có giá trị, so sánh với selectedCategoryId
+        // Kiểm tra xem ID danh mục có khớp không
         categoryMatch = productCategoryId !== undefined && parseInt(productCategoryId) === selectedCategoryId;
+        
+        // Thử kiểm tra theo tên danh mục và loại danh mục nếu không tìm thấy theo ID
+        if (!categoryMatch && product.categoryDisplay) {
+          // Tìm danh mục trong categoryOptions dựa trên selectedCategory
+          const selectedCategoryInfo = categoryOptions.find(opt => opt.id === selectedCategory);
+          if (selectedCategoryInfo && selectedCategoryInfo.display) {
+            categoryMatch = product.categoryDisplay.includes(selectedCategoryInfo.display);
+          }
+        }
       }
       
       // Lọc theo loại da
@@ -527,26 +544,19 @@ const ProductStaff = () => {
       return categoryMatch && skinTypeMatch;
     });
     
-    // Chỉ hiển thị thông báo nếu có sản phẩm được lọc và khác với danh sách ban đầu
-    setFilteredCount(filtered.length !== originalProducts.length ? filtered.length : 0);
+    console.log(`Đã lọc: ${filtered.length} sản phẩm từ ${originalProducts.length} sản phẩm gốc`);
+    
+    // Cập nhật số lượng sản phẩm đã lọc
+    setFilteredCount(filtered.length);
+    
+    // Cập nhật danh sách sản phẩm hiển thị
     setProducts(filtered);
-    setPage(1); // Reset về trang đầu tiên khi lọc
+    
+    // Đặt lại trang về trang đầu tiên sau khi lọc
+    setPage(1);
+    
+    // Đóng dialog
     setOpenFilterDialog(false);
-  };
-
-  const handleCategoryChange = (event) => {
-    setSelectedCategory(event.target.value);
-  };
-
-  const handleSkinTypeChange = (event) => {
-    setSelectedSkinType(event.target.value);
-  };
-
-  const handleClear = () => {
-    setSearchTerm('');
-    setProducts(originalProducts);
-    // Reset thông báo số lượng lọc khi xóa tìm kiếm
-    setFilteredCount(0);
   };
 
   // Cập nhật hàm handleAdd
@@ -698,103 +708,91 @@ const ProductStaff = () => {
       return;
     }
     
-    // Kiểm tra đủ 5 ảnh sản phẩm
-    if (productImageFiles.length !== 5) {
-      alert('Vui lòng tải lên đúng 5 ảnh sản phẩm');
+    // Kiểm tra đủ 5 ảnh sản phẩm hoặc có ít nhất 1 ảnh
+    if (productImageFiles.length === 0) {
+      alert('Vui lòng tải lên ít nhất 1 ảnh sản phẩm');
       return;
     }
     
     try {
       setIsSubmitting(true);
+      console.log('Bắt đầu thêm sản phẩm...');
       
-      // Chuẩn bị dữ liệu gửi đi
-      const productData = { ...newProduct };
+      // Chuẩn bị dữ liệu gửi đi với định dạng đúng
+      const productData = {
+        productName: newProduct.productName,
+        categoryId: parseInt(newProduct.categoryId),
+        quantity: parseInt(newProduct.quantity),
+        capacity: newProduct.capacity || '',
+        price: parseFloat(newProduct.price),
+        brand: newProduct.brand || '',
+        origin: newProduct.origin || '',
+        status: newProduct.status || 'Available',
+        imgUrl: '', // Sẽ được cập nhật sau khi tải lên ảnh
+        skinType: newProduct.skinType || '',
+        description: newProduct.description || '',
+        ingredients: newProduct.ingredients || '',
+        usageInstructions: newProduct.usageInstructions || '',
+        manufactureDate: newProduct.manufactureDate 
+          ? new Date(newProduct.manufactureDate).toISOString() 
+          : new Date().toISOString()
+      };
+      
+      console.log('Dữ liệu sản phẩm gửi đi:', productData);
       
       // Sử dụng adminService.addProduct thay vì productService.createProduct
       const response = await adminService.addProduct(productData);
+      console.log('Phản hồi từ API:', response);
+      
+      if (!response || !response.productId) {
+        throw new Error('Không nhận được ID sản phẩm từ server');
+      }
       
       // Tải lên tất cả ảnh sản phẩm
-      if (response.productId) {
-        try {
-          // Sử dụng API mới để tải lên tất cả 5 ảnh cùng lúc
-          await productImageService.uploadMultipleProductPhotos(response.productId, productImageFiles);
-          
-          // Sau khi tải lên tất cả ảnh thành công, đặt ảnh ở vị trí mainImageIndex làm ảnh đại diện
-          // Lấy danh sách ảnh vừa tải lên
-          const uploadedImages = await productImageService.getProductImages(response.productId);
-          
-          // Xử lý response để đảm bảo có được mảng ảnh
-          let allImages = [];
-          if (Array.isArray(uploadedImages)) {
-            allImages = uploadedImages;
-          } else if (uploadedImages && uploadedImages.$values && Array.isArray(uploadedImages.$values)) {
-            allImages = uploadedImages.$values;
-          } else if (uploadedImages && typeof uploadedImages === 'object') {
-            // Nếu là một object đơn lẻ, đặt vào mảng
-            allImages = [uploadedImages];
-          }
-          
-          console.log("Ảnh đã tải lên:", allImages);
-          
-          // Tìm ảnh cần đặt làm ảnh đại diện
-          if (allImages && allImages.length > 0 && mainImageIndex >= 0 && mainImageIndex < allImages.length) {
-            // Đảm bảo mainImageIndex không vượt quá số lượng ảnh
-            const targetIndex = Math.min(mainImageIndex, allImages.length - 1);
-            
-            // Lấy ID của ảnh ở vị trí mainImageIndex
-            const mainImageId = allImages[targetIndex]?.imageID;
-            if (mainImageId) {
-              try {
-                // Đặt ảnh làm ảnh chính
-                await productImageService.setMainImage(response.productId, mainImageId);
-                console.log(`Đã đặt ảnh có ID ${mainImageId} làm ảnh đại diện`);
-              } catch (mainImageError) {
-                console.error('Lỗi khi đặt ảnh đại diện:', mainImageError);
-                
-                // Nếu không thể sử dụng API setMainImage, thì thử sắp xếp lại thủ công
-                try {
-                  // Tạo mảng sắp xếp lại với ảnh được chọn có displayOrder = 0
-                  const reorderedImages = allImages.map((img, idx) => {
-                    let newDisplayOrder;
-                    
-                    if (img.imageID === mainImageId) {
-                      // Ảnh đại diện có displayOrder = 0
-                      newDisplayOrder = 0;
-                    } else {
-                      // Các ảnh khác có displayOrder từ 1-4
-                      newDisplayOrder = idx + 1;
-                      if (idx >= targetIndex) {
-                        // Nếu vị trí >= vị trí ảnh đại diện, tăng thêm 1 để bỏ qua displayOrder = 0
-                        newDisplayOrder++;
-                      }
-                      
-                      // Đảm bảo không vượt quá 4
-                      newDisplayOrder = Math.min(newDisplayOrder, 4);
-                    }
-                    
-                    return {
-                      ...img,
-                      displayOrder: newDisplayOrder
-                    };
-                  });
-                  
-                  // Gọi API sắp xếp lại ảnh
-                  await productImageService.reorderProductImages(reorderedImages);
-                  console.log('Đã sắp xếp lại thứ tự hiển thị ảnh');
-                } catch (reorderError) {
-                  console.error('Không thể sắp xếp lại thứ tự ảnh:', reorderError);
-                }
-              }
-            } else {
-              console.error('Không thể lấy được ID của ảnh đại diện');
-            }
-          } else {
-            console.log('Không có ảnh để đặt làm ảnh đại diện hoặc vị trí không hợp lệ');
-          }
-        } catch (imageError) {
-          console.error('Lỗi khi tải lên ảnh sản phẩm:', imageError);
-          alert('Sản phẩm đã được tạo nhưng không thể tải lên ảnh. Bạn có thể thêm ảnh sau.');
+      try {
+        console.log(`Bắt đầu tải lên ${productImageFiles.length} ảnh cho sản phẩm ID ${response.productId}`);
+        
+        // Sử dụng API mới để tải lên tất cả ảnh cùng lúc
+        await productImageService.uploadMultipleProductPhotos(response.productId, productImageFiles);
+        console.log('Tải lên ảnh thành công');
+        
+        // Sau khi tải lên tất cả ảnh thành công, đặt ảnh ở vị trí mainImageIndex làm ảnh đại diện
+        const uploadedImages = await productImageService.getProductImages(response.productId);
+        console.log('Ảnh đã tải lên:', uploadedImages);
+        
+        // Xử lý response để đảm bảo có được mảng ảnh
+        let allImages = [];
+        if (Array.isArray(uploadedImages)) {
+          allImages = uploadedImages;
+        } else if (uploadedImages && uploadedImages.$values && Array.isArray(uploadedImages.$values)) {
+          allImages = uploadedImages.$values;
+        } else if (uploadedImages && typeof uploadedImages === 'object') {
+          // Nếu là một object đơn lẻ, đặt vào mảng
+          allImages = [uploadedImages];
         }
+        
+        console.log("Ảnh đã tải lên:", allImages);
+        
+        // Tìm ảnh cần đặt làm ảnh đại diện
+        if (allImages && allImages.length > 0 && mainImageIndex >= 0 && mainImageIndex < allImages.length) {
+          // Đảm bảo mainImageIndex không vượt quá số lượng ảnh
+          const targetIndex = Math.min(mainImageIndex, allImages.length - 1);
+          
+          // Lấy ID của ảnh ở vị trí mainImageIndex
+          const mainImageId = allImages[targetIndex]?.imageID || allImages[targetIndex]?.imageId;
+          if (mainImageId) {
+            try {
+              // Đặt ảnh làm ảnh chính
+              await productImageService.setMainImage(response.productId, mainImageId);
+              console.log(`Đã đặt ảnh có ID ${mainImageId} làm ảnh đại diện`);
+            } catch (mainImageError) {
+              console.error('Lỗi khi đặt ảnh đại diện:', mainImageError);
+            }
+          }
+        }
+      } catch (imageError) {
+        console.error('Lỗi khi tải lên ảnh sản phẩm:', imageError);
+        alert('Sản phẩm đã được tạo nhưng không thể tải lên ảnh. Bạn có thể thêm ảnh sau.');
       }
 
       // Đóng dialog và hiển thị thông báo
@@ -803,12 +801,29 @@ const ProductStaff = () => {
       
       // Refresh danh sách sản phẩm
       await fetchCategories();
+      fetchProducts();
       
       // Chuyển đến tab Hàng mới nhập để xem sản phẩm vừa thêm
       goToNewProductsTab();
     } catch (error) {
       console.error('Lỗi khi thêm sản phẩm:', error);
-      alert(`Lỗi khi thêm sản phẩm: ${error.message || 'Lỗi không xác định'}`);
+      
+      // Hiển thị thông báo lỗi chi tiết hơn
+      let errorMessage = 'Lỗi khi thêm sản phẩm';
+      
+      if (error.response) {
+        // Lỗi từ server với response
+        errorMessage += `: ${error.response.data?.error || error.response.data?.message || error.message}`;
+        console.error('Server error details:', error.response.data);
+      } else if (error.request) {
+        // Lỗi không nhận được response
+        errorMessage += ': Không nhận được phản hồi từ server. Vui lòng kiểm tra kết nối mạng.';
+      } else {
+        // Lỗi trong quá trình thiết lập request
+        errorMessage += `: ${error.message}`;
+      }
+      
+      alert(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -1591,38 +1606,122 @@ const ProductStaff = () => {
           <div className="dashboard-title-bar">
             <h1>Sản Phẩm</h1>
             <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+              {/* Search Bar */}
+              <div style={{ 
+                position: 'relative', 
+                display: 'flex', 
+                alignItems: 'center',
+                marginRight: '5px' 
+              }}>
+                <input
+                  type="text"
+                  placeholder="Tìm kiếm sản phẩm..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  style={{
+                    padding: '10px 12px 10px 40px',
+                    border: '1px solid #ddd',
+                    borderRadius: '5px',
+                    fontSize: '14px',
+                    width: '300px',
+                    backgroundColor: '#f8f9fa',
+                    transition: 'all 0.3s'
+                  }}
+                />
+                <FaSearch style={{ 
+                  position: 'absolute', 
+                  left: '12px', 
+                  color: '#6c757d',
+                  fontSize: '16px'
+                }} />
+                {searchTerm && (
+                  <button
+                    onClick={handleClear}
+                    style={{
+                      position: 'absolute',
+                      right: '12px',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      color: '#6c757d',
+                      padding: '0',
+                      fontSize: '14px'
+                    }}
+                  >
+                    <MdClose />
+                  </button>
+                )}
+              </div>
+
               {searchTerm && products.length > 0 && (
-                <div style={{ color: '#666', fontSize: '14px', alignSelf: 'center' }}>
-                  Tìm thấy: {products.length} sản phẩm
+                <div style={{ 
+                  color: '#666', 
+                  fontSize: '14px', 
+                  backgroundColor: '#e9f5fe', 
+                  padding: '5px 10px', 
+                  borderRadius: '4px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '5px'
+                }}>
+                  <FaSearch style={{ fontSize: '12px' }} />
+                  <span>Tìm thấy: {products.length} sản phẩm</span>
                 </div>
               )}
-               <button className="btn-filter" onClick={handleFilterClick}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                  <FaFilter /> 
-                  <span>Lọc</span>
-                  {filteredCount > 0 && <span className="notification">{filteredCount}</span>}
-                </div>
+              <button className="btn-filter" onClick={handleFilterClick} style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+                padding: '8px 16px',
+                backgroundColor: filteredCount > 0 ? '#e9f5fe' : '#f8f9fa',
+                border: '1px solid #ddd',
+                borderRadius: '5px',
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}>
+                <FaFilter style={{ color: filteredCount > 0 ? '#007bff' : '#6c757d' }} /> 
+                <span style={{ color: filteredCount > 0 ? '#007bff' : '#6c757d' }}>Lọc</span>
+                {filteredCount > 0 && 
+                  <span style={{ 
+                    backgroundColor: '#007bff', 
+                    color: 'white', 
+                    borderRadius: '50%', 
+                    width: '20px', 
+                    height: '20px', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center', 
+                    fontSize: '12px',
+                    fontWeight: 'bold'
+                  }}>
+                    {filteredCount}
+                  </span>
+                }
               </button>
               {filteredCount > 0 && (
                 <button
                   onClick={handleClearFilters}
                   style={{
-                    padding: '10px 20px',
-                    backgroundColor: '#6c757d',
-                    color: 'white',
-                    border: 'none',
+                    padding: '8px 16px',
+                    backgroundColor: '#f8f9fa',
+                    color: '#6c757d',
+                    border: '1px solid #ddd',
                     borderRadius: '5px',
                     cursor: 'pointer',
-                    fontSize: '14px'
+                    fontSize: '14px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '5px'
                   }}
                 >
+                  <MdClose />
                   Xóa bộ lọc
                 </button>
               )}
               <button
                 onClick={handleAdd}
                 style={{
-                  padding: '10px 20px',
+                  padding: '8px 16px',
                   backgroundColor: '#28a745',
                   color: 'white',
                   border: 'none',
@@ -1830,12 +1929,20 @@ const ProductStaff = () => {
             </table>
             
             {/* Phân trang */}
-            <div style={{ display: 'flex', justifyContent: 'center', marginTop: '20px' }}>
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'center', 
+              marginTop: '20px',
+              marginBottom: '20px'
+            }}>
               <Pagination
                 count={Math.ceil(products.length / pageSize)}
                 page={page}
                 onChange={handlePageChange}
+                variant="outlined"
                 color="primary"
+                showFirstButton
+                showLastButton
                 size="large"
               />
             </div>
@@ -1843,43 +1950,132 @@ const ProductStaff = () => {
         </div>
       </div>
 
-      {/* Dialog lọc sản phẩm */}
-      <Dialog open={openFilterDialog} onClose={() => setOpenFilterDialog(false)}>
-        <DialogTitle>Lọc sản phẩm</DialogTitle>
-        <DialogContent>
-          <Select
-            value={selectedCategory}
-            onChange={handleCategoryChange}
-            displayEmpty
-            fullWidth
-            style={{ marginBottom: '10px', marginTop: '10px' }}
-          >
-            <MenuItem value=""><em>Danh mục sản phẩm</em></MenuItem>
-            {categoryOptions.map((category) => (
-              <MenuItem key={category.id} value={category.id}>
-                {category.display}
+      {/* Filter Dialog */}
+      <Dialog
+        open={openFilterDialog}
+        onClose={() => setOpenFilterDialog(false)}
+        PaperProps={{
+          style: {
+            borderRadius: '8px',
+            padding: '10px',
+            maxWidth: '500px',
+            width: '100%'
+          }
+        }}
+      >
+        <DialogTitle style={{ borderBottom: '1px solid #eee', padding: '16px 24px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <FaFilter style={{ color: '#6c757d' }} />
+              <span style={{ fontWeight: 'bold', fontSize: '20px', color: '#333' }}>Bộ lọc sản phẩm</span>
+            </div>
+            <IconButton
+              edge="end"
+              color="inherit"
+              onClick={() => setOpenFilterDialog(false)}
+              aria-label="close"
+              size="small"
+            >
+              <MdClose />
+            </IconButton>
+          </div>
+        </DialogTitle>
+        <DialogContent style={{ padding: '20px 24px' }}>
+          <div style={{ marginBottom: '20px' }}>
+            <div style={{ marginBottom: '10px', fontWeight: 'bold', color: '#333' }}>Danh mục sản phẩm</div>
+            <Select
+              value={selectedCategory}
+              onChange={handleCategoryChange}
+              displayEmpty
+              fullWidth
+              style={{ marginBottom: '10px', backgroundColor: '#f8f9fa', borderRadius: '4px' }}
+              MenuProps={{
+                PaperProps: {
+                  style: {
+                    maxHeight: 300
+                  }
+                }
+              }}
+            >
+              <MenuItem value="">
+                <em>Tất cả danh mục</em>
               </MenuItem>
-            ))}
-          </Select>
-          <Select
-            value={selectedSkinType}
-            onChange={handleSkinTypeChange}
-            displayEmpty
-            fullWidth
-            style={{ marginTop: '10px' }}
-          >
-            <MenuItem value=""><em>Loại da</em></MenuItem>
-            {skinTypes.map((skinType, index) => (
-              <MenuItem key={index} value={skinType}>{skinType}</MenuItem>
-            ))}
-          </Select>
+              {categoryOptions.map((option) => (
+                <MenuItem key={option.id} value={option.id}>
+                  {option.display}
+                </MenuItem>
+              ))}
+            </Select>
+            
+            <div style={{ marginTop: '20px', marginBottom: '10px', fontWeight: 'bold', color: '#333' }}>Loại da</div>
+            <Select
+              value={selectedSkinType}
+              onChange={handleSkinTypeChange}
+              displayEmpty
+              fullWidth
+              style={{ backgroundColor: '#f8f9fa', borderRadius: '4px' }}
+              MenuProps={{
+                PaperProps: {
+                  style: {
+                    maxHeight: 300
+                  }
+                }
+              }}
+            >
+              <MenuItem value="">
+                <em>Tất cả loại da</em>
+              </MenuItem>
+              {skinTypes.map((type) => (
+                <MenuItem key={type} value={type}>
+                  {type}
+                </MenuItem>
+              ))}
+            </Select>
+          </div>
+          
+          <div style={{ backgroundColor: '#f8f9fa', padding: '15px', borderRadius: '5px', marginTop: '10px' }}>
+            <div style={{ fontWeight: 'bold', marginBottom: '10px', color: '#333' }}>Bộ lọc đã chọn:</div>
+            {!selectedCategory && !selectedSkinType ? (
+              <div style={{ fontStyle: 'italic', color: '#6c757d' }}>Chưa chọn bộ lọc nào</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                {selectedCategory && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                    <span style={{ backgroundColor: '#e9ecef', padding: '3px 8px', borderRadius: '4px', fontSize: '13px' }}>
+                      Danh mục: {categoryOptions.find(c => c.id === selectedCategory)?.display || selectedCategory}
+                    </span>
+                  </div>
+                )}
+                {selectedSkinType && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                    <span style={{ backgroundColor: '#e9ecef', padding: '3px 8px', borderRadius: '4px', fontSize: '13px' }}>
+                      Loại da: {selectedSkinType}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenFilterDialog(false)}>Hủy</Button>
-          <Button onClick={handleFilterApply} color="primary">Áp dụng</Button>
-          {filteredCount > 0 && (
-            <Button onClick={handleClearFilters} color="secondary">Xóa bộ lọc</Button>
-          )}
+        <DialogActions style={{ padding: '16px 24px', borderTop: '1px solid #eee' }}>
+          <Button 
+            onClick={handleClearFilters} 
+            color="inherit"
+            style={{ marginRight: 'auto' }}
+            disabled={!selectedCategory && !selectedSkinType}
+          >
+            Xóa bộ lọc
+          </Button>
+          <Button onClick={() => setOpenFilterDialog(false)} color="inherit">
+            Hủy
+          </Button>
+          <Button 
+            onClick={handleFilterApply} 
+            variant="contained" 
+            color="primary"
+          >
+            Áp dụng
+          </Button>
         </DialogActions>
       </Dialog>
 

@@ -30,41 +30,57 @@ const Header = () => {
     
     const updateCartCount = async () => {
       try {
+        console.log("Cập nhật số lượng sản phẩm trong giỏ hàng...");
         // Get user ID from localStorage
         const user = JSON.parse(localStorage.getItem('user'));
         
         if (user && user.userId) {
+          console.log(`Người dùng đã đăng nhập với ID: ${user.userId}`);
           // Fetch current cart directly using getCurrentCart
           const response = await orderService.getCurrentCart(user.userId);
+          console.log("Phản hồi từ API giỏ hàng:", response);
           
           if (response && response.items && response.items.$values) {
             // Calculate total quantity from order items
             const count = response.items.$values.reduce(
               (total, item) => total + item.quantity, 0
             );
+            console.log(`Tổng số lượng sản phẩm trong giỏ hàng: ${count}`);
+            
             if (isMounted.current) {
               setCartItemCount(count);
+              // Lưu giá trị vào localStorage để tránh mất khi reload
+              localStorage.setItem('cartItemCount', count.toString());
             }
           } else {
+            console.log("Không tìm thấy sản phẩm trong giỏ hàng từ API");
             if (isMounted.current) {
               setCartItemCount(0);
+              localStorage.setItem('cartItemCount', '0');
             }
           }
         } else {
+          console.log("Người dùng chưa đăng nhập, sử dụng localStorage");
           // Fallback to localStorage for non-authenticated users
           const cart = JSON.parse(localStorage.getItem('cart') || '[]');
           const count = cart.reduce((total, item) => total + item.quantity, 0);
+          console.log(`Tổng số lượng sản phẩm trong localStorage: ${count}`);
+          
           if (isMounted.current) {
             setCartItemCount(count);
+            localStorage.setItem('cartItemCount', count.toString());
           }
         }
       } catch (error) {
-        console.error('Error fetching cart:', error);
+        console.error('Lỗi khi lấy thông tin giỏ hàng:', error);
         // Fallback to localStorage on error
         const cart = JSON.parse(localStorage.getItem('cart') || '[]');
         const count = cart.reduce((total, item) => total + item.quantity, 0);
+        console.log(`Lỗi xảy ra, sử dụng localStorage với số lượng: ${count}`);
+        
         if (isMounted.current) {
           setCartItemCount(count);
+          localStorage.setItem('cartItemCount', count.toString());
         }
       }
     };
@@ -77,7 +93,8 @@ const Header = () => {
     
     // Custom event for when cart is updated within the same window
     window.addEventListener('cartUpdated', updateCartCount);
-
+    
+    // Cleanup function to remove event listeners
     return () => {
       isMounted.current = false;
       window.removeEventListener('storage', updateCartCount);

@@ -1,13 +1,14 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Box, Container, Typography, Paper, TextField, Button, CircularProgress } from '@mui/material';
-import { ArrowBack, Save } from '@mui/icons-material';
+import { ArrowBack, Save, CloudUpload } from '@mui/icons-material';
 import Header from '../../../components/Header';
 import Footer from '../../../components/Footer/Footer';
 import blogService from '../../../apis/blog';
 
-const CreatePost = () => {
+const CreatePost = ({ editMode }) => {
   const navigate = useNavigate();
+  const { id } = useParams(); // Lấy ID từ params nếu đang ở chế độ chỉnh sửa
   const [post, setPost] = useState({
     title: '',
     content: '',
@@ -16,6 +17,41 @@ const CreatePost = () => {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+  const [initialLoading, setInitialLoading] = useState(editMode); // Đánh dấu đang tải dữ liệu ban đầu nếu ở chế độ edit
+
+  // Nếu ở chế độ chỉnh sửa, tải dữ liệu bài viết khi component được mount
+  useEffect(() => {
+    if (editMode && id) {
+      const fetchPost = async () => {
+        try {
+          setInitialLoading(true);
+          setError(null);
+          
+          // Gọi API để lấy thông tin bài viết
+          const response = await blogService.getPostById(id);
+          
+          // Cập nhật state với dữ liệu từ API
+          setPost({
+            id: response.postId || id,
+            title: response.title || '',
+            content: response.content || '',
+            imageUrl: response.imageUrl || '',
+            userId: response.userId || 1
+          });
+          
+          setInitialLoading(false);
+        } catch (error) {
+          console.error('Lỗi khi tải bài viết:', error);
+          setError(`Không thể tải bài viết. Lỗi: ${error.message}`);
+          setInitialLoading(false);
+        }
+      };
+      
+      fetchPost();
+    }
+  }, [editMode, id]);
 
   // Xử lý thay đổi input
   const handleInputChange = (field, value) => {
@@ -25,7 +61,19 @@ const CreatePost = () => {
     }));
   };
 
-  // Xử lý lưu bài viết mới
+  // Xử lý khi chọn file ảnh
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setImageFile(file);
+      
+      // Tạo URL xem trước cho ảnh
+      const previewUrl = URL.createObjectURL(file);
+      setImagePreview(previewUrl);
+    }
+  };
+  
+  // Xử lý lưu bài viết
   const handleSave = async () => {
     // Kiểm tra dữ liệu nhập vào
     if (!post.title.trim()) {
@@ -42,18 +90,35 @@ const CreatePost = () => {
       setLoading(true);
       setError(null);
 
-      // Gọi API để tạo bài viết mới
-      const response = await blogService.createPost(post);
-      console.log('Create post response:', response);
+      const postData = {
+        ...post,
+        image: imageFile // Thêm file ảnh nếu có
+      };
 
-      // Hiển thị thông báo thành công
-      alert('Tạo bài viết mới thành công!');
+      // Đảm bảo postId/id trong dữ liệu gửi đi khớp với ID trên URL khi chỉnh sửa
+      if (editMode) {
+        postData.postId = parseInt(id); // Thêm postId để tránh lỗi "ID không trùng khớp"
+      }
+
+      let response;
+      
+      if (editMode) {
+        // Gọi API để cập nhật bài viết
+        response = await blogService.updatePost(id, postData);
+        console.log('Update post response:', response);
+        alert('Cập nhật bài viết thành công!');
+      } else {
+        // Gọi API để tạo bài viết mới
+        response = await blogService.createPost(postData);
+        console.log('Create post response:', response);
+        alert('Tạo bài viết mới thành công!');
+      }
 
       // Chuyển hướng về trang quản lý blog
       navigate('/blogManager');
     } catch (error) {
-      console.error('Error creating post:', error);
-      setError(`Không thể tạo bài viết. Lỗi: ${error.message}`);
+      console.error('Error saving post:', error);
+      setError(`Không thể ${editMode ? 'cập nhật' : 'tạo'} bài viết. Lỗi: ${error.message}`);
     } finally {
       setLoading(false);
     }
@@ -63,6 +128,16 @@ const CreatePost = () => {
   const handleGoBack = () => {
     navigate('/blogManager');
   };
+
+  // Hiển thị loading khi đang tải dữ liệu ban đầu cho chế độ chỉnh sửa
+  if (initialLoading) {
+    return (
+      <Box sx={{ bgcolor: "#f0f0f0", minHeight: "100vh", width: '99vw', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+        <Header />
+        <CircularProgress sx={{ color: '#059669', mt: 10 }} />
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ bgcolor: "#f0f0f0", minHeight: "100vh", width: '99vw' }}>
@@ -89,7 +164,7 @@ const CreatePost = () => {
               fontSize: { xs: '1.8rem', sm: '2.2rem', md: '2.5rem' }
             }}
           >
-            Tạo Bài Viết Mới
+            {editMode ? 'Chỉnh Sửa Bài Viết' : 'Tạo Bài Viết Mới'}
           </Typography>
 
           {error && (
@@ -109,6 +184,29 @@ const CreatePost = () => {
               required
             />
 
+            <Button
+              variant="outlined"
+              component="label"
+              startIcon={<CloudUpload />}
+              sx={{ 
+                mb: 2,
+                borderColor: '#059669', 
+                color: '#059669', 
+                '&:hover': { 
+                  borderColor: '#047857', 
+                  color: '#047857' 
+                }
+              }}
+            >
+              Tải ảnh lên
+              <input
+                type="file"
+                hidden
+                accept="image/*"
+                onChange={handleImageChange}
+              />
+            </Button>
+
             <TextField
               fullWidth
               label="URL Ảnh bìa"
@@ -119,7 +217,32 @@ const CreatePost = () => {
               helperText="Nhập URL hình ảnh cho bài viết (không bắt buộc)"
             />
 
-            {post.imageUrl && (
+            {/* Hiển thị xem trước ảnh từ file được tải lên */}
+            {imagePreview && (
+              <Box
+                sx={{
+                  width: '100%',
+                  display: 'flex',
+                  justifyContent: 'center',
+                  mb: 3
+                }}
+              >
+                <Box
+                  component="img"
+                  src={imagePreview}
+                  alt="Xem trước ảnh bìa"
+                  sx={{
+                    maxWidth: '100%',
+                    maxHeight: '300px',
+                    objectFit: 'contain',
+                    borderRadius: 1
+                  }}
+                />
+              </Box>
+            )}
+
+            {/* Hiển thị ảnh từ URL nếu không có file được tải lên */}
+            {!imagePreview && post.imageUrl && (
               <Box
                 sx={{
                   width: '100%',
@@ -180,7 +303,7 @@ const CreatePost = () => {
                     <CircularProgress size={24} color="inherit" sx={{ mr: 1 }} />
                     Đang lưu...
                   </>
-                ) : 'Lưu bài viết'}
+                ) : (editMode ? 'Cập nhật bài viết' : 'Lưu bài viết')}
               </Button>
             </Box>
           </Box>

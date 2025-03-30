@@ -111,9 +111,9 @@ axiosClient.interceptors.request.use(
                     
                     console.log('User role in request:', normalizedRole);
                     
-                    // In thêm thông tin debug
-                    if (normalizedRole !== 'Manager' && normalizedRole !== 'Admin') {
-                        console.warn('Role không phải Manager hoặc Admin:', normalizedRole);
+                    // In thêm thông tin debug - Cho phép Staff thêm sản phẩm
+                    if (normalizedRole !== 'Manager' && normalizedRole !== 'Admin' && normalizedRole !== 'Staff') {
+                        console.warn('Role không phải Manager, Admin hoặc Staff:', normalizedRole);
                     }
                 }
                 

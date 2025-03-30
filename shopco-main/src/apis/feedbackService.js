@@ -241,9 +241,30 @@ const feedbackService = {
                 timeout: 60000, // 60s cho upload ảnh và xử lý
             });
             
+            // Tự động cập nhật trạng thái sau khi phản hồi thành công
+            try {
+                await feedbackService.updateFeedbackStatus(replyData.conversationId, 'Replied');
+            } catch (statusError) {
+                console.warn('Không thể cập nhật trạng thái đơn hỗ trợ:', statusError);
+                // Tiếp tục trả về response ban đầu ngay cả khi cập nhật trạng thái thất bại
+            }
+            
             return response;
         } catch (error) {
             console.error('Error replying to feedback with image:', error);
+            throw error;
+        }
+    },
+    
+    // Thêm phương thức cập nhật trạng thái
+    updateFeedbackStatus: async (conversationId, status) => {
+        try {
+            const response = await axiosClient.put(`/api/feedbacks/${conversationId}/status`, { 
+                status: status 
+            });
+            return response;
+        } catch (error) {
+            console.error(`Error updating feedback status to ${status}:`, error);
             throw error;
         }
     }

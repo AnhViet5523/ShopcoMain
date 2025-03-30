@@ -268,10 +268,24 @@ export default function ProductDetail() {
     try {
       // Get user ID from localStorage
       const user = JSON.parse(localStorage.getItem('user'));
-      const userId = user?.userId || 1; // Fallback to 1 if no user ID found
+      
+      // Kiểm tra người dùng đã đăng nhập chưa
+      if (!user || !user.userId) {
+        alert('Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng');
+        // Lưu URL hiện tại để sau khi đăng nhập quay lại
+        navigate('/login', { state: { returnUrl: `/product/${id}` } });
+        return;
+      }
+      
+      console.log("Đang thêm sản phẩm vào giỏ hàng:", {
+        userId: user.userId,
+        productId: product.productId,
+        quantity: quantity
+      });
       
       // Call the API to add item to cart
-      await orderService.addtocard(userId, product.productId, quantity);
+      const result = await orderService.addtocard(user.userId, product.productId, quantity);
+      console.log("Kết quả thêm vào giỏ hàng:", result);
       
       // Dispatch custom event to notify other components (like Header) that cart has been updated
       window.dispatchEvent(new CustomEvent('cartUpdated'));
@@ -282,7 +296,15 @@ export default function ProductDetail() {
       // Reset quantity
       setQuantity(1);
     } catch (error) {
-      console.error('Error adding to cart:', error);
+      console.error('Lỗi khi thêm vào giỏ hàng:', error);
+      // Hiển thị lỗi chi tiết để dễ gỡ lỗi
+      if (error.response) {
+        console.error('Chi tiết lỗi từ API:', {
+          status: error.response.status,
+          statusText: error.response.statusText,
+          data: error.response.data
+        });
+      }
       alert('Có lỗi xảy ra khi thêm vào giỏ hàng. Vui lòng thử lại sau.');
     }
   };
@@ -378,19 +400,22 @@ export default function ProductDetail() {
   const getImageUrl = (image) => {
     if (!image) return '/images/default-product.jpg';
     
+    // Thêm timestamp để tránh cache
+    const timestamp = new Date().getTime();
+    
     // Nếu là đường dẫn đầy đủ (bắt đầu bằng http hoặc https)
     if (typeof image === 'string') {
-      if (image.startsWith('http')) return image;
-      return image;
+      if (image.startsWith('http')) return `${image}?t=${timestamp}`;
+      return `${image}?t=${timestamp}`;
     }
     
     // Nếu là object có thuộc tính imgUrl
     if (image.imgUrl) {
-      if (image.imgUrl.startsWith('http')) return image.imgUrl;
-      return image.imgUrl;
+      if (image.imgUrl.startsWith('http')) return `${image.imgUrl}?t=${timestamp}`;
+      return `${image.imgUrl}?t=${timestamp}`;
     }
     
-    return '/images/default-product.jpg';
+    return `/images/default-product.jpg?t=${timestamp}`;
   };
 
   const handleSelectImage = (index) => {

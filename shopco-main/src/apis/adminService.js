@@ -1,4 +1,5 @@
 import axiosClient from './axiosClient';
+import axios from 'axios';
 
 const adminService = {
     getAllOrders: async () => {
@@ -14,11 +15,73 @@ const adminService = {
     // Thêm phương thức mới để thêm sản phẩm
     addProduct: async (productData) => {
         try {
-            const response = await axiosClient.post('/api/Admin/Product', productData);
+            console.log('Gọi API thêm sản phẩm với dữ liệu:', JSON.stringify(productData, null, 2));
+            
+            // Kiểm tra lại dữ liệu trước khi gửi
+            if (!productData.productName) {
+                throw new Error('Thiếu tên sản phẩm');
+            }
+            
+            if (!productData.categoryId || isNaN(productData.categoryId)) {
+                throw new Error('Danh mục sản phẩm không hợp lệ');
+            }
+            
+            if (!productData.quantity || isNaN(productData.quantity)) {
+                throw new Error('Số lượng sản phẩm không hợp lệ');
+            }
+            
+            if (!productData.price || isNaN(productData.price)) {
+                throw new Error('Giá sản phẩm không hợp lệ');
+            }
+            
+            // Đảm bảo các trường bắt buộc có giá trị mặc định hợp lệ
+            const dataToSend = {
+                ...productData,
+                categoryId: parseInt(productData.categoryId),
+                quantity: parseInt(productData.quantity),
+                price: parseFloat(productData.price),
+                status: productData.status || 'Available',
+                capacity: productData.capacity || '100ml',
+                brand: productData.brand || 'Unknown',
+                origin: productData.origin || 'Unknown',
+                imgUrl: productData.imgUrl || '',
+                skinType: productData.skinType || 'All',
+                description: productData.description || '',
+                ingredients: productData.ingredients || '',
+                usageInstructions: productData.usageInstructions || '',
+                manufactureDate: productData.manufactureDate || new Date().toISOString()
+            };
+            
+            console.log('Dữ liệu đã được chuẩn hóa:', JSON.stringify(dataToSend, null, 2));
+            
+            const response = await axiosClient.post('/api/Admin/Product', dataToSend);
+            console.log('Phản hồi từ API thêm sản phẩm:', response);
+            
+            if (!response) {
+                throw new Error('Không nhận được phản hồi từ server');
+            }
+            
             return response;
         } catch (error) {
-            console.error('Error adding product:', error);
-            throw error;
+            console.error('Lỗi chi tiết khi thêm sản phẩm:', error);
+            
+            if (error.response) {
+                // Server trả về lỗi với status code
+                console.error('Server Error Status:', error.response.status);
+                console.error('Server Error Data:', error.response.data);
+                
+                // Chi tiết lỗi từ server
+                const serverError = error.response.data?.error || error.response.data?.message || 'Lỗi không xác định từ server';
+                throw new Error(`Lỗi từ server: ${serverError} (Status: ${error.response.status})`);
+            } else if (error.request) {
+                // Request đã được gửi nhưng không nhận được response
+                console.error('Request sent but no response:', error.request);
+                throw new Error('Không nhận được phản hồi từ server. Vui lòng kiểm tra kết nối mạng.');
+            } else {
+                // Lỗi xảy ra trong quá trình thiết lập request
+                console.error('Error setting up request:', error.message);
+                throw error;
+            }
         }
     },
 
@@ -262,31 +325,70 @@ const adminService = {
 
     getAllPosts: async () => {
         try {
-            // Thêm tham số ngẫu nhiên để tránh cache và request trùng lặp
+            console.log('Đang tải danh sách tất cả bài viết...');
+            
+            // Thêm timestamp để tránh cache
             const timestamp = new Date().getTime();
-            const response = await axiosClient.get(`/api/Post?_t=${timestamp}`, {
-                headers: {
-                    'Cache-Control': 'no-cache',
-                    'Pragma': 'no-cache',
-                    'Expires': '0'
+            
+            // Tạo CancelToken để có thể hủy request khi cần thiết
+            const source = axios.CancelToken.source();
+            
+            // Thiết lập timeout dài hơn (30 giây)
+            const timeout = setTimeout(() => {
+                source.cancel('Thời gian phản hồi quá lâu');
+            }, 30000);
+            
+            try {
+                const response = await axiosClient.get(`/api/Post?_t=${timestamp}`, {
+                    headers: {
+                        'Cache-Control': 'no-cache',
+                        'Pragma': 'no-cache',
+                        'Expires': '0'
+                    },
+                    cancelToken: source.token,
+                    // Tăng timeout lên 30 giây
+                    timeout: 30000
+                });
+                
+                // Xóa timeout khi request thành công
+                clearTimeout(timeout);
+                
+                console.log('Raw Response in Service:', response);
+                
+                // Xử lý nhiều định dạng response
+                if (response && response["$values"]) {
+                    return response["$values"];
                 }
-            });
-            
-            console.log('Raw Response in Service:', response);
-            
-            // Xử lý nhiều định dạng response
-            if (response && response["$values"]) {
-                return response["$values"];
+                
+                return response;
+            } catch (requestError) {
+                clearTimeout(timeout);
+                throw requestError;
             }
-            
-            return response;
         } catch (error) {
-            console.error('Detailed Error fetching posts:', error);
-            // Trả về một mảng rỗng để dễ xử lý hơn
-            if (error.message === 'Request was cancelled') {
-                return [];
+            console.error('Lỗi khi tải danh sách bài viết:', error);
+            
+            // Xử lý trường hợp request bị hủy một cách thân thiện hơn
+            if (axios.isCancel(error)) {
+                console.log('Request bị hủy:', error.message);
+                throw new Error('Không thể kết nối đến máy chủ, vui lòng thử lại sau');
             }
-            throw error; 
+            
+            // Các lỗi khác
+            if (error.response) {
+                console.error('Chi tiết lỗi từ server:', error.response.data);
+                console.error('Mã lỗi:', error.response.status);
+                
+                if (error.response.status >= 500) {
+                    throw new Error('Máy chủ đang gặp sự cố, vui lòng thử lại sau');
+                }
+            } else if (error.request) {
+                // Request được gửi nhưng không nhận được response
+                console.error('Không nhận được phản hồi từ server:', error.request);
+                throw new Error('Không thể kết nối đến máy chủ, vui lòng kiểm tra kết nối mạng và thử lại');
+            }
+            
+            throw error;
         }
     },
 
