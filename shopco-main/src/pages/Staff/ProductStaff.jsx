@@ -1565,8 +1565,30 @@ const ProductStaff = () => {
 
   // Hàm xử lý xóa ảnh
   const handleDeleteImage = async (imageId) => {
-    if (window.confirm('Bạn có chắc chắn muốn xóa ảnh này?')) {
-      try {
+    try {
+      // Trước khi xóa, kiểm tra xem sản phẩm còn bao nhiêu ảnh
+      const productImages = await productImageService.getProductImages(selectedProduct.ProductID);
+      
+      // Xử lý response để lấy mảng ảnh
+      let allImages = [];
+      if (Array.isArray(productImages)) {
+        allImages = productImages;
+      } else if (productImages && productImages.$values && Array.isArray(productImages.$values)) {
+        allImages = productImages.$values;
+      } else if (productImages && typeof productImages === 'object') {
+        allImages = [productImages];
+      }
+      
+      console.log(`Sản phẩm hiện có ${allImages.length} ảnh`);
+      
+      // Kiểm tra nếu chỉ còn 5 ảnh thì không cho xóa
+      if (allImages.length <= 5) {
+        alert('Không thể xóa ảnh vì sản phẩm cần có tối thiểu 5 ảnh. Hãy thêm ảnh mới trước khi xóa ảnh này.');
+        return;
+      }
+      
+      // Nếu có nhiều hơn 5 ảnh, tiến hành xác nhận và xóa
+      if (window.confirm('Bạn có chắc chắn muốn xóa ảnh này?')) {
         setUploadingImage(true);
         await productImageService.deleteProductImage(imageId);
         alert('Xóa ảnh thành công');
@@ -1595,12 +1617,12 @@ const ProductStaff = () => {
         
         // Cập nhật lại trang sản phẩm
         await fetchProducts(categoryMapping);
-      } catch (error) {
-        console.error('Lỗi khi xóa ảnh:', error);
-        alert('Không thể xóa ảnh. Vui lòng thử lại sau.');
-      } finally {
-        setUploadingImage(false);
       }
+    } catch (error) {
+      console.error('Lỗi khi xóa ảnh:', error);
+      alert('Không thể xóa ảnh. Vui lòng thử lại sau.');
+    } finally {
+      setUploadingImage(false);
     }
   };
 
