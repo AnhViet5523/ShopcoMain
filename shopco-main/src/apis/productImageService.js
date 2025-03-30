@@ -88,23 +88,61 @@ const productImageService = {
     // Thêm nhiều ảnh cùng lúc cho sản phẩm
     uploadMultipleProductPhotos: async (productId, files) => {
         try {
-            console.log(`Calling API: POST /api/Photos/upload-multiple/product/${productId}`);
+            console.log(`Calling API: POST /api/Photos/upload-multiple/product/${productId} with ${files.length} files`);
+            
+            // Kiểm tra tham số đầu vào
+            if (!productId) {
+                throw new Error('productId là bắt buộc');
+            }
+            
+            if (!files || !Array.isArray(files) || files.length === 0) {
+                throw new Error('Vui lòng cung cấp ít nhất một file ảnh');
+            }
+            
+            // Tạo FormData
             const formData = new FormData();
             
-            // Thêm các file vào formData với đúng tên tham số là 'files'
+            // Thêm productId vào formData để đảm bảo API có thể nhận được
+            formData.append('productId', productId);
+            
+            // Log chi tiết về các file
+            console.log(`Tải lên ${files.length} file cho sản phẩm ${productId}:`);
             for (let i = 0; i < files.length; i++) {
+                console.log(`File ${i+1}: ${files[i].name}, Size: ${(files[i].size/1024).toFixed(2)}KB, Type: ${files[i].type}`);
+                // Thêm các file vào formData với đúng tên tham số là 'files'
                 formData.append('files', files[i]);
             }
             
+            // Tạo header riêng cho multipart/form-data
+            const headers = {
+                'Content-Type': 'multipart/form-data',
+                'Accept': 'application/json'
+            };
+            
+            console.log('Gửi request với headers:', headers);
+            
             const response = await axiosClient.post(`/api/Photos/upload-multiple/product/${productId}`, formData, {
-                headers: {
-                    'Content-Type': 'multipart/form-data'
-                }
+                headers: headers
             });
+            
             console.log('API Response for multiple upload:', response);
             return response;
         } catch (error) {
             console.error(`Error uploading multiple images for product ${productId}:`, error);
+            
+            // Log chi tiết hơn về lỗi
+            if (error.response) {
+                // Lỗi từ server
+                console.error('Server Response Status:', error.response.status);
+                console.error('Server Response Data:', error.response.data);
+            } else if (error.request) {
+                // Lỗi không nhận được response
+                console.error('No Response from Server:', error.request);
+            } else {
+                // Lỗi khác
+                console.error('Error Message:', error.message);
+            }
+            
             throw error;
         }
     },

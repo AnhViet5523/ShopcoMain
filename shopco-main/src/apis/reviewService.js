@@ -27,29 +27,9 @@ const reviewService = {
             console.error('Error fetching reviews:', error);
         }
     },
-//     {
-//   "$id": "1",
-//   "$values": [
-//     {
-//       "$id": "2",
-//       "reviewId": 16,
-//       "userId": 4,
-//       "productId": 7,
-//       "rating": 5,
-//       "reviewDate": "2025-03-12T12:45:04.397",
-//       "reviewComment": "viet anh review",
-//       "product": null,
-//       "user": null
-//     }
-//   ]
-// }
+
     postReview: async (review) => {
-//         {
-//   "userId": 0,
-//   "productId": 0,
-//   "rating": 0,
-//   "reviewComment": "string",
-// }
+
         try {
             const response = await axiosClient.post(`/api/Reviews`, review);
             return response;
@@ -78,6 +58,21 @@ const reviewService = {
         } catch (error) {
             console.error('Error fetching user:', error);
             throw error; 
+        }
+    },
+
+    // Phương thức gửi phản hồi cho đánh giá từ staff
+    postReply: async (reviewId, replyContent) => {
+        try {
+            // Gửi PUT request đến endpoint chính xác với cấu trúc dữ liệu phù hợp với ReviewResponseDto
+            const response = await axiosClient.put(`/api/Reviews/${reviewId}/response`, {
+                Response: replyContent
+            });
+            console.log('Đã gửi phản hồi:', replyContent);
+            return response.data;
+        } catch (error) {
+            console.error('Error posting reply to review:', error);
+            throw error;
         }
     }
 };
