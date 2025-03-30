@@ -53,6 +53,17 @@ export default function ProductCard({ product }) {
     return product.imgUrl || product.image || product.imgURL || '/images/default-product.jpg';
   };
 
+  // Thêm hàm tính giá giảm 15%
+  const calculateDiscountedPrice = (price) => {
+    return Math.round(price * 0.85);
+  };
+
+  // Lấy giá gốc từ sản phẩm
+  const originalPrice = product.price || 0;
+
+  // Tính giá sau khi giảm 15%
+  const discountedPrice = calculateDiscountedPrice(originalPrice);
+
   return (
     <Card 
       onClick={handleClick}
@@ -80,19 +91,24 @@ export default function ProductCard({ product }) {
         
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
           <Typography variant="h6" color="error" fontWeight="bold">
-            {product.price?.toLocaleString()}đ
+            {discountedPrice.toLocaleString()}đ
           </Typography>
           <Typography
             variant="body2"
             color="text.secondary"
             sx={{ textDecoration: 'line-through' }}
           >
-            {product.price?.toLocaleString()}đ
+            {originalPrice.toLocaleString()}đ
           </Typography>
         </Box>
 
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Rating value={product.rating} precision={0.5} readOnly size="small" />
+          <Rating 
+            value={product.rating || 0} 
+            precision={0.5} 
+            readOnly 
+            size="small" 
+          />
           <Typography variant="body2" color="text.secondary">
             {product.ratingCount ? `(${product.ratingCount})` : ""}
           </Typography>

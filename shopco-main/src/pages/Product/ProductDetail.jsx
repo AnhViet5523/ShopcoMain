@@ -17,12 +17,8 @@ import {
   Badge,
   Modal,
   TextField,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemAvatar,
-  Avatar,
-  Drawer
+  Avatar
+
 } from '@mui/material';
 import { Home as HomeIcon, Add as AddIcon, Remove as RemoveIcon, Close as CloseIcon } from '@mui/icons-material';
 import productService from '../../apis/productService';
@@ -30,7 +26,7 @@ import orderService from '../../apis/orderService';
 import reviewService from "../../apis/reviewService";
 import userService from '../../apis/userService';
 
-const FlashDealTimer = memo(({ initialHours = 0, initialMinutes = 0, initialSeconds = 45 }) => {
+const FlashDealTimer = memo(({ initialHours = 1, initialMinutes = 59, initialSeconds = 59 }) => {
   const [time, setTime] = useState({
     hours: initialHours,
     minutes: initialMinutes,
@@ -388,7 +384,7 @@ export default function ProductDetail() {
       });
       const updatedReviews = await reviewService.getReviewsProductId(id);
       setReviews(updatedReviews);
-      alert('Review added successfully!');
+      alert('Đã thêm đánh giá thành công!');
       handleCloseModal();
     } catch (error) {
       console.error('Error adding review:', error);
@@ -581,8 +577,8 @@ export default function ProductDetail() {
           <Link color="inherit" href="/">
             <HomeIcon />
           </Link>
-          <Link color="inherit" href="/category">
-            Danh Mục
+          <Link color="inherit" href="/">
+            Trang chủ
           </Link>
           {loading ? (
             <Box sx={{ bgcolor: '#f0f0f0', height: 24, width: 200 }} />
@@ -768,7 +764,12 @@ export default function ProductDetail() {
                 
                 {/* Ratings */}
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                  <Rating value={4.5} precision={0.5} readOnly size="small" />
+                  <Rating 
+                    value={reviews.length > 0 ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length : 0}
+                    precision={0.5}
+                    readOnly
+                    size="small"
+                  />
                   <Typography variant="body2" sx={{ ml: 1 }}>
                     {reviews?.length} đánh giá
                   </Typography>
@@ -819,7 +820,7 @@ export default function ProductDetail() {
                     </Typography>
                     <Badge 
                       sx={{ ml: 2 }}
-                      badgeContent={`14%`} 
+                      badgeContent={`${Math.round((1 - (product?.discountedPrice / product?.price)) * 100)}%`}
                       color="error"
                     />
                   </Box>
