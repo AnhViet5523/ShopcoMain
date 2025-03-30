@@ -144,8 +144,16 @@ export default function App() {
           <Route path="/blog" element={<BlogPage />} />
           <Route path="/blog/:id" element={<BlogDetail />} />
           <Route path="/blogManager/:id" element={<BlogDetail />} />
-          <Route path="/Blog/CreateEditPost/CreatePost" element={<CreatePost />} />
-          <Route path="/Blog/CreateEditPost/EditPost/:id" element={<CreatePost editMode={true} />} />
+          <Route path="/Blog/CreateEditPost/CreatePost" element={
+            <ProtectedRoute>
+              <CreatePost />
+            </ProtectedRoute>
+          } />
+          <Route path="/Blog/CreateEditPost/EditPost/:id" element={
+            <ProtectedRoute>
+              <CreatePost editMode={true} />
+            </ProtectedRoute>
+          } />
           <Route path="/bestsellers" element={<BestSellers />} />
 
           {/* Static Pages */}

@@ -114,8 +114,15 @@ const CreatePost = ({ editMode }) => {
         alert('Tạo bài viết mới thành công!');
       }
 
-      // Chuyển hướng về trang quản lý blog
-      navigate('/blogManager');
+      // Lấy vai trò người dùng để chuyển hướng về đúng trang
+      const userRole = localStorage.getItem('user_role') || '';
+      if (userRole.toLowerCase() === 'manager' || userRole.toLowerCase() === 'admin') {
+        navigate('/blogManager');
+      } else if (userRole.toLowerCase() === 'staff') {
+        navigate('/blogStaff');
+      } else {
+        navigate('/blog');
+      }
     } catch (error) {
       console.error('Error saving post:', error);
       setError(`Không thể ${editMode ? 'cập nhật' : 'tạo'} bài viết. Lỗi: ${error.message}`);
@@ -126,7 +133,15 @@ const CreatePost = ({ editMode }) => {
 
   // Xử lý quay lại
   const handleGoBack = () => {
-    navigate('/blogManager');
+    // Lấy vai trò người dùng để chuyển hướng về đúng trang
+    const userRole = localStorage.getItem('user_role') || '';
+    if (userRole.toLowerCase() === 'manager' || userRole.toLowerCase() === 'admin') {
+      navigate('/blogManager');
+    } else if (userRole.toLowerCase() === 'staff') {
+      navigate('/blogStaff');
+    } else {
+      navigate('/blog');
+    }
   };
 
   // Hiển thị loading khi đang tải dữ liệu ban đầu cho chế độ chỉnh sửa

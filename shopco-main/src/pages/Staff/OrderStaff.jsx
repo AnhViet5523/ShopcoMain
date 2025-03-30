@@ -14,8 +14,8 @@ const OrderStaff = () => {
   const [orderItems, setOrderItems] = useState([]);
   const [searchKey, setSearchKey] = useState(''); 
   const [cancelledOrders, setCancelledOrders] = useState([]); // Thêm state để lưu trữ các đơn hàng bị hủy
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize] = useState(10);
+  const [page, setPage] = useState(1);
+  const pageSize = 15;
   const [lastDeliveredOrderId, setLastDeliveredOrderId] = useState(null); // Lưu trữ ID đơn hàng cuối cùng được đánh dấu đã giao
 
   const navigate = useNavigate();
@@ -134,13 +134,13 @@ const OrderStaff = () => {
 
   // Hàm xử lý khi thay đổi trang
   const handlePageChange = (event, value) => {
-    setCurrentPage(value);
+    setPage(value);
   };
 
   // Lấy mảng đơn hàng cho trang hiện tại
   const getCurrentPageItems = () => {
     const filteredItems = filteredOrders();
-    const startIndex = (currentPage - 1) * pageSize;
+    const startIndex = (page - 1) * pageSize;
     return filteredItems.slice(startIndex, startIndex + pageSize);
   };
 
@@ -229,7 +229,7 @@ const OrderStaff = () => {
 
   // Khi tab thay đổi, reset lại trang hiện tại
   useEffect(() => {
-    setCurrentPage(1);
+    setPage(1);
   }, [activeTab, searchKey]);
 
   return (
@@ -507,12 +507,13 @@ const OrderStaff = () => {
             }}>
               <Pagination 
                 count={totalPages} 
-                page={currentPage} 
+                page={page} 
                 onChange={handlePageChange} 
                 variant="outlined" 
                 color="primary" 
                 showFirstButton 
                 showLastButton
+                size="large"
               />
             </div>
           )}

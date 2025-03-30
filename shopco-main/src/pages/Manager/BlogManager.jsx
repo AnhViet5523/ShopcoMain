@@ -15,8 +15,8 @@ const BlogManager = () => {
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredCount, setFilteredCount] = useState(0);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize] = useState(10);
+  const [page, setPage] = useState(1);
+  const pageSize = 15;
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [postToDelete, setPostToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -214,18 +214,18 @@ const BlogManager = () => {
 
   // Hàm xử lý khi thay đổi trang
   const handlePageChange = (event, value) => {
-    setCurrentPage(value);
+    setPage(value);
   };
 
   // Lấy blog cho trang hiện tại
   const getCurrentPageItems = () => {
-    const startIndex = (currentPage - 1) * pageSize;
+    const startIndex = (page - 1) * pageSize;
     return filteredPosts.slice(startIndex, startIndex + pageSize);
   };
 
   // Reset trang về 1 khi thay đổi từ khóa tìm kiếm
   useEffect(() => {
-    setCurrentPage(1);
+    setPage(1);
   }, [searchTerm]);
 
   const sidebarItems = [
@@ -537,12 +537,13 @@ const BlogManager = () => {
           }}>
             <Pagination 
               count={totalPages} 
-              page={currentPage} 
+              page={page} 
               onChange={handlePageChange} 
               variant="outlined" 
               color="primary" 
               showFirstButton 
               showLastButton
+              size="large"
             />
           </div>
         )}

@@ -332,7 +332,7 @@ const Feedback = () => {
           </div>
         </div>
         
-        <div className="sidebar-title">MANAGER FEEDBACK</div>
+        <div className="sidebar-title">MANAGER</div>
         
         <div className="sidebar-menu">
           {sidebarItems.map((item) => (
@@ -632,13 +632,21 @@ const Feedback = () => {
             </tbody>
           </table>
           
-          {/* Pagination */}
-          <div style={{ display: 'flex', justifyContent: 'center', marginTop: '20px' }}>
+          {/* Phân trang */}
+          <div style={{ 
+            display: 'flex', 
+            justifyContent: 'center', 
+            marginTop: '20px',
+            marginBottom: '20px'
+          }}>
             <Pagination
               count={Math.ceil(reviews.length / pageSize)}
               page={page}
               onChange={handlePageChange}
+              variant="outlined"
               color="primary"
+              showFirstButton
+              showLastButton
               size="large"
             />
           </div>

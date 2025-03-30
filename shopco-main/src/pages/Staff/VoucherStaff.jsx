@@ -15,8 +15,8 @@ const VoucherStaff = () => {
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [originalVouchers, setOriginalVouchers] = useState([]);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize] = useState(10);
+  const [page, setPage] = useState(1);
+  const pageSize = 15;
 
   // State cho dialog thêm voucher
   const [openDialog, setOpenDialog] = useState(false);
@@ -221,19 +221,24 @@ const VoucherStaff = () => {
     }
   };
 
-  // Lấy voucher cho trang hiện tại
-  const getCurrentPageItems = () => {
-    const startIndex = (currentPage - 1) * pageSize;
-    return vouchers.slice(startIndex, startIndex + pageSize);
-  };
-
-  // Lấy tổng số trang
+  // Lấy tổng số trang dựa trên số lượng voucher và kích thước trang
   const totalPages = Math.ceil(vouchers.length / pageSize);
 
   // Hàm xử lý khi thay đổi trang
   const handlePageChange = (event, value) => {
-    setCurrentPage(value);
+    setPage(value);
   };
+
+  // Lấy mảng voucher cho trang hiện tại
+  const getCurrentPageItems = () => {
+    const startIndex = (page - 1) * pageSize;
+    return vouchers.slice(startIndex, startIndex + pageSize);
+  };
+
+  // Khi từ khóa tìm kiếm thay đổi, reset lại trang hiện tại
+  useEffect(() => {
+    setPage(1);
+  }, [searchTerm]);
 
   return (
     <Box sx={{ bgcolor: "#f0f0f0", minHeight: "100vh", width:'99vw' }}>
@@ -441,12 +446,13 @@ const VoucherStaff = () => {
             }}>
               <Pagination 
                 count={totalPages} 
-                page={currentPage} 
+                page={page} 
                 onChange={handlePageChange} 
                 variant="outlined" 
                 color="primary" 
                 showFirstButton 
                 showLastButton
+                size="large"
               />
             </div>
           )}

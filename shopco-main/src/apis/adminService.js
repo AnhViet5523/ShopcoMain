@@ -117,10 +117,123 @@ const adminService = {
     // Thêm phương thức để cập nhật sản phẩm
     updateProduct: async (productId, productData) => {
         try {
-            const response = await axiosClient.put(`/api/Admin/${productId}/product`, productData);
+            // Ghi log thông tin sản phẩm trước khi cập nhật
+            console.log('Thông tin sản phẩm ID cập nhật:', productId);
+            console.log('CategoryId được gửi:', productData.categoryId);
+            
+            // Biến đổi tên trường để khớp CHÍNH XÁC với model ProductUpdateDTO trong AdminController.cs
+            const dataToSend = {
+                // Đảm bảo tất cả các trường bắt buộc có trong DTO
+                ProductName: productData.productName || "",
+                CategoryId: productData.categoryId ? parseInt(productData.categoryId) : 0, // Không thể null cho int
+                Quantity: parseInt(productData.quantity) || 0,
+                Capacity: productData.capacity || "50g",
+                Price: parseFloat(productData.price) || 0,
+                Brand: productData.brand || "",
+                Origin: productData.origin || "",
+                Status: productData.status || "Available",
+                ImgUrl: productData.imgUrl || "",
+                SkinType: productData.skinType || "",
+                Description: productData.description || "",
+                Ingredients: productData.ingredients || "",
+                UsageInstructions: productData.usageInstructions || "",
+                ManufactureDate: new Date().toISOString() // Luôn cung cấp một giá trị hợp lệ
+            };
+            
+            // Kiểm tra tính hợp lệ của CategoryId
+            if (dataToSend.CategoryId <= 0) {
+                console.error('CẢNH BÁO: CategoryId không hợp lệ:', dataToSend.CategoryId);
+                // Sử dụng giá trị mặc định an toàn
+                dataToSend.CategoryId = 1; // Sử dụng danh mục mặc định (1)
+            }
+            
+            // Lấy vai trò từ localStorage
+            let userRole = 'Customer'; // Giá trị mặc định
+            
+            try {
+                const userStr = localStorage.getItem('user');
+                if (userStr) {
+                    const user = JSON.parse(userStr);
+                    if (user && user.role) {
+                        userRole = user.role;
+                        // Đảm bảo chữ cái đầu viết hoa
+                        if (userRole.toLowerCase() === 'admin') userRole = 'Admin';
+                        if (userRole.toLowerCase() === 'manager') userRole = 'Manager';
+                        if (userRole.toLowerCase() === 'staff') userRole = 'Staff';
+                    }
+                }
+            } catch (e) {
+                console.error('Lỗi khi đọc thông tin người dùng:', e);
+            }
+            
+            // Tạo headers với thông tin quyền truy cập
+            const headers = {
+                'User-Role': userRole,
+                'X-User-Role': userRole,
+                'Role': userRole,
+                'Content-Type': 'application/json'
+            };
+            
+            console.log(`Đang gửi dữ liệu cập nhật sản phẩm đến Admin/${productId}/product:`, JSON.stringify(dataToSend, null, 2));
+            console.log('Headers:', headers);
+            
+            // Trực tiếp gọi axios thay vì axiosClient để có nhiều tùy chọn hơn
+            const response = await axiosClient.put(`/api/Admin/${productId}/product`, dataToSend, { 
+                headers,
+                timeout: 10000 // Tăng timeout lên 10 giây
+            });
+            
+            console.log('Phản hồi từ API cập nhật sản phẩm:', response);
             return response;
         } catch (error) {
             console.error('Error updating product:', error);
+            
+            // Chi tiết hóa thông tin lỗi 500
+            if (error.response && error.response.status === 500) {
+                console.error('Lỗi 500 từ server. Chi tiết:', error.response.data);
+                
+                // Hiển thị stack trace nếu có
+                if (error.response.data && error.response.data.details) {
+                    console.error('Chi tiết lỗi server:', error.response.data.details);
+                    
+                    // Kiểm tra các lỗi đặc biệt
+                    const errorDetails = error.response.data.details.toLowerCase();
+                    if (errorDetails.includes('foreign key') || errorDetails.includes('reference constraint')) {
+                        console.error('Lỗi ràng buộc khóa ngoại - CategoryId không hợp lệ');
+                        alert('Lỗi: Danh mục sản phẩm không hợp lệ. Vui lòng chọn danh mục khác.');
+                        return Promise.reject(new Error('Danh mục không hợp lệ'));
+                    }
+                    
+                    if (errorDetails.includes('null')) {
+                        console.error('Lỗi giá trị null không hợp lệ - kiểm tra các trường bắt buộc');
+                    }
+                }
+            }
+            
+            // Chi tiết hóa thông tin lỗi
+            if (error.response) {
+                console.error('Status code:', error.response.status);
+                console.error('Response headers:', error.response.headers);
+                console.error('Response data:', error.response.data);
+                
+                // Thử in ra chi tiết lỗi từ ModelState nếu có
+                if (error.response.data && error.response.data.errors) {
+                    console.error('Validation errors:', error.response.data.errors);
+                }
+                
+                // Thử trích xuất thông báo lỗi
+                const errorMessage = 
+                    (error.response.data && error.response.data.error) || 
+                    (error.response.data && error.response.data.message) ||
+                    (error.response.data && typeof error.response.data === 'string' ? error.response.data : 'Unknown error');
+                
+                console.error('Error message:', errorMessage);
+            } else if (error.request) {
+                console.error('No response received:', error.request);
+            } else {
+                console.error('Error setting up request:', error.message);
+            }
+            
             throw error;
         }
     },
