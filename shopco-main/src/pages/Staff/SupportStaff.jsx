@@ -92,10 +92,22 @@ const  SupportStaff = () => {
     }
   };
 
-  // Hàm format ngày giờ
+  // Sửa hàm format ngày giờ để chỉ hiển thị ngày
   const formatDateTime = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleString('vi-VN');
+    if (!dateString) return '';
+    
+    try {
+      const date = new Date(dateString);
+      // Chỉ trả về phần ngày, bỏ phần giờ
+      return date.toLocaleDateString('vi-VN');
+    } catch (error) {
+      console.error('Lỗi khi định dạng ngày:', error);
+      // Nếu có lỗi, trả về định dạng cắt chuỗi
+      if (dateString.includes('T')) {
+        return dateString.split('T')[0];
+      }
+      return dateString;
+    }
   };
 
   const handleReply = (request) => {

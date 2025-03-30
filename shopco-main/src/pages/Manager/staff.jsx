@@ -494,6 +494,25 @@ const Staff = () => {
     return currentUserRole === 'Manager' || currentUserRole === 'Admin';
   };
 
+  // Thêm hàm để định dạng ngày
+  const formatDate = (dateString) => {
+    if (!dateString || dateString === '-') return '-';
+    
+    try {
+      // Chuyển đổi chuỗi ngày tháng thành đối tượng Date
+      const date = new Date(dateString);
+      // Định dạng ngày theo kiểu Việt Nam
+      return date.toLocaleDateString('vi-VN');
+    } catch (error) {
+      console.error('Lỗi khi định dạng ngày:', error);
+      // Nếu có lỗi, trả về định dạng cắt chuỗi
+      if (dateString.includes('T')) {
+        return dateString.split('T')[0];
+      }
+      return dateString;
+    }
+  };
+
   return (
     <Box sx={{ bgcolor: "#f0f0f0", minHeight: "100vh", width:'99vw' }}>
       <div className="manager-container">
@@ -620,7 +639,7 @@ const Staff = () => {
                       <td>{member.role || '-'}</td>
                       <td>{member.phone || '-'}</td>
                       <td>{member.address || '-'}</td>
-                      <td>{member.registrationDate || '-'}</td>
+                      <td>{formatDate(member.registrationDate) || '-'}</td>
                       <td>
                         <div style={{ display: 'flex', justifyContent: 'center', gap: '8px' }}>
                           {canChangeRole() ? (

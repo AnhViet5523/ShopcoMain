@@ -88,6 +88,25 @@ const ViewOrder = () => {
     }
   };
 
+  // Thêm hàm để định dạng ngày tháng
+  const formatDate = (dateString) => {
+    if (!dateString) return '';
+    
+    try {
+      // Chuyển đổi chuỗi ngày tháng thành đối tượng Date
+      const date = new Date(dateString);
+      // Định dạng ngày theo kiểu Việt Nam
+      return date.toLocaleDateString('vi-VN');
+    } catch (error) {
+      console.error('Lỗi khi định dạng ngày:', error);
+      // Nếu có lỗi, trả về định dạng cắt chuỗi
+      if (dateString.includes('T')) {
+        return dateString.split('T')[0];
+      }
+      return dateString;
+    }
+  };
+
   // Hàm lọc đơn hàng theo tab và từ khóa tìm kiếm
   const filteredOrders = () => {
     let filtered;
@@ -95,8 +114,22 @@ const ViewOrder = () => {
     // Lọc theo trạng thái tab
     if (activeTab === 'Đơn hàng vận chuyển') {
       filtered = orders.filter(order => order.orderStatus === 'Paid' && order.deliveryStatus === 'Not Delivered');
+      
+      // Sắp xếp đơn hàng vận chuyển mới nhất lên đầu tiên
+      filtered.sort((a, b) => {
+        const dateA = new Date(a.orderDate);
+        const dateB = new Date(b.orderDate);
+        return dateB - dateA; // Sắp xếp giảm dần theo ngày (mới nhất lên đầu)
+      });
     } else if (activeTab === 'Đơn hàng bị hủy') {
       filtered = cancelledOrders;
+      
+      // Sắp xếp đơn hàng bị hủy mới nhất lên đầu tiên
+      filtered.sort((a, b) => {
+        const dateA = new Date(a.requestDate);
+        const dateB = new Date(b.requestDate);
+        return dateB - dateA; // Sắp xếp giảm dần theo ngày (mới nhất lên đầu)
+      });
     } else if (activeTab === 'Giao thành công') {
       filtered = orders.filter(order => order.orderStatus === 'Completed');
       
@@ -105,11 +138,28 @@ const ViewOrder = () => {
         filtered.sort((a, b) => {
           if (a.orderId === lastDeliveredOrderId) return -1;
           if (b.orderId === lastDeliveredOrderId) return 1;
-          return 0;
+          // Nếu không phải đơn hàng vừa được đánh dấu, sắp xếp theo ngày
+          const dateA = new Date(a.orderDate);
+          const dateB = new Date(b.orderDate);
+          return dateB - dateA;
+        });
+      } else {
+        // Nếu không có đơn hàng vừa giao, sắp xếp theo ngày
+        filtered.sort((a, b) => {
+          const dateA = new Date(a.orderDate);
+          const dateB = new Date(b.orderDate);
+          return dateB - dateA;
         });
       }
     } else {
       filtered = orders; // Tab "Tất cả"
+      
+      // Sắp xếp đơn hàng mới nhất lên đầu tiên cho tab "Tất cả"
+      filtered.sort((a, b) => {
+        const dateA = new Date(a.orderDate);
+        const dateB = new Date(b.orderDate);
+        return dateB - dateA; // Sắp xếp giảm dần theo ngày (mới nhất lên đầu)
+      });
     }
 
     // Lọc theo từ khóa tìm kiếm
@@ -367,7 +417,7 @@ const ViewOrder = () => {
                         <td>{order.fullName}</td>
                         <td>{order.phone}</td>
                         <td>{order.reason}</td>
-                        <td>{order.requestDate}</td>
+                        <td>{formatDate(order.requestDate)}</td>
                         <td>{order.status}</td>
                         <td>
                           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -417,7 +467,7 @@ const ViewOrder = () => {
                         <td>{order.items?.$values.map(item => item.quantity).join(', ')}</td>
                         <td>{order.voucherId}</td>
                         <td>{order.totalAmount}</td>
-                        <td>{order.orderDate}</td>
+                        <td>{formatDate(order.orderDate)}</td>
                         <td>{order.orderStatus}</td>
                         <td>{order.deliveryStatus}</td>
                         <td>{order.deliveryAddress}</td>
