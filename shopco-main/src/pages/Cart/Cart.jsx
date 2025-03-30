@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
-import { Box, Typography, Container, Button, TextField, Paper, CircularProgress } from '@mui/material';
+import { Box, Typography, Container, Button, TextField, Paper, CircularProgress, Breadcrumbs, Link } from '@mui/material';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer/Footer';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import orderService from '../../apis/orderService';
 import productImageService from '../../apis/productImageService';
+import { Home } from "@mui/icons-material";
 
 const Cart = () => {
   const navigate = useNavigate();
@@ -133,6 +134,12 @@ const Cart = () => {
           if (item.product) {
             let productImages = productImagesMap[productId] || [];
             
+            // Lấy giá gốc
+            let originalPrice = item.product.price || item.price || 0;
+            
+            // Tính giá giảm 15%
+            let discountedPrice = Math.round(originalPrice * 0.85);
+            
             // Nếu có ảnh từ productImageService
             if (productImages.length > 0) {
               // Tìm ảnh đại diện (isMainImage = true)
@@ -188,12 +195,18 @@ const Cart = () => {
             console.warn(`Sản phẩm ID ${productId} không có orderItemId`);
           }
           
+          // Lấy giá gốc từ sản phẩm
+          const originalPrice = item.product?.price || item.price || 0;
+          
+          // Tính giá giảm 15%
+          const discountedPrice = Math.round(originalPrice * 0.85);
+          
           return {
             id: item.orderItemId,
             productId: item.productId,
             name: item.product ? item.product.productName : 'Sản phẩm không xác định',
-            price: item.price || 0,
-            originalPrice: (item.price || 0) * 1.2, // Tính giá gốc cao hơn 20%
+            price: discountedPrice, // Giá đã giảm 15%
+            originalPrice: originalPrice, // Giá gốc
             quantity: item.quantity || 1,
             imgUrl: productImage,
           };
@@ -476,10 +489,18 @@ const Cart = () => {
   }
 
   return (
-
-//     <Box sx={{ backgroundColor: '#f5f5f5', minHeight: '100vh',width: "99vw" }}>
     <Box sx={{ backgroundColor: '#e0f7fa', minHeight: '100vh', overflow: 'hidden', width:'99vw' }}>
       <Header />
+      
+      {/* Thêm Breadcrumbs */}
+      <Breadcrumbs aria-label="breadcrumb" sx={{ mb: 3, ml: 10 }}>
+        <Link underline="hover" color="inherit" href="/" display="flex" alignItems="center">
+          <Home sx={{ mr: 0.5 }} fontSize="inherit" />
+          Trang chủ
+        </Link>
+        <Typography color="text.primary">Giỏ hàng</Typography>
+      </Breadcrumbs>
+      
       <Container maxWidth="lg" sx={{ py: 4 }}>
         <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 3 }}>
           {/* Left side - Cart items */}
@@ -539,12 +560,14 @@ const Cart = () => {
                       </Typography>
                       
                       <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                        <Typography variant="body2" sx={{ mr: 1 }}>
+                        <Typography variant="body2" sx={{ mr: 1, fontWeight: 'bold', color: '#ff6b6b' }}>
                           {item.price.toLocaleString()}đ
                         </Typography>
-                        <Typography variant="body2" sx={{ textDecoration: 'line-through', color: 'text.secondary' }}>
-                          {item.originalPrice.toLocaleString()}đ
-                        </Typography>
+                        {item.originalPrice > item.price && (
+                          <Typography variant="body2" sx={{ textDecoration: 'line-through', color: 'text.secondary' }}>
+                            {item.originalPrice.toLocaleString()}đ
+                          </Typography>
+                        )}
                       </Box>
                     </Box>
                     

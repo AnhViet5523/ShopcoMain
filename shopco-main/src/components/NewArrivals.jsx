@@ -128,8 +128,20 @@ export default function NewArrivals() {
         };
       });
       
-      setProducts(_products);
-      console.log(`Loaded ${_products.length} products successfully`);
+      // Lấy điểm đánh giá trung bình cho mỗi sản phẩm
+      const productsWithRatings = await Promise.all(
+        _products.map(async (product) => {
+          const { averageRating, totalReviews } = await productService.getProductAverageRating(product.productId);
+          return {
+            ...product,
+            rating: averageRating,
+            ratingCount: totalReviews,
+          };
+        })
+      );
+      
+      setProducts(productsWithRatings);
+      console.log(`Loaded ${productsWithRatings.length} products successfully`);
     } catch (error) {
       // Bỏ qua lỗi CanceledError
       if (error.name === 'CanceledError') {

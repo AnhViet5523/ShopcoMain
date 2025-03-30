@@ -7,9 +7,9 @@ import {
     Typography, Box, Alert, Stepper, Step, StepLabel, 
     LinearProgress, Paper, Fade, Slide, Grow, CircularProgress,
     IconButton, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle,
-    Container
+    Container, Breadcrumbs, Link
 } from '@mui/material';
-import { ArrowBack, ArrowForward, Check, Close as CloseIcon } from '@mui/icons-material';
+import { ArrowBack, ArrowForward, Check, Close as CloseIcon, Home as HomeIcon } from '@mui/icons-material';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer/Footer';
 
@@ -660,6 +660,15 @@ const QuizTest = () => {
     return (
         <Box sx={{ bgcolor: "#f0f0f0", minHeight: "100vh", width:'99vw' }}>
             <Header />
+            
+            {/* Thêm Breadcrumbs */}
+            <Breadcrumbs aria-label="breadcrumb" sx={{ mb: 3, ml: 10 }}>
+                <Link underline="hover" color="inherit" href="/" display="flex" alignItems="center">
+                    <HomeIcon sx={{ mr: 0.5 }} fontSize="inherit" />
+                    Trang chủ
+                </Link>
+                <Typography color="text.primary">Bài kiểm tra loại da</Typography>
+            </Breadcrumbs>
             
             <Container maxWidth="lg" sx={{ my: 4, px: 2 }}>
                 {error && (

@@ -28,6 +28,23 @@ import paymentService from '../../apis/paymentService';
 import userService from '../../apis/userService';
 import productImageService from '../../apis/productImageService';
 
+// Thêm hàm calculateDiscountedPrice để tính giá đã giảm 15%
+const calculateDiscountedPrice = (price) => {
+  // Giảm giá 15%
+  return Math.round(price * 0.85);
+};
+
+// Cập nhật hàm tính tổng tiền với giá đã giảm
+const calculateTotalWithDiscount = () => {
+  if (!order || !order.items || !order.items.$values) return 0;
+  
+  return order.items.$values.reduce((total, item) => {
+    // Tính giá sau khi giảm 15% cho mỗi sản phẩm
+    const discountedPrice = calculateDiscountedPrice(item.price || 0);
+    return total + (discountedPrice * item.quantity);
+  }, 0);
+};
+
 const Checkout = () => {
   const [open, setOpen] = useState(false);
   const [addressDialogOpen, setAddressDialogOpen] = useState(false);
@@ -747,27 +764,42 @@ const Checkout = () => {
     }
   };
 
-  // Calculate discount amount
+  // Cập nhật hàm tính tổng tiền
+  const calculateTotalWithDiscount = () => {
+    if (!order || !order.items || !order.items.$values) return 0;
+    
+    return order.items.$values.reduce((total, item) => {
+      // Tính giá sau khi giảm 15% cho mỗi sản phẩm
+      const discountedPrice = calculateDiscountedPrice(item.price || 0);
+      return total + (discountedPrice * item.quantity);
+    }, 0);
+  };
+
+  // Cập nhật hàm calculateDiscount để tính dựa trên tổng tiền đã giảm 15%
   const calculateDiscount = () => {
     if (!order) return 0;
     
+    // Tính tổng tiền đã giảm 15%
+    const totalWithDiscount = calculateTotalWithDiscount();
+    
     if (order.voucher) {
-      return order.totalAmount * order.voucher.discountPercent / 100;
+      return totalWithDiscount * order.voucher.discountPercent / 100;
     } else if (selectedVoucher && voucherApplied) {
-      return order.totalAmount * selectedVoucher.discountPercent / 100;
+      return totalWithDiscount * selectedVoucher.discountPercent / 100;
     }
     
     return 0;
   };
 
-  // Calculate final amount
+  // Cập nhật hàm calculateFinalAmount
   const calculateFinalAmount = () => {
     if (!order) return 0;
     
     const shippingFee = 30000;
-    const discount = calculateDiscount();
+    const totalWithDiscount = calculateTotalWithDiscount();
+    const voucherDiscount = calculateDiscount();
     
-    return order.totalAmount + shippingFee - discount;
+    return totalWithDiscount + shippingFee - voucherDiscount;
   };
 
   // Thêm các hàm xử lý tăng/giảm số lượng ngay sau hàm calculateFinalAmount
@@ -1336,7 +1368,7 @@ const Checkout = () => {
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
                 <Typography>Tạm tính:</Typography>
                 <Typography sx={{ color: '#ff6b6b', fontWeight: 'bold' }}>
-                  {order.totalAmount?.toLocaleString()} ₫
+                  {calculateTotalWithDiscount().toLocaleString()} ₫
                 </Typography>
               </Box>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
@@ -1435,9 +1467,19 @@ const Checkout = () => {
               {/* Price & Quantity với nút tăng/giảm */}
               <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', ml: 2 }}>
                 {/* Giá sản phẩm */}
-                <Typography sx={{ fontWeight: 'bold', color: '#ff6b6b', mb: 1 }}>
-                  {item?.price?.toLocaleString()} ₫
+                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', mb: 1 }}>
+                  <Typography sx={{ fontWeight: 'bold', color: '#ff6b6b' }}>
+                    {calculateDiscountedPrice(item?.price || 0).toLocaleString()} ₫
                 </Typography>
+                  {/* Hiển thị giá gốc */}
+                  <Typography sx={{ 
+                    textDecoration: 'line-through', 
+                    color: 'text.secondary',
+                    fontSize: '0.85rem'
+                  }}>
+                    {item?.price?.toLocaleString()} ₫
+                  </Typography>
+                </Box>
                 
                 {/* Nút tăng/giảm số lượng */}
                 <Box 
