@@ -44,8 +44,14 @@ const ViewSupport = () => {
       if (response && response.$values) {
         const formattedData = response.$values.map(request => ({
           ...request,
-          messages: request.messages.$values
+          messages: request.messages.$values,
+          timestamp: request.messages && request.messages.$values && request.messages.$values.length > 0 
+                    ? new Date(request.messages.$values[0].sendTime).getTime()
+                    : 0
         }));
+
+        formattedData.sort((a, b) => b.timestamp - a.timestamp);
+        
         setSupportRequests(formattedData);
       } else {
         setSupportRequests([]);

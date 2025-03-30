@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
-import { FaFilter, FaFileExport, FaPlus } from 'react-icons/fa';
-import { Box, Dialog, DialogTitle, DialogContent, DialogActions, Button, Select, MenuItem, Pagination, CircularProgress } from '@mui/material';
+import { FaFilter, FaFileExport, FaPlus, FaReply } from 'react-icons/fa';
+import { Box, Dialog, DialogTitle, DialogContent, DialogActions, Button, Select, MenuItem, Pagination, CircularProgress, TextField, Snackbar, Alert } from '@mui/material';
 import './Manager.css';
 import { useNavigate } from 'react-router-dom';
 import reviewService from '../../apis/reviewService';
@@ -24,6 +24,19 @@ const FeedbackStaff = () => {
   // Phân trang
   const [page, setPage] = useState(1);
   const pageSize = 10;
+
+  // State cho chức năng phản hồi
+  const [openReplyDialog, setOpenReplyDialog] = useState(false);
+  const [selectedReview, setSelectedReview] = useState(null);
+  const [replyContent, setReplyContent] = useState('');
+  const [replyLoading, setReplyLoading] = useState(false);
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: '',
+    severity: 'success'
+  });
+
+  const [selectedResponseStatus, setSelectedResponseStatus] = useState('');
 
   const sidebarItems = [
     { id: 'orderStaff', name: 'Đơn hàng', icon: '📋' },
@@ -50,7 +63,8 @@ const FeedbackStaff = () => {
         productId: review.productId,
         rating: review.rating,
         reviewComment: review.reviewComment,
-        reviewDate: new Date(review.reviewDate).toLocaleDateString('vi-VN')
+        reviewDate: new Date(review.reviewDate).toLocaleDateString('vi-VN'),
+        staffResponse: review.staffResponse || ''
       }));
       
       setReviews(processedReviews);
@@ -127,6 +141,20 @@ const FeedbackStaff = () => {
     fetchReviews();
   }, []);
 
+  // Sử dụng useMemo để tính toán đánh giá hiển thị theo phân trang
+  const displayedReviews = useMemo(() => {
+    // Phân trang ở client
+    const startIndex = (page - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    
+    return reviews.slice(startIndex, endIndex);
+  }, [reviews, page, pageSize]);
+
+  // Xử lý thay đổi trang
+  const handlePageChange = (event, newPage) => {
+    setPage(newPage);
+  };
+
   // Sửa lại useEffect xử lý tìm kiếm
   useEffect(() => {
     if (!searchTerm.trim()) {
@@ -152,31 +180,19 @@ const FeedbackStaff = () => {
     setFilteredCount(filteredReviews.length !== originalReviews.length ? filteredReviews.length : 0);
   }, [searchTerm, originalReviews, userNames, productNames]);
 
-  // Sử dụng useMemo để tính toán đánh giá hiển thị theo phân trang
-  const displayedReviews = useMemo(() => {
-    // Phân trang ở client
-    const startIndex = (page - 1) * pageSize;
-    const endIndex = startIndex + pageSize;
-    
-    return reviews.slice(startIndex, endIndex);
-  }, [reviews, page, pageSize]);
-
-  // Xử lý thay đổi trang
-  const handlePageChange = (event, newPage) => {
-    setPage(newPage);
-  };
-
   // Xử lý lọc
   const handleFilterClick = () => {
     setSelectedRating('');
+    setSelectedResponseStatus('');
     setOpenFilterDialog(true);
   };
 
   const handleFilterApply = () => {
     console.log('Selected Rating:', selectedRating);
+    console.log('Selected Response Status:', selectedResponseStatus);
     
     // Nếu không có bộ lọc nào được chọn, reset về danh sách gốc
-    if (!selectedRating) {
+    if (!selectedRating && !selectedResponseStatus) {
       setReviews(originalReviews);
       setFilteredCount(0);
       setOpenFilterDialog(false);
@@ -184,7 +200,18 @@ const FeedbackStaff = () => {
     }
     
     const filtered = originalReviews.filter(review => {
-      return selectedRating ? review.rating === parseInt(selectedRating) : true;
+      // Lọc theo rating nếu có chọn
+      const ratingMatch = selectedRating ? review.rating === parseInt(selectedRating) : true;
+      
+      // Lọc theo trạng thái phản hồi nếu có chọn
+      let responseMatch = true;
+      if (selectedResponseStatus === 'replied') {
+        responseMatch = Boolean(review.staffResponse);
+      } else if (selectedResponseStatus === 'notReplied') {
+        responseMatch = !Boolean(review.staffResponse);
+      }
+      
+      return ratingMatch && responseMatch;
     });
 
     console.log('Filtered Reviews:', filtered);
@@ -199,6 +226,10 @@ const FeedbackStaff = () => {
     setSelectedRating(event.target.value);
   };
 
+  const handleResponseStatusChange = (event) => {
+    setSelectedResponseStatus(event.target.value);
+  };
+
   const handleClear = () => {
     setSearchTerm('');
     setReviews(originalReviews);
@@ -211,11 +242,69 @@ const FeedbackStaff = () => {
     setReviews(originalReviews);
     setFilteredCount(0);
     setSelectedRating('');
+    setSelectedResponseStatus('');
     setSearchTerm('');
   };
 
   // Tạo danh sách rating cho bộ lọc
   const ratingOptions = [1, 2, 3, 4, 5];
+
+  // Thêm các hàm xử lý phản hồi
+  const handleOpenReplyDialog = (review) => {
+    setSelectedReview(review);
+    setReplyContent(review.staffResponse || ''); // Sử dụng phản hồi hiện tại nếu có
+    setOpenReplyDialog(true);
+  };
+
+  const handleCloseReplyDialog = () => {
+    setOpenReplyDialog(false);
+    setSelectedReview(null);
+    setReplyContent('');
+  };
+
+  const handleReplyContentChange = (e) => {
+    setReplyContent(e.target.value);
+  };
+
+  const handleSubmitReply = async () => {
+    if (!selectedReview || !replyContent.trim()) return;
+    
+    setReplyLoading(true);
+    try {
+      await reviewService.postReply(selectedReview.reviewId, replyContent);
+      
+      // Cập nhật state reviews và originalReviews
+      const updatedReviews = reviews.map(review => 
+        review.reviewId === selectedReview.reviewId 
+          ? { ...review, staffResponse: replyContent } 
+          : review
+      );
+      
+      setReviews(updatedReviews);
+      setOriginalReviews(updatedReviews);
+      
+      setSnackbar({
+        open: true,
+        message: 'Phản hồi đã được gửi thành công!',
+        severity: 'success'
+      });
+      
+      handleCloseReplyDialog();
+    } catch (error) {
+      console.error('Lỗi khi gửi phản hồi:', error);
+      setSnackbar({
+        open: true,
+        message: 'Có lỗi xảy ra khi gửi phản hồi. Vui lòng thử lại!',
+        severity: 'error'
+      });
+    } finally {
+      setReplyLoading(false);
+    }
+  };
+
+  const handleCloseSnackbar = () => {
+    setSnackbar(prev => ({ ...prev, open: false }));
+  };
 
   return (
     <Box sx={{ bgcolor: "#f0f0f0", minHeight: "100vh", width:'99vw' }}>
@@ -305,18 +394,67 @@ const FeedbackStaff = () => {
                 Tìm thấy: {reviews.length} đánh giá
               </div>
             )}
-            <button className="btn-filter" onClick={handleFilterClick}>
+            
+            {/* Thêm thông tin thống kê */}
+            <div style={{ color: '#666', fontSize: '14px', alignSelf: 'center', marginRight: '15px' }}>
+              {originalReviews.length > 0 && (
+                <>
+                  <span style={{ color: '#28a745', fontWeight: 'bold' }}>
+                    {originalReviews.filter(r => Boolean(r.staffResponse)).length}
+                  </span> đã phản hồi / 
+                  <span style={{ color: '#dc3545', fontWeight: 'bold' }}>
+                    {originalReviews.filter(r => !Boolean(r.staffResponse)).length}
+                  </span> chưa phản hồi
+                </>
+              )}
+            </div>
+            
+            <button 
+              className="btn-filter" 
+              onClick={handleFilterClick}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+                padding: '8px 15px',
+                backgroundColor: '#007bff',
+                color: 'white',
+                border: 'none',
+                borderRadius: '5px',
+                cursor: 'pointer',
+                fontWeight: 'bold',
+                position: 'relative'
+              }}
+            >
               <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                 <FaFilter /> 
                 <span>Lọc</span>
-                {filteredCount > 0 && <span className="notification">{filteredCount}</span>}
+                {filteredCount > 0 && (
+                  <span style={{
+                    position: 'absolute',
+                    top: '-8px',
+                    right: '-8px',
+                    backgroundColor: '#dc3545',
+                    color: 'white',
+                    borderRadius: '50%',
+                    width: '20px',
+                    height: '20px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '12px',
+                    fontWeight: 'bold'
+                  }}>
+                    {filteredCount}
+                  </span>
+                )}
               </div>
             </button>
             {filteredCount > 0 && (
               <button
                 onClick={handleClearFilters}
                 style={{
-                  padding: '10px 20px',
+                  padding: '8px 15px',
                   backgroundColor: '#6c757d',
                   color: 'white',
                   border: 'none',
@@ -349,8 +487,9 @@ const FeedbackStaff = () => {
                 <th style={{ width: '120px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>TÊN NGƯỜI DÙNG</th>
                 <th style={{ width: '200px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>TÊN SẢN PHẨM</th>                              
                 <th style={{ width: '80px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>ĐÁNH GIÁ</th>
-                <th style={{ width: '300px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>NỘI DUNG</th>
-                <th style={{ width: '120px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>NGÀY ĐÁNH GIÁ</th>               
+                <th style={{ width: '200px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>NỘI DUNG</th>
+                <th style={{ width: '120px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>NGÀY ĐÁNH GIÁ</th>
+                <th style={{ width: '180px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>PHẢN HỒI</th>               
                 <th style={{ width: '120px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>THAO TÁC</th>
               </tr>
             </thead>
@@ -358,7 +497,7 @@ const FeedbackStaff = () => {
               {loading ? (
                 <tr>
                   <td 
-                    colSpan="7" 
+                    colSpan="8" 
                     style={{ 
                       padding: '30px', 
                       textAlign: 'center', 
@@ -377,7 +516,7 @@ const FeedbackStaff = () => {
               ) : error ? (
                 <tr>
                   <td 
-                    colSpan="7" 
+                    colSpan="8" 
                     style={{ 
                       padding: '30px', 
                       textAlign: 'center', 
@@ -410,29 +549,69 @@ const FeedbackStaff = () => {
                     </td>
                     <td style={{ overflow: 'auto', maxHeight: '100px', padding: '8px', borderBottom: '1px solid #dee2e6', fontSize: '14px', textAlign: 'left' }}>{review.reviewComment}</td>
                     <td style={{ overflow: 'auto', maxHeight: '100px', padding: '8px', borderBottom: '1px solid #dee2e6', fontSize: '14px', textAlign: 'center' }}>{review.reviewDate}</td>
+                    <td style={{ overflow: 'auto', maxHeight: '100px', padding: '8px', borderBottom: '1px solid #dee2e6', fontSize: '14px', textAlign: 'left' }}>
+                      {review.staffResponse ? (
+                        <div style={{ 
+                          padding: '8px', 
+                          backgroundColor: '#f0f8ff', 
+                          borderRadius: '5px', 
+                          border: '1px solid #cce5ff',
+                          fontSize: '13px'
+                        }}>
+                          {review.staffResponse}
+                        </div>
+                      ) : (
+                        <span style={{ color: '#6c757d', fontStyle: 'italic', fontSize: '13px' }}>
+                          Chưa có phản hồi
+                        </span>
+                      )}
+                    </td>
                     <td style={{ whiteSpace: 'nowrap', overflow: 'auto', maxHeight: '100px', padding: '8px', borderBottom: '1px solid #dee2e6', textAlign: 'center' }}>
-                      <button
-                        onClick={() => navigate(`/product/${review.productId}`)}
-                        style={{
-                          padding: '5px 10px',
-                          backgroundColor: '#007bff',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '3px',
-                          cursor: 'pointer',
-                          transition: 'background-color 0.2s',
-                          ':hover': { backgroundColor: '#0069d9' }
-                        }}
-                      >
-                        Chi tiết
-                      </button>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                        <button
+                          onClick={() => navigate(`/product/${review.productId}`)}
+                          style={{
+                            padding: '5px 10px',
+                            backgroundColor: '#007bff',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '3px',
+                            cursor: 'pointer',
+                            transition: 'background-color 0.2s',
+                            fontSize: '13px',
+                            ':hover': { backgroundColor: '#0069d9' }
+                          }}
+                        >
+                          Chi tiết
+                        </button>
+                        <button
+                          onClick={() => handleOpenReplyDialog(review)}
+                          style={{
+                            padding: '5px 10px',
+                            backgroundColor: review.staffResponse ? '#28a745' : '#6c757d',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '3px',
+                            cursor: 'pointer',
+                            transition: 'background-color 0.2s',
+                            fontSize: '13px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '4px'
+                          }}
+                        >
+                          <FaReply size={12} />
+                          {review.staffResponse ? 'Sửa' : 'Phản hồi'}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
               ) : (
                 <tr>
                   <td 
-                    colSpan="7" 
+                    colSpan="8" 
                     className="empty-data-message"
                     style={{ 
                       padding: '30px', 
@@ -459,34 +638,241 @@ const FeedbackStaff = () => {
               onChange={handlePageChange}
               color="primary"
               size="large"
+              showFirstButton
+              showLastButton
             />
           </div>
         </div>
       </div>
     </div>
-    <Dialog open={openFilterDialog} onClose={() => setOpenFilterDialog(false)}>
-      <DialogTitle>Lọc đánh giá</DialogTitle>
-      <DialogContent>
-        <Select
-          value={selectedRating}
-          onChange={handleRatingChange}
-          displayEmpty
-          fullWidth
-          style={{ marginBottom: '10px', marginTop: '10px' }}
-        >
-          <MenuItem value=""><em>Số sao đánh giá</em></MenuItem>
-          {ratingOptions.map((rating) => (
-            <MenuItem key={rating} value={rating.toString()}>
-              {rating} {rating === 1 ? 'sao' : 'sao'}
-            </MenuItem>
-          ))}
-        </Select>
+    <Dialog 
+      open={openFilterDialog} 
+      onClose={() => setOpenFilterDialog(false)}
+      PaperProps={{ 
+        style: { 
+          borderRadius: '8px',
+          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)'
+        } 
+      }}
+    >
+      <DialogTitle style={{ backgroundColor: '#f8f9fa', borderBottom: '1px solid #eee', padding: '16px 24px' }}>
+        <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#333' }}>Lọc đánh giá</div>
+      </DialogTitle>
+      <DialogContent style={{ padding: '24px' }}>
+        <div style={{ marginBottom: '20px' }}>
+          <div style={{ fontSize: '14px', color: '#555', marginBottom: '8px' }}>Số sao đánh giá:</div>
+          <Select
+            value={selectedRating}
+            onChange={handleRatingChange}
+            displayEmpty
+            fullWidth
+            style={{ 
+              borderRadius: '4px',
+              backgroundColor: '#fff',
+              '& .MuiOutlinedInput-notchedOutline': {
+                borderColor: '#ddd'
+              }
+            }}
+          >
+            <MenuItem value=""><em>Tất cả</em></MenuItem>
+            {ratingOptions.map((rating) => (
+              <MenuItem key={rating} value={rating.toString()}>
+                {[...Array(rating)].map((_, i) => (
+                  <span key={i} style={{ color: '#ffc107' }}>★</span>
+                ))}
+                {[...Array(5-rating)].map((_, i) => (
+                  <span key={i} style={{ color: '#e4e5e9' }}>★</span>
+                ))}
+              </MenuItem>
+            ))}
+          </Select>
+        </div>
+        
+        <div>
+          <div style={{ fontSize: '14px', color: '#555', marginBottom: '8px' }}>Trạng thái phản hồi:</div>
+          <Select
+            value={selectedResponseStatus}
+            onChange={handleResponseStatusChange}
+            displayEmpty
+            fullWidth
+            style={{ 
+              borderRadius: '4px',
+              backgroundColor: '#fff',
+              '& .MuiOutlinedInput-notchedOutline': {
+                borderColor: '#ddd'
+              } 
+            }}
+          >
+            <MenuItem value=""><em>Tất cả</em></MenuItem>
+            <MenuItem value="replied" style={{ color: '#28a745' }}>✓ Đã phản hồi</MenuItem>
+            <MenuItem value="notReplied" style={{ color: '#dc3545' }}>✗ Chưa phản hồi</MenuItem>
+          </Select>
+        </div>
       </DialogContent>
-      <DialogActions>
-        <Button onClick={() => setOpenFilterDialog(false)}>Hủy</Button>
-        <Button onClick={handleFilterApply} color="primary">Áp dụng</Button>
+      <DialogActions style={{ padding: '16px 24px', borderTop: '1px solid #eee' }}>
+        <Button 
+          onClick={() => setOpenFilterDialog(false)} 
+          style={{ 
+            color: '#6c757d',
+            textTransform: 'none',
+            fontWeight: 'bold'
+          }}
+        >
+          Hủy
+        </Button>
+        <Button 
+          onClick={handleFilterApply} 
+          color="primary" 
+          variant="contained"
+          style={{ 
+            backgroundColor: '#007bff',
+            textTransform: 'none',
+            fontWeight: 'bold',
+            borderRadius: '4px',
+            boxShadow: 'none'
+          }}
+        >
+          Áp dụng
+        </Button>
       </DialogActions>
     </Dialog>
+
+    {/* Dialog phản hồi đánh giá */}
+    <Dialog 
+      open={openReplyDialog} 
+      onClose={handleCloseReplyDialog}
+      fullWidth
+      maxWidth="sm"
+      PaperProps={{ 
+        style: { 
+          borderRadius: '8px',
+          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)'
+        } 
+      }}
+    >
+      <DialogTitle style={{ backgroundColor: '#f8f9fa', borderBottom: '1px solid #eee', padding: '16px 24px' }}>
+        <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#333' }}>
+          {selectedReview?.staffResponse ? 'Chỉnh sửa phản hồi' : 'Thêm phản hồi'}
+        </div>
+      </DialogTitle>
+      <DialogContent style={{ padding: '24px' }}>
+        {selectedReview && (
+          <>
+            <Box sx={{ 
+              mb: 3, 
+              p: 2, 
+              bgcolor: '#f8f9fa', 
+              borderRadius: 1,
+              border: '1px solid #eee'
+            }}>
+              <div style={{ fontSize: '14px', color: '#666', marginBottom: '10px' }}>
+                <strong>Đánh giá từ:</strong> {userNames[selectedReview.userId] || 'Khách hàng'}
+              </div>
+              
+              <div style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
+                <strong style={{ fontSize: '14px', color: '#666', marginRight: '5px' }}>Đánh giá:</strong>
+                {[...Array(5)].map((_, i) => (
+                  <span key={i} style={{ color: i < selectedReview.rating ? '#ffc107' : '#e4e5e9', fontSize: '16px' }}>★</span>
+                ))}
+              </div>
+              
+              <div style={{ fontSize: '14px', color: '#666', marginBottom: '10px' }}>
+                <strong>Sản phẩm:</strong> {productNames[selectedReview.productId] || 'Sản phẩm'}
+              </div>
+              
+              <div style={{ fontSize: '14px', color: '#666', marginBottom: '8px' }}>
+                <strong>Nội dung đánh giá:</strong>
+              </div>
+              
+              <div style={{ 
+                padding: '12px', 
+                backgroundColor: 'white', 
+                borderRadius: '4px', 
+                border: '1px solid #ddd', 
+                fontSize: '14px',
+                color: '#333'
+              }}>
+                {selectedReview.reviewComment}
+              </div>
+            </Box>
+            
+            <TextField
+              label="Phản hồi của bạn"
+              multiline
+              rows={4}
+              fullWidth
+              value={replyContent}
+              onChange={handleReplyContentChange}
+              variant="outlined"
+              placeholder="Nhập phản hồi của bạn tại đây..."
+              InputProps={{
+                style: { fontSize: '14px' }
+              }}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  '& fieldset': {
+                    borderColor: '#ddd',
+                  },
+                  '&:hover fieldset': {
+                    borderColor: '#aaa',
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: '#007bff',
+                  },
+                },
+              }}
+            />
+          </>
+        )}
+      </DialogContent>
+      <DialogActions style={{ padding: '16px 24px', borderTop: '1px solid #eee' }}>
+        <Button 
+          onClick={handleCloseReplyDialog}
+          style={{ 
+            color: '#6c757d',
+            textTransform: 'none',
+            fontWeight: 'bold'
+          }}
+        >
+          Hủy
+        </Button>
+        <Button 
+          onClick={handleSubmitReply} 
+          color="primary" 
+          variant="contained"
+          disabled={replyLoading || !replyContent.trim()}
+          style={{ 
+            backgroundColor: !replyLoading && replyContent.trim() ? '#007bff' : undefined,
+            textTransform: 'none',
+            fontWeight: 'bold',
+            borderRadius: '4px',
+            boxShadow: 'none'
+          }}
+        >
+          {replyLoading ? 'Đang gửi...' : (selectedReview?.staffResponse ? 'Cập nhật' : 'Gửi phản hồi')}
+        </Button>
+      </DialogActions>
+    </Dialog>
+    
+    {/* Snackbar thông báo */}
+    <Snackbar 
+      open={snackbar.open} 
+      autoHideDuration={6000} 
+      onClose={handleCloseSnackbar}
+      anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+    >
+      <Alert 
+        onClose={handleCloseSnackbar} 
+        severity={snackbar.severity}
+        variant="filled"
+        style={{
+          borderRadius: '4px',
+          boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
+        }}
+      >
+        {snackbar.message}
+      </Alert>
+    </Snackbar>
     </Box>
   );
 };

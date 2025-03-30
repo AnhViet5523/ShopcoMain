@@ -24,13 +24,32 @@ const orderService = {
     },
     getCurrentCart: async (userId) => {
         try {
+            console.log(`Đang lấy giỏ hàng hiện tại cho người dùng ID: ${userId}`);
             const response = await axiosClient.get(`/api/Orders/current/${userId}`);
+            console.log('Phản hồi giỏ hàng hiện tại:', response);
+            
+            // Kiểm tra cấu trúc phản hồi
+            if (!response) {
+                console.warn('Không nhận được phản hồi từ API giỏ hàng');
+                return { items: { $values: [] } };
+            }
+            
+            // Chuẩn hóa dữ liệu
+            if (!response.items) {
+                console.warn('Phản hồi không có trường items');
+                response.items = { $values: [] };
+            } else if (!response.items.$values) {
+                console.warn('Phản hồi có trường items nhưng không có $values');
+                response.items.$values = [];
+            }
+            
             return response;
         } catch (error) {
-            console.error('Error:', error);
-            throw error;
+            console.error('Lỗi khi lấy giỏ hàng hiện tại:', error);
+            console.error('Chi tiết lỗi:', error.response?.data || error.message);
+            // Trả về đối tượng giỏ hàng trống để tránh lỗi
+            return { items: { $values: [] } };
         }
-        
     },
     countBoughtProducts: async (productId) => {
         try {
