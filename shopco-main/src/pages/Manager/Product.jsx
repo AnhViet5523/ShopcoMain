@@ -116,6 +116,8 @@ const Product = () => {
   const [previewImages, setPreviewImages] = useState([]);
   const [mainImageIndex, setMainImageIndex] = useState(0);
 
+  const [previewUrl, setPreviewUrl] = useState(null); // Thêm state để lưu URL xem trước của ảnh
+
   const sidebarItems = [
     { id: 'revenue', name: 'Doanh thu', icon: '📊' },
     { id: 'staff', name: 'Nhân viên', icon: '👤' },
@@ -1237,7 +1239,15 @@ const Product = () => {
   // Hàm xử lý khi chọn file ảnh mới
   const handleImageFileChange = (event) => {
     if (event.target.files && event.target.files[0]) {
-      setNewImageFile(event.target.files[0]);
+      const file = event.target.files[0];
+      setNewImageFile(file);
+      
+      // Tạo URL xem trước cho ảnh được chọn
+      const fileUrl = URL.createObjectURL(file);
+      setPreviewUrl(fileUrl);
+      
+      // Khi người dùng chọn file ảnh mới, đánh dấu là có thay đổi để nút Lưu được kích hoạt
+      setReorderChanged(true);
     }
   };
 
@@ -1279,6 +1289,12 @@ const Product = () => {
         images: productDetail.images || []
       });
 
+      // Xóa URL xem trước khi đã cập nhật ảnh thành công
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+        setPreviewUrl(null);
+      }
+      
       setNewImageFile(null);
       setSelectedImage(null);
     } catch (error) {
@@ -1457,37 +1473,13 @@ const Product = () => {
       setOpenEditImageDialog(false);
       setOpenImageGallery(false);
       
-      // Đợi một chút để đảm bảo server đã xử lý xong
-      setTimeout(async () => {
-        try {
-          // Cập nhật lại thông tin sản phẩm
-          const productDetail = await productService.getProductById(selectedProduct.ProductID);
-          
-          // Xử lý hình ảnh sản phẩm
-          let images = [];
-          if (productDetail.images && productDetail.images.length > 0) {
-            images = productDetail.images;
-          } else if (productDetail.imgURL) {
-            images = [{ imgUrl: productDetail.imgURL }];
-          } else if (selectedProduct.ImgURL) {
-            images = [{ imgUrl: selectedProduct.ImgURL }];
-          } else {
-            images = [{ imgUrl: '/images/default-product.jpg' }];
-          }
-          
-          // Cập nhật state
-          setProductImages(images);
-          setSelectedProduct({
-            ...selectedProduct,
-            ImgURL: productDetail.imgURL || productDetail.ImgURL,
-            images: images
-          });
-          
-          setNewImageFile(null);
-        } catch (error) {
-          console.error('Lỗi khi tải lại thông tin sản phẩm:', error);
-        }
-      }, 1000);
+      // Xóa URL xem trước khi đã thêm ảnh thành công
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+        setPreviewUrl(null);
+      }
+      
+      setNewImageFile(null);
     } catch (error) {
       console.error('Lỗi khi thêm ảnh:', error);
       alert(`Không thể thêm ảnh: ${error.message || 'Lỗi không xác định'}`);
@@ -3201,47 +3193,6 @@ const Product = () => {
                 </div>
               ) : (
                 <>
-                  {/* Phần thêm ảnh mới */}
-                  <div style={{ 
-                    marginBottom: '20px', 
-                    padding: '16px', 
-                    border: '1px dashed #ccc', 
-                    borderRadius: '4px',
-                    opacity: reorderedImages.length >= 5 ? 0.6 : 1
-                  }}>
-                    <div style={{ fontWeight: 'bold', marginBottom: '10px' }}>
-                      Thêm ảnh mới {reorderedImages.length >= 5 && "(Đã đạt giới hạn 5 ảnh)"}
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <Button
-                        variant="outlined"
-                        component="label"
-                        disabled={reorderedImages.length >= 5}
-                      >
-                        Chọn ảnh
-                        <input
-                          type="file"
-                          hidden
-                          accept="image/*"
-                          onChange={handleImageFileChange}
-                          onClick={() => setSelectedImage(null)}
-                          disabled={reorderedImages.length >= 5}
-                        />
-                      </Button>
-                      <span style={{ flex: 1 }}>
-                        {newImageFile ? newImageFile.name : 'Chưa chọn file nào'}
-                      </span>
-                      <Button
-                        variant="contained"
-                        color="primary"
-                        onClick={handleAddNewImage}
-                        disabled={!newImageFile || selectedImage !== null || reorderedImages.length >= 5}
-                      >
-                        Thêm ảnh
-                      </Button>
-                    </div>
-                  </div>
-
                   {/* Hiển thị danh sách ảnh để sửa - Bố cục mới */}
                   <div style={{ fontWeight: 'bold', marginBottom: '10px' }}>Danh sách ảnh ({reorderedImages.length}/5)</div>
                   
@@ -3432,6 +3383,37 @@ const Product = () => {
                                             {newImageFile ? newImageFile.name : 'Chưa chọn file nào'}
                                           </Typography>
                                         </Box>
+                                        
+                                        {/* Hiển thị xem trước ảnh nếu có */}
+                                        {previewUrl && (
+                                          <Box 
+                                            sx={{ 
+                                              mt: 2,
+                                              display: 'flex',
+                                              justifyContent: 'center',
+                                              flexDirection: 'column',
+                                              alignItems: 'center',
+                                            }}
+                                          >
+                                            <Typography variant="caption" gutterBottom>
+                                              Xem trước ảnh:
+                                            </Typography>
+                                            <Box 
+                                              component="img"
+                                              src={previewUrl}
+                                              alt="Xem trước"
+                                              sx={{
+                                                maxWidth: '100%', 
+                                                maxHeight: '150px',
+                                                objectFit: 'contain',
+                                                border: '1px solid #ddd',
+                                                borderRadius: '4px',
+                                                p: 1
+                                              }}
+                                            />
+                                          </Box>
+                                        )}
+                                        
                                         {newImageFile && (
                                           <Box 
                                             sx={{ 
@@ -3460,15 +3442,7 @@ const Product = () => {
                                         >
                                           {selectedImageObj.isMainImage ? 'Ảnh đại diện' : 'Đặt làm ảnh đại diện'}
                                         </Button>
-                                        <Button
-                                          variant="contained"
-                                          color="error"
-                                          size="small"
-                                          onClick={() => handleDeleteImage(selectedImage)}
-                                          fullWidth
-                                        >
-                                          Xóa ảnh này
-                                        </Button>
+                                        
                                       </Box>
                                     </Box>
                                   </Box>
@@ -3542,7 +3516,7 @@ const Product = () => {
                 onClick={handleReorderImages} 
                 color="primary" 
                 variant="contained"
-                disabled={uploadingImage || !reorderChanged}
+                disabled={uploadingImage || (!reorderChanged && !newImageFile)}
               >
                 Lưu thay đổi
               </Button>
