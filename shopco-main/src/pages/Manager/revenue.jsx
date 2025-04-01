@@ -32,6 +32,11 @@ ChartJS.register(
 const API_URL = import.meta.env.VITE_API_URL || 'https://localhost:7175';
 console.log('API URL sử dụng trong trang Revenue:', API_URL);
 
+const months = [
+  'Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6',
+  'Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12'
+];
+
 const Revenue = () => {
   const [activeItem, setActiveItem] = useState('revenue');
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -42,6 +47,8 @@ const Revenue = () => {
   const [totalOrders, setTotalOrders] = useState(0);
   const [monthlyData, setMonthlyData] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [hasChartData, setHasChartData] = useState(false);
   const navigate = useNavigate();
 
   const sidebarItems = [
@@ -52,7 +59,7 @@ const Revenue = () => {
     { id: 'viewCustomer', name: 'Hồ sơ khách hàng', icon: '📝' },
     { id: 'viewSupport', name: 'Đơn hỗ trợ', icon: '📫' },
     { id: 'voucher', name: 'Vouchers', icon: '🎫' },
-    { id: 'feedback', name: 'Feedback', icon: '📢' },
+    { id: 'feedback', name: 'Đánh giá sản phẩm', icon: '📢' },
     { id: 'blogManager', name: 'Blog', icon: '📰' }
   ];
 
@@ -61,145 +68,69 @@ const Revenue = () => {
   }, [selectedYear, monthDisplay]);
 
   const fetchRevenueData = async () => {
-    setIsLoading(true);
     try {
-      // Gọi API lấy tổng doanh thu
-      console.log('Đang gọi API tổng doanh thu...');
-      console.log('API URL tổng doanh thu:', `${API_URL}/api/Admin/revenue/total`);
-      try {
-        const totalRevenue = await adminService.getTotalRevenue();
-        console.log('Dữ liệu tổng doanh thu:', totalRevenue);
-        setTotalRevenue(totalRevenue || 0);
-      } catch (revenueError) {
-        console.error('Lỗi khi lấy tổng doanh thu:', revenueError);
-        setTotalRevenue(0);
+      setIsLoading(true);
+      
+      // Lấy dữ liệu từ API summary
+      const payments = await adminService.getPaymentSummary();
+      console.log('Raw API Response:', payments);
+
+      // Đảm bảo payments là một mảng
+      if (!Array.isArray(payments)) {
+        console.error('Dữ liệu không phải là mảng:', payments);
+        setError('Định dạng dữ liệu không hợp lệ');
+        return;
       }
 
-      // Gọi API lấy tất cả đơn hàng
-      console.log('Đang gọi API lấy tất cả đơn hàng...');
-      console.log('API URL tất cả đơn hàng:', `${API_URL}/api/Admin/all`);
-      try {
-        const orders = await adminService.getAllOrders();
-        console.log('Dữ liệu đơn hàng nhận được:', orders);
-        
-        // Đảm bảo orders là một mảng trước khi filter
-        const ordersArray = Array.isArray(orders) ? orders : [];
-        console.log('Độ dài mảng orders:', ordersArray.length);
-        
-        // Lọc đơn hàng trong năm được chọn
-        const ordersInSelectedYear = ordersArray.filter(order => {
-          if (!order || !order.orderDate) return false;
-          const orderDate = new Date(order.orderDate);
-          return orderDate.getFullYear() === selectedYear;
-        });
-        console.log(`Số đơn hàng trong năm ${selectedYear}:`, ordersInSelectedYear.length);
-        
-        // Đếm tổng số đơn hàng hoàn thành
-        const completedOrders = ordersInSelectedYear.filter(order => 
-          order.orderStatus === "Completed"
-        );
-        console.log('Số đơn hàng hoàn thành:', completedOrders.length);
-        setTotalOrders(completedOrders.length);
-        
-        // Tính tổng số khách hàng duy nhất
-        const uniqueCustomers = [...new Set(ordersInSelectedYear.map(order => order.userId))];
-        console.log('Số khách hàng duy nhất:', uniqueCustomers.length);
-        setTotalCustomers(uniqueCustomers.length);
-        
-        // Tạo dữ liệu theo tháng
-        const monthlyDataTemp = [];
-        let totalRevenueInYear = 0;
-        
-        // Đếm số tháng có dữ liệu thực tế
-        let monthsWithData = 0;
-        
-        for (let month = 1; month <= 12; month++) {
-          try {
-            // Gọi API lấy doanh thu theo tháng
-            console.log(`Đang gọi API doanh thu tháng ${month}/${selectedYear}...`);
-            console.log('API URL doanh thu theo tháng:', `${API_URL}/api/Admin/revenue/monthly?year=${selectedYear}&month=${month}`);
-            const monthlyRevenue = await adminService.getMonthlyRevenue(selectedYear, month);
-            console.log(`Doanh thu tháng ${month}/${selectedYear}:`, monthlyRevenue);
-            
-            // Chỉ cộng vào tổng và đếm số tháng nếu có doanh thu thực tế
-            if (monthlyRevenue > 0) {
-              totalRevenueInYear += monthlyRevenue;
-              monthsWithData++;
-            }
-            
-            // Lọc số đơn hàng và khách hàng trong tháng
-            const ordersInMonth = ordersInSelectedYear.filter(order => {
-              if (!order || !order.orderDate) return false;
-              const orderDate = new Date(order.orderDate);
-              return orderDate.getMonth() + 1 === month;
-            });
-            
-            const customersInMonth = [...new Set(ordersInMonth.map(order => order.userId))].length;
-            
-            monthlyDataTemp.push({
-              month: month,
-              monthName: `Tháng ${month}`,
-              revenue: monthlyRevenue || 0,
-              orders: ordersInMonth.length,
-              customers: customersInMonth,
-              averagePerCustomer: customersInMonth > 0 ? Math.round((monthlyRevenue || 0) / customersInMonth) : 0
-            });
-          } catch (monthError) {
-            console.error(`Lỗi khi lấy dữ liệu tháng ${month}:`, monthError);
-            monthlyDataTemp.push({
-              month: month,
-              monthName: `Tháng ${month}`,
-              revenue: 0,
-              orders: 0,
-              customers: 0,
-              averagePerCustomer: 0
-            });
-          }
-        }
-        
-        console.log('Dữ liệu hàng tháng đã tạo:', monthlyDataTemp);
-        setMonthlyData(monthlyDataTemp);
-        
-        // Tính doanh thu trung bình theo tháng (chỉ tính các tháng có dữ liệu)
-        if (monthsWithData > 0) {
-          setAverageMonthlyRevenue(Math.round(totalRevenueInYear / monthsWithData));
-        } else {
-          setAverageMonthlyRevenue(0);
-        }
-      } catch (ordersError) {
-        console.error('Lỗi khi lấy dữ liệu đơn hàng:', ordersError);
-        // Tạo dữ liệu trống nếu không lấy được đơn hàng
-        const emptyMonthlyData = Array.from({length: 12}, (_, i) => ({
-          month: i + 1,
-          monthName: `Tháng ${i + 1}`,
-          revenue: 0,
-          orders: 0,
-          customers: 0,
-          averagePerCustomer: 0
-        }));
-        setMonthlyData(emptyMonthlyData);
-        setTotalOrders(0);
-        setTotalCustomers(0);
-        setAverageMonthlyRevenue(0);
-      }
+      // Khởi tạo mảng dữ liệu theo tháng
+      const monthlyData = Array(12).fill(0);
+      let totalAmount = 0;
       
-      setIsLoading(false);
+      // Xử lý từng payment
+      payments.forEach(payment => {
+        try {
+          if (payment && payment.paymentDate && payment.amount) {
+            const date = new Date(payment.paymentDate);
+            const year = date.getFullYear();
+            const month = date.getMonth();
+            
+            // Chỉ xử lý các payment trong năm được chọn và trong khoảng tháng đã chọn
+            if (year === selectedYear && month < monthDisplay) {
+              const amount = Number(payment.amount);
+              if (!isNaN(amount)) {
+                monthlyData[month] += amount;
+                totalAmount += amount;
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Lỗi xử lý payment:', error, payment);
+        }
+      });
+
+      console.log('Months to display:', monthDisplay);
+      console.log('Monthly Data:', monthlyData);
+      console.log('Total Amount:', totalAmount);
+
+      // Cập nhật state
+      setTotalRevenue(totalAmount);
+      
+      // Chỉ lấy số tháng được chọn để hiển thị
+      const displayData = monthlyData.slice(0, monthDisplay);
+      setMonthlyData(displayData);
+
+      // Tính doanh thu trung bình chỉ cho các tháng được chọn
+      const monthsWithRevenue = displayData.filter(amount => amount > 0).length;
+      setAverageMonthlyRevenue(monthsWithRevenue > 0 ? totalAmount / monthsWithRevenue : 0);
+
+      // Cập nhật trạng thái có dữ liệu
+      setHasChartData(displayData.some(amount => amount > 0));
+
     } catch (error) {
-      console.error('Lỗi khi lấy dữ liệu doanh thu:', error);
+      console.error('Lỗi khi lấy dữ liệu:', error);
+      setError('Không thể tải dữ liệu. Vui lòng thử lại sau.');
+    } finally {
       setIsLoading(false);
-      // Thiết lập giá trị mặc định nếu có lỗi
-      setTotalRevenue(0);
-      setTotalOrders(0);
-      setTotalCustomers(0);
-      setAverageMonthlyRevenue(0);
-      setMonthlyData(Array.from({length: 12}, (_, i) => ({
-        month: i + 1,
-        monthName: `Tháng ${i + 1}`,
-        revenue: 0,
-        orders: 0,
-        customers: 0,
-        averagePerCustomer: 0
-      })));
     }
   };
 
@@ -213,66 +144,25 @@ const Revenue = () => {
 
   // Lọc dữ liệu theo số tháng được chọn
   const filteredMonthlyData = useMemo(() => {
-    // Đảm bảo monthlyData là mảng trước khi xử lý
-    if (!Array.isArray(monthlyData) || monthlyData.length === 0) {
-      return [];
-    }
+    if (!monthlyData || !Array.isArray(monthlyData)) return [];
     
-    // Nếu hiển thị tất cả 12 tháng
-    if (monthDisplay === 12) {
-      return monthlyData;
-    }
-    
-    const currentDate = new Date();
-    const currentMonth = currentDate.getMonth() + 1; // Lấy tháng hiện tại (1-12)
-    const currentYear = currentDate.getFullYear();
-    
-    // Đối với năm hiện tại
-    if (selectedYear === currentYear) {
-      // Hiển thị các tháng gần đây nhất
-      return monthlyData
-        .filter(item => {
-          // Chỉ hiển thị các tháng đã qua trong năm hiện tại
-          return item.month <= currentMonth && item.month > currentMonth - monthDisplay;
-        })
-        .sort((a, b) => a.month - b.month);
-    } 
-    // Đối với năm trong quá khứ
-    else if (selectedYear < currentYear) {
-      // Hiển thị tháng cuối năm nếu chọn hiển thị 3 hoặc 6 tháng
-      if (monthDisplay === 3) {
-        return monthlyData.slice(-3); // 3 tháng cuối năm
-      } else if (monthDisplay === 6) {
-        return monthlyData.slice(-6); // 6 tháng cuối năm
-      }
-      return monthlyData;
-    } 
-    // Đối với năm trong tương lai
-    else {
-      // Hiển thị các tháng đầu năm nếu là năm tương lai
-      if (monthDisplay === 3) {
-        return monthlyData.slice(0, 3); // 3 tháng đầu năm
-      } else if (monthDisplay === 6) {
-        return monthlyData.slice(0, 6); // 6 tháng đầu năm
-      }
-      return monthlyData;
-    }
-  }, [monthlyData, monthDisplay, selectedYear]);
+    // Trả về mảng doanh thu theo tháng cho năm được chọn
+    return monthlyData;
+  }, [monthlyData]);
 
-  // Dữ liệu cho biểu đồ - sử dụng dữ liệu đã lọc
+  // Dữ liệu cho biểu đồ
   const chartData = {
-    labels: filteredMonthlyData.map(item => item.monthName),
+    labels: months,
     datasets: [
       {
-        label: 'Doanh Thu',
-        data: filteredMonthlyData.map(item => item.revenue / 1000000), // Đơn vị triệu đồng
-        borderColor: '#059669',
-        backgroundColor: 'rgba(5, 150, 105, 0.1)',
-        borderWidth: 2,
-        pointBackgroundColor: '#059669',
+        label: `Doanh thu năm ${selectedYear}`,
+        data: filteredMonthlyData,
+        borderColor: selectedYear === 2025 ? 'rgb(255, 99, 132)' : 'rgb(53, 162, 235)',
+        backgroundColor: selectedYear === 2025 ? 'rgba(255, 99, 132, 0.5)' : 'rgba(53, 162, 235, 0.5)',
         tension: 0.4,
-      },
-    ],
+        spanGaps: true
+      }
+    ]
   };
 
   // Cấu hình biểu đồ
@@ -301,7 +191,7 @@ const Revenue = () => {
                 style: 'currency',
                 currency: 'VND',
                 maximumFractionDigits: 0,
-              }).format(context.parsed.y * 1000000);
+              }).format(context.parsed.y);
             }
             return label;
           }
@@ -313,6 +203,11 @@ const Revenue = () => {
         grid: {
           color: 'rgba(200, 200, 200, 0.3)',
         },
+        ticks: {
+          font: {
+            size: 12
+          }
+        }
       },
       y: {
         beginAtZero: true,
@@ -321,25 +216,29 @@ const Revenue = () => {
         },
         ticks: {
           callback: function(value) {
-            return value + 'tr';
+            return new Intl.NumberFormat('vi-VN', {
+              style: 'currency',
+              currency: 'VND',
+              notation: 'compact',
+              maximumFractionDigits: 0
+            }).format(value);
+          },
+          font: {
+            size: 12
           }
         }
       }
-    },
+    }
   };
 
   // Format tiền tệ Việt Nam
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('vi-VN', { 
-      style: 'decimal',
+      style: 'currency',
+      currency: 'VND',
       maximumFractionDigits: 0 
-    }).format(amount) + ' đ';
+    }).format(amount);
   };
-
-  // Kiểm tra xem có dữ liệu cho biểu đồ không
-  const hasChartData = useMemo(() => {
-    return filteredMonthlyData && filteredMonthlyData.some(item => item.revenue > 0);
-  }, [filteredMonthlyData]);
 
   // Kiểm tra xem có dữ liệu tổng quát không
   const hasDashboardData = useMemo(() => {
@@ -408,8 +307,7 @@ const Revenue = () => {
                   displayEmpty
                   inputProps={{ 'aria-label': 'year' }}
                 >
-                  <MenuItem value={2022}>2022</MenuItem>
-                  <MenuItem value={2023}>2023</MenuItem>
+                 
                   <MenuItem value={2024}>2024</MenuItem>
                   <MenuItem value={2025}>2025</MenuItem>
                 </Select>
@@ -420,7 +318,7 @@ const Revenue = () => {
         
         {/* Dashboard Metrics */}
         <Grid container spacing={2} sx={{ mb: 3 }}>
-          <Grid item xs={12} sm={6} md={4}>
+          <Grid item xs={12} sm={6} md={6}>
             <Paper sx={{ p: 2, borderRadius: 2, textAlign: 'center', boxShadow: 2 }}>
               <Typography color="textSecondary" variant="subtitle2">
                 Tổng Doanh Thu
@@ -430,23 +328,13 @@ const Revenue = () => {
               </Typography>
             </Paper>
           </Grid>
-          <Grid item xs={12} sm={6} md={4}>
+          <Grid item xs={12} sm={6} md={6}>
             <Paper sx={{ p: 2, borderRadius: 2, textAlign: 'center', boxShadow: 2 }}>
               <Typography color="textSecondary" variant="subtitle2">
                 Doanh Thu TB/Tháng
               </Typography>
               <Typography variant="h5" fontWeight="bold" color="primary">
                 {averageMonthlyRevenue > 0 ? formatCurrency(averageMonthlyRevenue) : "Không có dữ liệu"}
-              </Typography>
-            </Paper>
-          </Grid>
-          <Grid item xs={12} sm={6} md={4}>
-            <Paper sx={{ p: 2, borderRadius: 2, textAlign: 'center', boxShadow: 2 }}>
-              <Typography color="textSecondary" variant="subtitle2">
-                Tổng Khách Hàng
-              </Typography>
-              <Typography variant="h5" fontWeight="bold" color="primary">
-                {totalCustomers > 0 ? totalCustomers : "Không có dữ liệu"}
               </Typography>
             </Paper>
           </Grid>
@@ -468,52 +356,18 @@ const Revenue = () => {
             
             {!isLoading && !hasChartData && (
               <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
-                <Typography>Không có dữ liệu doanh thu cho {selectedYear}</Typography>
+                <Typography>
+                  {selectedYear === 2025 
+                    ? "Chưa có dữ liệu doanh thu cho năm 2025" 
+                    : `Không có dữ liệu doanh thu cho năm ${selectedYear}`}
+                </Typography>
               </Box>
             )}
           </div>
         </Paper>
         
-        {/* Revenue Table */}
-        <Paper sx={{ p: 3, borderRadius: 2, boxShadow: 2 }}>
-          <Typography variant="h6" sx={{ mb: 2 }}>
-            Chi Tiết Doanh Thu {monthDisplay === 12 ? 'Hàng Tháng' : `${monthDisplay} Tháng`} {selectedYear}
-          </Typography>
-          <TableContainer>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Tháng</TableCell>
-                  <TableCell align="right">Doanh Thu</TableCell>
-                  <TableCell align="right">Số Đơn Hàng</TableCell>
-                  <TableCell align="right">Số Khách Hàng</TableCell>
-                  <TableCell align="right">TB/Khách</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {isLoading ? (
-                  <TableRow>
-                    <TableCell colSpan={5} align="center">Đang tải dữ liệu...</TableCell>
-                  </TableRow>
-                ) : filteredMonthlyData.length > 0 ? (
-                  filteredMonthlyData.map((row) => (
-                    <TableRow key={row.month}>
-                      <TableCell component="th" scope="row">{row.monthName}</TableCell>
-                      <TableCell align="right">{row.revenue > 0 ? formatCurrency(row.revenue) : "Không có dữ liệu"}</TableCell>
-                      <TableCell align="right">{row.orders > 0 ? row.orders : "-"}</TableCell>
-                      <TableCell align="right">{row.customers > 0 ? row.customers : "-"}</TableCell>
-                      <TableCell align="right">{row.averagePerCustomer > 0 ? formatCurrency(row.averagePerCustomer) : "-"}</TableCell>
-                    </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={5} align="center">Không có dữ liệu cho năm {selectedYear}</TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </Paper>
+        {/* Revenue Table - Chỉ hiển thị khi không phải năm 2025 */}
+        {/*  */}
       </div>
     </div>
     </Box>

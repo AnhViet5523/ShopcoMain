@@ -34,6 +34,8 @@ const BlogDetail = () => {
     // Cuộn lên đầu trang khi component được tải
     window.scrollTo(0, 0);
     
+    let isMounted = true;
+    
     const fetchPost = async () => {
       console.log('ID from URL params:', id, 'Type:', typeof id);
       
@@ -46,6 +48,7 @@ const BlogDetail = () => {
       
       try {
         setLoading(true);
+        setError(null);
         
         // Đảm bảo id là một số
         const numericId = parseInt(id);
@@ -55,6 +58,10 @@ const BlogDetail = () => {
         
         console.log('Fetching post with numeric ID:', numericId);
         const response = await blogService.getPostById(numericId);
+        
+        // Kiểm tra nếu component vẫn mounted
+        if (!isMounted) return;
+
         console.log('Post data received:', response);
         
         // Kiểm tra response
@@ -72,24 +79,38 @@ const BlogDetail = () => {
           userId: response.userId || 1
         };
         
-        setPost(processedPost);
-        // Khởi tạo dữ liệu cho form chỉnh sửa
-        setEditedPost(processedPost);
-        
-        // Tự động tạo các section từ nội dung
-        if (processedPost.content) {
-          generateSectionsFromContent(processedPost.content);
+        if (isMounted) {
+          setPost(processedPost);
+          // Khởi tạo dữ liệu cho form chỉnh sửa
+          setEditedPost(processedPost);
+          
+          // Tự động tạo các section từ nội dung
+          if (processedPost.content) {
+            generateSectionsFromContent(processedPost.content);
+          }
         }
-        
-        setLoading(false);
       } catch (error) {
         console.error('Error fetching post:', error);
-        setError(`Không thể tải bài viết. Lỗi: ${error.message}`);
-        setLoading(false);
+        if (isMounted) {
+          if (error.message === 'Request was cancelled') {
+            // Bỏ qua lỗi này vì component đã unmount
+            return;
+          }
+          setError(`Không thể tải bài viết. Lỗi: ${error.message}`);
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
     fetchPost();
+    
+    // Cleanup function
+    return () => {
+      isMounted = false;
+    };
   }, [id]);
 
   // Hàm phân tích nội dung để tạo mục lục
@@ -104,61 +125,34 @@ const BlogDetail = () => {
       const headingRegex = /^(\d+(\.\d+)?)\.?\s+(.+)$/gm;
       let match;
       const extractedSections = [];
-      let index = 0;
       
       // Tạo bản sao của nội dung để tìm kiếm
       const contentCopy = content.toString();
       
       while ((match = headingRegex.exec(contentCopy)) !== null) {
-        const fullHeading = match[0]; // Toàn bộ tiêu đề, ví dụ: "1. Tiêu đề chính"
+        const fullHeading = match[0]; // Toàn bộ tiêu đề, ví dụ: "1. Giới thiệu"
         const headingNumber = match[1]; // Số, ví dụ: "1" hoặc "1.1"
-        // Phần text của tiêu đề không được sử dụng trực tiếp
-        const sectionId = `section-${index}`;
+        const headingText = match[3]; // Phần text của tiêu đề
+        
+        // Tạo ID duy nhất cho section này
+        const sectionId = `section-${headingNumber.replace(/\./g, '-')}`;
         
         // Xác định level dựa trên số lượng dấu chấm trong headingNumber
         const level = (headingNumber.match(/\./g) || []).length + 2; // level 2 = h2, level 3 = h3, etc.
         
         extractedSections.push({
           id: sectionId,
-          title: fullHeading.substring(fullHeading.indexOf(' ') + 1), // Chỉ lấy phần text
-          fullTitle: fullHeading, // Lấy cả tiêu đề đầy đủ
-          level: level
+          title: headingText,
+          fullTitle: fullHeading,
+          level: level,
+          number: headingNumber
         });
-        
-        sectionRefs.current[sectionId] = sectionId;
-        index++;
       }
       
-      // Nếu tìm thấy các tiêu đề
       if (extractedSections.length > 0) {
         setSections(extractedSections);
-        return;
-      }
-      
-      // Nếu không tìm thấy tiêu đề ở trên, thử tìm bằng cách phân tích văn bản thành các đoạn
-      const paragraphs = content.split('\n\n');
-      if (paragraphs.length > 2) {
-        const paragraphSections = [];
-        
-        for (let i = 0; i < paragraphs.length; i++) {
-          if (paragraphs[i].trim().length < 20) continue; // Bỏ qua đoạn quá ngắn
-          
-          const sectionId = `section-para-${i}`;
-          paragraphSections.push({
-            id: sectionId,
-            title: paragraphs[i].substring(0, 70) + (paragraphs[i].length > 70 ? '...' : ''),
-            level: 2
-          });
-          
-          sectionRefs.current[sectionId] = sectionId;
-        }
-        
-        if (paragraphSections.length > 0) {
-          setSections(paragraphSections);
-        }
       }
     } catch (err) {
-      // Sử dụng tên biến khác để tránh warning
       console.error('Error generating sections:', err);
     }
   };
@@ -179,13 +173,13 @@ const BlogDetail = () => {
       // Xử lý văn bản thuần thành HTML có cấu trúc
       let htmlContent = content;
       
-      // Tìm các tiêu đề có dạng số
+      // Tìm các tiêu đề có dạng số và thêm id cho chúng
       htmlContent = htmlContent.replace(
         /^(\d+(\.\d+)?)\.?\s+(.+)$/gm, 
         (match, number) => {
-          const level = (number.match(/\./g) || []).length + 2; // level 2 = h2, level 3 = h3, etc.
-          const sectionId = `section-${sections.findIndex(s => s.fullTitle === match) || Math.random().toString(36).substr(2, 9)}`;
-          return `<h${level} id="${sectionId}">${match}</h${level}>`;
+          const sectionId = `section-${number.replace(/\./g, '-')}`;
+          const level = (number.match(/\./g) || []).length + 2;
+          return `<h${level} id="${sectionId}" class="blog-heading blog-heading-${level}">${match}</h${level}>`;
         }
       );
       
@@ -193,16 +187,26 @@ const BlogDetail = () => {
       htmlContent = htmlContent.split('\n\n').map((paragraph, index) => {
         if (!paragraph.trim()) return '';
         if (paragraph.startsWith('<h')) return paragraph; // Nếu đã là tiêu đề thì giữ nguyên
-        return `<p id="paragraph-${index}">${paragraph.replace(/\n/g, '<br>')}</p>`;
+        return `<p class="blog-paragraph" id="paragraph-${index}">${paragraph.replace(/\n/g, '<br>')}</p>`;
       }).join('');
       
-      return { __html: DOMPurify.sanitize(htmlContent) };
+      // Bọc nội dung trong div.blog-content
+      htmlContent = `<div class="blog-content">${htmlContent}</div>`;
+      
+      return { __html: DOMPurify.sanitize(htmlContent, { 
+        ADD_TAGS: ['h2', 'h3', 'h4'],
+        ADD_ATTR: ['id', 'class'],
+        ADD_CLASSES: {
+          'h2': 'blog-heading blog-heading-2',
+          'h3': 'blog-heading blog-heading-3',
+          'h4': 'blog-heading blog-heading-4',
+          'p': 'blog-paragraph'
+        }
+      }) };
     } catch (err) {
       console.error('Error creating markup:', err);
-      
-      // Nếu có lỗi, trả về nội dung dạng văn bản đơn giản
       return { 
-        __html: DOMPurify.sanitize(`<p>${content.replace(/\n/g, '<br>')}</p>`)
+        __html: DOMPurify.sanitize(`<div class="blog-content"><p class="blog-paragraph">${content.replace(/\n/g, '<br>')}</p></div>`)
       };
     }
   };
@@ -443,10 +447,14 @@ const BlogDetail = () => {
           className="blog-banner-container"
           sx={{ 
             width: '100%',
+            maxWidth: '800px', // Giới hạn chiều rộng tối đa
+            height: 'auto',
+            maxHeight: '400px', // Giới hạn chiều cao tối đa
             mb: 0,
             padding: 0,
             position: 'relative',
-            overflow: 'hidden'
+            overflow: 'hidden',
+            margin: '0 auto'
           }}
         >
           {isEditMode ? (
@@ -497,7 +505,13 @@ const BlogDetail = () => {
                   component="img"
                   src={imagePreview || editedPost.imageUrl}
                   alt="Xem trước ảnh bìa"
-                  className="blog-banner-image"
+                  sx={{
+                    width: '100%',
+                    height: 'auto',
+                    maxHeight: '400px',
+                    objectFit: 'contain',
+                    borderRadius: '4px'
+                  }}
                   onError={(err) => {
                     console.log('Preview image failed to load');
                     err.target.src = '/images/blog-placeholder.jpg';
@@ -511,7 +525,13 @@ const BlogDetail = () => {
                 component="img"
                 src={post.imageUrl}
                 alt={post.title}
-                className="blog-banner-image" 
+                sx={{
+                  width: '100%',
+                  height: 'auto',
+                  maxHeight: '400px',
+                  objectFit: 'contain',
+                  borderRadius: '4px'
+                }}
                 onError={(err) => {
                   console.log('Image failed to load, using fallback');
                   err.target.src = '/images/blog-placeholder.jpg';
@@ -522,7 +542,13 @@ const BlogDetail = () => {
                 component="img"
                 src="/images/blog-placeholder.jpg"
                 alt="Ảnh mặc định"
-                className="blog-banner-image"
+                sx={{
+                  width: '100%',
+                  height: 'auto',
+                  maxHeight: '400px',
+                  objectFit: 'contain',
+                  borderRadius: '4px'
+                }}
                 onError={(err) => {
                   console.log('Default image failed to load');
                   err.target.style.display = 'none';
@@ -611,65 +637,31 @@ const BlogDetail = () => {
               </Box>
             )}
             
-            {isEditMode ? (
-              <TextField
-                fullWidth
-                label="Tiêu đề bài viết"
-                variant="outlined"
-                value={editedPost.title || ''}
-                onChange={(e) => handleInputChange('title', e.target.value)}
-                sx={{ mb: 3 }}
-              />
-            ) : (
-              <Typography variant="h4" component="h1" gutterBottom 
-                className="blog-title"
-                sx={{ 
-                  fontWeight: 'bold', 
-                  mb: 3, 
-                  textAlign: 'center',
-                  color: '#059669',
-                  background: 'linear-gradient(to right, #059669, #10b981)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  textShadow: '0px 1px 2px rgba(0,0,0,0.1)',
-                  fontSize: { xs: '1.8rem', sm: '2.2rem', md: '2.5rem' }
-                }}
-              >
-                {post.title || 'Không có tiêu đề'}
-              </Typography>
-            )}
-            
-            {/* Phần mục lục - chỉ hiển thị nếu có sections và không ở chế độ chỉnh sửa */}
+            {/* Hiển thị mục lục nếu có sections */}
             {sections.length > 0 && !isEditMode && (
-              <Paper 
-                elevation={1} 
-                sx={{ 
-                  p: 3, 
-                  mb: 4, 
-                  borderRadius: 2,
-                  bgcolor: '#f5f5f5'
-                }}
-              >
+              <Paper elevation={1} sx={{ p: 3, mb: 4, borderRadius: 2, bgcolor: '#f5f5f5' }}>
                 <Typography variant="h6" className="blog-toc-title" sx={{ fontWeight: 'bold', mb: 2 }}>
                   Mục lục bài viết
                 </Typography>
-                
                 <List dense>
                   {sections.map((section) => (
-                    <ListItem 
-                      key={section.id} 
-                      button 
+                    <ListItem
+                      key={section.id}
+                      button
                       onClick={() => scrollToSection(section.id)}
-                      sx={{ 
+                      sx={{
+                        pl: section.level > 2 ? (section.level - 1) * 2 : 0,
                         color: '#0ea5e9',
-                        pl: section.level > 2 ? (section.level - 1) * 2 : 0 // Thụt vào cho các tiêu đề cấp thấp hơn
+                        '&:hover': {
+                          backgroundColor: 'rgba(14, 165, 233, 0.1)'
+                        }
                       }}
                     >
                       <ListItemIcon sx={{ minWidth: '30px' }}>
                         <ArrowRightIcon fontSize="small" />
                       </ListItemIcon>
-                      <ListItemText 
-                        primary={section.fullTitle || section.title} 
+                      <ListItemText
+                        primary={section.fullTitle}
                         primaryTypographyProps={{
                           fontSize: section.level > 2 ? '0.95rem' : 'inherit'
                         }}
@@ -696,11 +688,6 @@ const BlogDetail = () => {
               <div 
                 className="blog-content" 
                 dangerouslySetInnerHTML={createMarkup(post.content)}
-                style={{
-                  lineHeight: 1.8,
-                  fontSize: '1rem',
-                  color: '#333'
-                }}
               />
             )}
 

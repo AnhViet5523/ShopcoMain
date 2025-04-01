@@ -505,6 +505,72 @@ const adminService = {
         }
     },
 
+    getTotalRevenue: async () => {
+        try {
+            // Lấy tất cả thanh toán
+            const payments = await axiosClient.get('/api/Payments');
+            
+            // Tính tổng doanh thu từ các thanh toán thành công
+            const totalRevenue = payments.data
+                .filter(payment => payment.paymentStatus === "Success")
+                .reduce((total, payment) => total + payment.amount, 0);
+                
+            return totalRevenue;
+        } catch (error) {
+            console.error('Lỗi khi lấy tổng doanh thu:', error);
+            throw error;
+        }
+    },
+
+    getMonthlyRevenue: async (year) => {
+        try {
+            // Lấy tất cả thanh toán
+            const payments = await axiosClient.get('/api/Payments');
+            
+            // Khởi tạo mảng 12 tháng với doanh thu 0
+            const monthlyRevenue = Array(12).fill(0);
+            
+            // Lọc và tính tổng doanh thu theo tháng cho năm được chọn
+            payments.data.forEach(payment => {
+                if (payment.paymentStatus === "Success") {
+                    const paymentDate = new Date(payment.paymentDate);
+                    if (paymentDate.getFullYear() === year) {
+                        const month = paymentDate.getMonth();
+                        monthlyRevenue[month] += payment.amount;
+                    }
+                }
+            });
+            
+            // Chuyển đổi dữ liệu sang định dạng mong muốn
+            return monthlyRevenue.map((revenue, index) => ({
+                month: index + 1,
+                revenue: revenue
+            }));
+        } catch (error) {
+            console.error('Lỗi khi lấy doanh thu theo tháng:', error);
+            throw error;
+        }
+    },
+
+    // Thêm phương thức mới để lấy dữ liệu từ API summary
+    getPaymentSummary: async () => {
+        try {
+            const response = await axiosClient.get('/api/Admin/summary');
+            // Kiểm tra và xử lý dữ liệu trả về
+            if (response && response.data && response.data.$values) {
+                return response.data.$values;
+            } else if (Array.isArray(response)) {
+                return response;
+            } else if (response && Array.isArray(response.$values)) {
+                return response.$values;
+            }
+            return [];
+        } catch (error) {
+            console.error('Lỗi khi lấy dữ liệu tổng quan thanh toán:', error);
+            throw error;
+        }
+    },
+
     // ... các phương thức khác nếu có ...
 };
 

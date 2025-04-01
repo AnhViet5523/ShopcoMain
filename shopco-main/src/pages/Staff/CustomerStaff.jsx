@@ -21,7 +21,7 @@ const CustomerStaff = () => {
     { id: 'customerStaff', name: 'Hồ sơ người dùng', icon: '📝' },
     { id: 'supportStaff', name: 'Đơn hỗ trợ', icon: '📫' },
     { id: 'voucherStaff', name: 'Vouchers', icon: '🎫' },
-    { id: 'feedbackStaff', name: 'Feedback', icon: '📢' },
+    { id: 'feedbackStaff', name: 'Đánh giá sản phẩm', icon: '📢' },
     { id: 'blogStaff', name: 'Blog', icon: '📰' }
   ];
 
@@ -36,8 +36,14 @@ const CustomerStaff = () => {
         
         if (isMounted) {
           if (Array.isArray(data)) {
-            setCustomers(data);
-            setOriginalCustomers(data);
+            // Sắp xếp người dùng theo ngày đăng ký mới nhất
+            const sortedData = [...data].sort((a, b) => {
+              const dateA = new Date(a.registrationDate || 0);
+              const dateB = new Date(b.registrationDate || 0);
+              return dateB - dateA;
+            });
+            setCustomers(sortedData);
+            setOriginalCustomers(sortedData);
           } else {
             console.error('Dữ liệu không phải là mảng:', data);
             setCustomers([]);

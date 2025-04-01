@@ -20,6 +20,7 @@ const Order = () => {
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
   const [reason, setReason] = useState('');
+  const [cancelError, setCancelError] = useState(null);
 
   useEffect(() => {
     const fetchUserName = () => {
@@ -188,10 +189,12 @@ const Order = () => {
     setFullName('');
     setPhone('');
     setReason('');
+    setCancelError(null);
   };
 
   const handleSubmitCancelRequest = async () => {
     try {
+      setCancelError(null);
       const requestDate = new Date().toISOString();
       await userService.requestCancelOrder({
         orderId: selectedOrderId,
@@ -205,7 +208,12 @@ const Order = () => {
       handleCloseDialog();
     } catch (error) {
       console.error('Lỗi khi hủy đơn hàng:', error);
-      setError('Không thể hủy đơn hàng. Vui lòng thử lại sau.');
+      if (error.response && error.response.data) {
+        const errorMessage = error.response.data.error || 'Không thể hủy đơn hàng. Vui lòng thử lại sau.';
+        setCancelError(errorMessage);
+      } else {
+        setCancelError('Không thể hủy đơn hàng. Vui lòng thử lại sau.');
+      }
     }
   };
 
@@ -459,6 +467,18 @@ const Order = () => {
           {"Hủy đơn hàng"}
         </DialogTitle>
         <DialogContent>
+          {cancelError && (
+            <Box sx={{ 
+              mt: 2, 
+              p: 2, 
+              bgcolor: '#ffebee', 
+              color: '#c62828', 
+              borderRadius: 1,
+              mb: 2 
+            }}>
+              <Typography variant="body2">{cancelError}</Typography>
+            </Box>
+          )}
           <Box sx={{ mt: 2 }}>
             <TextField
               autoFocus
@@ -493,7 +513,7 @@ const Order = () => {
         </DialogContent>
         <DialogActions sx={{ px: 3, py: 2 }}>
           <Button onClick={handleCloseDialog} sx={{ textTransform: 'none' }}>
-            Hủy
+            Đóng
           </Button>
           <Button 
             onClick={handleSubmitCancelRequest} 
@@ -504,7 +524,7 @@ const Order = () => {
               '&:hover': { bgcolor: '#e65c00' } 
             }}
           >
-            Đồng ý
+            Xác nhận hủy
           </Button>
         </DialogActions>
       </Dialog>

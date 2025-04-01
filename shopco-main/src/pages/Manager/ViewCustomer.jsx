@@ -24,7 +24,7 @@ const ViewCustomer = () => {
     { id: 'viewCustomer', name: 'Hồ sơ người dùng', icon: '📝' },
     { id: 'viewSupport', name: 'Đơn hỗ trợ', icon: '📫' },
     { id: 'voucher', name: 'Vouchers', icon: '🎫' },
-    { id: 'feedback', name: 'Feedback', icon: '📢' },
+    { id: 'feedback', name: 'Đánh giá sản phẩm', icon: '📢' },
     { id: 'blogManager', name: 'Blog', icon: '📰' }
   ];
 
@@ -39,8 +39,14 @@ const ViewCustomer = () => {
         
         if (isMounted) {
           if (Array.isArray(data)) {
-            setCustomers(data);
-            setOriginalCustomers(data);
+            // Sắp xếp người dùng theo ngày đăng ký mới nhất
+            const sortedData = [...data].sort((a, b) => {
+              const dateA = new Date(a.registrationDate || 0);
+              const dateB = new Date(b.registrationDate || 0);
+              return dateB - dateA;
+            });
+            setCustomers(sortedData);
+            setOriginalCustomers(sortedData);
           } else {
             console.error('Dữ liệu không phải là mảng:', data);
             setCustomers([]);

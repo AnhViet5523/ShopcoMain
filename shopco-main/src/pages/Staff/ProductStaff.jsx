@@ -111,7 +111,7 @@ const ProductStaff = () => {
     { id: 'customerStaff', name: 'Hồ sơ khách hàng', icon: '📝' },
     { id: 'supportStaff', name: 'Đơn hỗ trợ', icon: '📫' },
     { id: 'voucherStaff', name: 'Vouchers', icon: '🎫' },
-    { id: 'feedbackStaff', name: 'Feedback', icon: '📢' },
+    { id: 'feedbackStaff', name: 'Đánh giá sản phẩm', icon: '📢' },
     { id: 'blogStaff', name: 'Blog', icon: '📰' }
   ];
 

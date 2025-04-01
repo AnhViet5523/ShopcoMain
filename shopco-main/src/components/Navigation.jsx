@@ -19,7 +19,7 @@ const menuItems = [
   { name: "Dụng Cụ/Phụ Kiện Chăm Sóc Da", subItems: ["Bông Tẩy Trang", "Dụng Cụ/Máy Rửa Mặt", "Máy Xông Mặt/Đẩy Tinh Chất"] }
 ];
 
-const extraMenuItems = ["Thương Hiệu", "Bán chạy", "Blog", "Quy trình chăm sóc da"];
+const extraMenuItems = [ "Bán chạy", "Blog", "Quy trình chăm sóc da"];
 
 const skinTypes = ["Da Dầu", "Da Khô", "Da Thường", "Da Hỗn Hợp", "Da Nhạy Cảm"];
 
