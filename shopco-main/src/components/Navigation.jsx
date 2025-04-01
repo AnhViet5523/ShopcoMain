@@ -232,25 +232,23 @@ const handleClickAway = () => {
                   <ClickAwayListener onClickAway={handleClickAway}>
                     <MenuList>
                       {skinTypes.map((type) => {
-                        // Chuyển đổi tên loại da thành định dạng URL đúng
-                        let urlParam = '';
-                        if (type === 'Da dầu') urlParam = 'da-dau';
-                        else if (type === 'Da khô') urlParam = 'da-kho';
-                        else if (type === 'Da thường') urlParam = 'da-thuong';
-                        else if (type === 'Da hỗn hợp') urlParam = 'da-hon-hop';
-                        else if (type === 'Da nhạy cảm') urlParam = 'da-nhay-cam';
-                        else urlParam = type.toLowerCase().replace(/\s+/g, '-');
-                        
+                        const pathMap = {
+                          "Da Dầu": "/da-dau",
+                          "Da Khô": "/da-kho",
+                          "Da Thường": "/da-thuong",
+                          "Da Hỗn Hợp": "/da-hon-hop",
+                          "Da Nhạy Cảm": "/da-nhay-cam"
+                        };
                         return (
                           <MenuItem 
                             key={type} 
                             onClick={() => {
-                              // Chuyển đến trang chi tiết quy trình chăm sóc da với param skinType
-                              navigate(`/quy-trinh-cham-soc/${urlParam}`, { 
-                                state: { skinType: type } 
-                              });
-                              // Đóng dropdown sau khi chọn
-                              setSkinTypeAnchorEl(null);
+                              const path = pathMap[type];
+                              if (path) {
+                                navigate(path);
+                              } else {
+                                console.log(type);
+                              }
                             }} 
                             sx={{
                               py: 1.5,

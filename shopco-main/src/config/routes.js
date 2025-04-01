@@ -5,10 +5,6 @@ import ProductDetailPage from '../pages/Product/Detail';
 import AuthPage from '../pages/Auth';
 import QuizPage from '../pages/Quiz/QuizPage';
 import { registerUser, loginUser } from '../controllers/userController';
-import RoutineManager from '../pages/Manager/Routine';
-import RoutineDetail from '../pages/SkincareRoutine/SkincareRoutinesNew/RoutineDetail';
-import RoutineEdit from '../pages/Manager/RoutineEdit';
-import CareDetail from '../pages/CareProcess/CareDetail';
 
 // Lazy load các components
 const Home = lazy(() => import('../pages/Home'));
@@ -70,26 +66,6 @@ export const publicRoutes = [
   {
     path: '/quiz',
     component: QuizPage
-  },
-  {
-    path: '/routine',
-    component: RoutineManager
-  },
-  {
-    path: '/Routine/:id',
-    component: RoutineDetail
-  },
-  {
-    path: '/Routine/Edit/:id',
-    component: RoutineEdit
-  },
-  {
-    path: '/care/:id',
-    component: CareDetail
-  },
-  {
-    path: '/care/type/:skinType',
-    component: CareDetail
   }
 ];
 

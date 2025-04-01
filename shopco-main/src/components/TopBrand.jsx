@@ -55,7 +55,7 @@ const TopBrand = () => {
             fontSize: { xs: "1.5rem", sm: "2rem" }
           }}
         >
-          THƯƠNG HIỆU NỔI BẬT
+          TOP BRAND
         </Typography>
         <Grid 
           container 

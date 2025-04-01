@@ -25,8 +25,7 @@ const ViewCustomer = () => {
     { id: 'viewSupport', name: 'Đơn hỗ trợ', icon: '📫' },
     { id: 'voucher', name: 'Vouchers', icon: '🎫' },
     { id: 'feedback', name: 'Feedback', icon: '📢' },
-    { id: 'blogManager', name: 'Blog', icon: '📰' },
-    { id: 'routine', name: 'Quy trình chăm sóc da', icon: '🧖‍♂️' }
+    { id: 'blogManager', name: 'Blog', icon: '📰' }
   ];
 
   useEffect(() => {
