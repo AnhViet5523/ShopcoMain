@@ -166,7 +166,7 @@ export default function NewArrivals() {
 
   return (
     <Container sx={{ py: 5, maxWidth: "100%" }}>
-      <Typography variant="h2" fontWeight="bold" style={{color:"black", fontFamily:"inherit"}} textAlign="center">NEW ARRIVALS</Typography>
+      <Typography variant="h2" fontWeight="bold" style={{color:"black", fontFamily:"inherit"}} textAlign="center">SẢN PHẨM</Typography>
       <Grid container spacing={3} sx={{ mt: 3 }}>
         {products && products.length > 0 ? (
           products.map((product) => (

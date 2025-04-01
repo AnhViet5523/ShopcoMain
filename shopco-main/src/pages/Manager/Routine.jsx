@@ -5,37 +5,36 @@ import { Box, Dialog, DialogActions, DialogContent, DialogTitle, TextField, Butt
 import { Editor } from '@tinymce/tinymce-react';
 import './Manager.css';
 import adminService from '../../apis/adminService';
-import blogService from '../../apis/blog';
 
-const BlogManager = () => {
+const RoutineManager = () => {
   const [activeTab, setActiveTab] = useState('Tất cả');
   const [activeItem, setActiveItem] = useState('');
-  const [posts, setPosts] = useState([]);
-  const [originalPosts, setOriginalPosts] = useState([]);
+  const [routines, setRoutines] = useState([]);
+  const [originalRoutines, setOriginalRoutines] = useState([]);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredCount, setFilteredCount] = useState(0);
   const [page, setPage] = useState(1);
   const pageSize = 15;
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [postToDelete, setPostToDelete] = useState(null);
+  const [routineToDelete, setRoutineToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Set activeItem thành 'blogManager' khi component được mount
-    setActiveItem('blogManager');
+    // Set activeItem thành 'routine' khi component được mount
+    setActiveItem('routine');
     
     // Phần còn lại của useEffect
     let isMounted = true;
     
-    const fetchPosts = async () => {
+    const fetchRoutines = async () => {
       try {
         setError('Đang tải dữ liệu...');
         
         // Thêm tham số để tránh cache
-        const response = await adminService.getAllPosts();
+        const response = await adminService.getSkinCareRoutines();
         
         // Kiểm tra nếu component vẫn mounted
         if (!isMounted) return;
@@ -43,45 +42,44 @@ const BlogManager = () => {
         console.log('Full API Response:', response);
         
         // Xử lý nhiều định dạng response
-        let postsData = [];
+        let routinesData = [];
         if (Array.isArray(response)) {
-          postsData = response;
+          routinesData = response;
         } else if (response && response["$values"]) {
-          postsData = response["$values"];
+          routinesData = response["$values"];
         } else if (response && Array.isArray(response.data)) {
-          postsData = response.data;
+          routinesData = response.data;
         } else if (response && typeof response === 'object') {
           // Nếu là object khác, thử chuyển thành mảng
-          postsData = [response];
+          routinesData = [response];
         }
 
-        console.log('Processed Posts:', postsData);
+        console.log('Processed Routines:', routinesData);
         
         // Kiểm tra và chuyển đổi dữ liệu nếu cần
-        const formattedPosts = postsData.map(post => ({
-          id: post.id || post.postId || 0,
-          userId: post.userId || 'N/A',
-          title: post.title || 'Không có tiêu đề',
-          content: post.content || 'Không có nội dung',
-          imageUrl: post.imageUrl || null,
-          createdAt: post.createdAt ? new Date(post.createdAt).toLocaleDateString() : 'Chưa xác định'
+        const formattedRoutines = routinesData.map(routine => ({
+          id: routine.id || routine.routineId || 0,
+          skinType: routine.skinType || 'Tất cả các loại da',
+          title: routine.title || 'Không có tiêu đề',
+          content: routine.content || 'Không có nội dung',
+          createdAt: routine.createdAt ? new Date(routine.createdAt).toLocaleDateString() : 'Chưa xác định'
         }));
 
-        console.log('Formatted Posts:', formattedPosts);
+        console.log('Formatted Routines:', formattedRoutines);
         
         if (isMounted) {
-          setPosts(formattedPosts);
-          setOriginalPosts(formattedPosts);
+          setRoutines(formattedRoutines);
+          setOriginalRoutines(formattedRoutines);
           
-          // Nếu không có bài viết nào
-          if (formattedPosts.length === 0) {
-            setError('Không có bài viết nào');
+          // Nếu không có quy trình nào
+          if (formattedRoutines.length === 0) {
+            setError('Không có quy trình chăm sóc da nào');
           } else {
             setError(null);
           }
         }
       } catch (error) {
-        console.error('Chi tiết lỗi tải bài viết:', error);
+        console.error('Chi tiết lỗi tải quy trình chăm sóc da:', error);
         if (isMounted) {
           // Xử lý các loại lỗi khác nhau
           if (error.message.includes('cancelled') || error.message.includes('Không thể kết nối đến máy chủ')) {
@@ -89,7 +87,7 @@ const BlogManager = () => {
               <div>
                 Kết nối bị gián đoạn. 
                 <Button 
-                  onClick={fetchPosts} 
+                  onClick={fetchRoutines} 
                   variant="contained" 
                   size="small" 
                   sx={{ 
@@ -107,7 +105,7 @@ const BlogManager = () => {
               <div>
                 Máy chủ phản hồi quá lâu. 
                 <Button 
-                  onClick={fetchPosts} 
+                  onClick={fetchRoutines} 
                   variant="contained" 
                   size="small" 
                   sx={{ 
@@ -125,7 +123,7 @@ const BlogManager = () => {
               <div>
                 Lỗi kết nối mạng. Vui lòng kiểm tra kết nối internet của bạn. 
                 <Button 
-                  onClick={fetchPosts} 
+                  onClick={fetchRoutines} 
                   variant="contained" 
                   size="small" 
                   sx={{ 
@@ -141,9 +139,9 @@ const BlogManager = () => {
           } else {
             setError(
               <div>
-                {error.message || 'Không thể tải bài viết. Vui lòng thử lại sau.'}
+                {error.message || 'Không thể tải quy trình chăm sóc da. Vui lòng thử lại sau.'}
                 <Button 
-                  onClick={fetchPosts} 
+                  onClick={fetchRoutines} 
                   variant="contained" 
                   size="small" 
                   sx={{ 
@@ -161,7 +159,7 @@ const BlogManager = () => {
       }
     };
 
-    fetchPosts();
+    fetchRoutines();
     
     // Cleanup function để tránh memory leak và race condition
     return () => {
@@ -172,55 +170,57 @@ const BlogManager = () => {
   // Xử lý tìm kiếm
   useEffect(() => {
     if (!searchTerm.trim()) {
-      setPosts(originalPosts);
+      setRoutines(originalRoutines);
       setFilteredCount(0);
       return;
     }
 
     const searchTermLower = searchTerm.toLowerCase().trim();
-    const filteredPosts = originalPosts.filter(post => {
-      const titleMatches = post.title.toLowerCase().includes(searchTermLower);
-      const contentMatches = post.content.toLowerCase().includes(searchTermLower);
-      return titleMatches || contentMatches;
+    const filteredRoutines = originalRoutines.filter(routine => {
+      const titleMatches = routine.title.toLowerCase().includes(searchTermLower);
+      const contentMatches = routine.content.toLowerCase().includes(searchTermLower);
+      const skinTypeMatches = routine.skinType.toLowerCase().includes(searchTermLower);
+      return titleMatches || contentMatches || skinTypeMatches;
     });
 
-    setPosts(filteredPosts);
-    setFilteredCount(filteredPosts.length !== originalPosts.length ? filteredPosts.length : 0);
-  }, [searchTerm, originalPosts]);
+    setRoutines(filteredRoutines);
+    setFilteredCount(filteredRoutines.length !== originalRoutines.length ? filteredRoutines.length : 0);
+  }, [searchTerm, originalRoutines]);
 
   const handleClear = () => {
     setSearchTerm('');
-    setPosts(originalPosts);
+    setRoutines(originalRoutines);
     setFilteredCount(0);
   };
 
-  // Hàm lọc blog dựa trên từ khóa tìm kiếm
-  const getFilteredPosts = () => {
+  // Hàm lọc quy trình dựa trên từ khóa tìm kiếm
+  const getFilteredRoutines = () => {
     if (!searchTerm.trim()) {
-      return posts;
+      return routines;
     }
     
     const searchTermLower = searchTerm.toLowerCase().trim();
-    return posts.filter(post => {
-      const titleMatches = post.title.toLowerCase().includes(searchTermLower);
-      const contentMatches = post.content.toLowerCase().includes(searchTermLower);
-      return titleMatches || contentMatches;
+    return routines.filter(routine => {
+      const titleMatches = routine.title.toLowerCase().includes(searchTermLower);
+      const contentMatches = routine.content.toLowerCase().includes(searchTermLower);
+      const skinTypeMatches = routine.skinType.toLowerCase().includes(searchTermLower);
+      return titleMatches || contentMatches || skinTypeMatches;
     });
   };
 
-  // Lấy tổng số trang dựa trên số lượng blog và kích thước trang
-  const filteredPosts = getFilteredPosts();
-  const totalPages = Math.ceil(filteredPosts.length / pageSize);
+  // Lấy tổng số trang dựa trên số lượng quy trình và kích thước trang
+  const filteredRoutines = getFilteredRoutines();
+  const totalPages = Math.ceil(filteredRoutines.length / pageSize);
 
   // Hàm xử lý khi thay đổi trang
   const handlePageChange = (event, value) => {
     setPage(value);
   };
 
-  // Lấy blog cho trang hiện tại
+  // Lấy quy trình cho trang hiện tại
   const getCurrentPageItems = () => {
     const startIndex = (page - 1) * pageSize;
-    return filteredPosts.slice(startIndex, startIndex + pageSize);
+    return filteredRoutines.slice(startIndex, startIndex + pageSize);
   };
 
   // Reset trang về 1 khi thay đổi từ khóa tìm kiếm
@@ -242,8 +242,8 @@ const BlogManager = () => {
   ];
 
   // Hàm mở dialog xác nhận xóa
-  const handleOpenDeleteDialog = (post) => {
-    setPostToDelete(post);
+  const handleOpenDeleteDialog = (routine) => {
+    setRoutineToDelete(routine);
     setDeleteDialogOpen(true);
     setDeleteError(null);
   };
@@ -251,34 +251,34 @@ const BlogManager = () => {
   // Hàm đóng dialog xác nhận xóa
   const handleCloseDeleteDialog = () => {
     setDeleteDialogOpen(false);
-    setPostToDelete(null);
+    setRoutineToDelete(null);
     setDeleteError(null);
   };
 
-  // Hàm xử lý xóa bài viết
-  const handleDeletePost = async () => {
-    if (!postToDelete) return;
+  // Hàm xử lý xóa quy trình chăm sóc da
+  const handleDeleteRoutine = async () => {
+    if (!routineToDelete) return;
     
     setIsDeleting(true);
     setDeleteError(null);
     
     try {
-      await blogService.deletePost(postToDelete.id);
+      await adminService.deleteSkincareRoutine(routineToDelete.id);
       
       // Cập nhật state sau khi xóa thành công
-      const updatedPosts = posts.filter(post => post.id !== postToDelete.id);
-      setPosts(updatedPosts);
-      setOriginalPosts(originalPosts.filter(post => post.id !== postToDelete.id));
+      const updatedRoutines = routines.filter(routine => routine.id !== routineToDelete.id);
+      setRoutines(updatedRoutines);
+      setOriginalRoutines(originalRoutines.filter(routine => routine.id !== routineToDelete.id));
       
       // Đóng dialog
       setDeleteDialogOpen(false);
-      setPostToDelete(null);
+      setRoutineToDelete(null);
       
       // Hiển thị thông báo thành công (có thể thêm toast notification ở đây)
-      console.log('Xóa bài viết thành công');
+      console.log('Xóa quy trình chăm sóc da thành công');
     } catch (error) {
-      console.error('Lỗi khi xóa bài viết:', error);
-      setDeleteError(error.message || 'Đã xảy ra lỗi khi xóa bài viết');
+      console.error('Lỗi khi xóa quy trình chăm sóc da:', error);
+      setDeleteError(error.message || 'Đã xảy ra lỗi khi xóa quy trình chăm sóc da');
     } finally {
       setIsDeleting(false);
     }
@@ -327,7 +327,7 @@ const BlogManager = () => {
           <div className="search-bar" style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
             <input 
               type="text" 
-              placeholder="Tìm kiếm theo tiêu đề hoặc nội dung..." 
+              placeholder="Tìm kiếm theo loại da, tiêu đề hoặc nội dung..." 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               style={{
@@ -363,18 +363,18 @@ const BlogManager = () => {
         
         {/* Dashboard Title and Actions */}
         <div className="dashboard-title-bar">
-          <h1>Bài Viết Blog</h1>
+          <h1>Quy Trình Chăm Sóc Da</h1>
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-            {searchTerm && posts.length > 0 && (
+            {searchTerm && routines.length > 0 && (
               <div style={{ color: '#666', fontSize: '14px', alignSelf: 'center' }}>
-                Tìm thấy: {posts.length} bài viết
+                Tìm thấy: {routines.length} quy trình
               </div>
             )}
             <button 
               className="btn-create-payment"
-              onClick={() => navigate("/Blog/CreateEditPost/CreatePost")}
+              onClick={() => navigate("/Routine/Create")}
             >
-              <FaPlus /> Tạo bài viết
+              <FaPlus /> Tạo quy trình mới
             </button>
           </div>
         </div>
@@ -394,10 +394,9 @@ const BlogManager = () => {
             <thead>
               <tr style={{ backgroundColor: '#f8f9fa', height: '50px' }}>
                 <th style={{ width: '60px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>STT</th>
-                <th style={{ width: '230px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>TIÊU ĐỀ</th>
+                <th style={{ width: '150px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>LOẠI DA</th>
+                <th style={{ width: '250px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>TIÊU ĐỀ</th>
                 <th style={{ width: '350px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>NỘI DUNG</th>
-                <th style={{ width: '140px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>ẢNH</th>
-                <th style={{ width: '120px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>NGÀY TẠO</th>
                 <th style={{ width: '200px', padding: '12px 8px', borderBottom: '2px solid #dee2e6', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>THAO TÁC</th>
               </tr>
             </thead>
@@ -405,7 +404,7 @@ const BlogManager = () => {
               {error ? (
                 <tr>
                   <td 
-                    colSpan="6" 
+                    colSpan="5" 
                     style={{ 
                       padding: '30px', 
                       textAlign: 'center', 
@@ -418,17 +417,18 @@ const BlogManager = () => {
                     {error}
                   </td>
                 </tr>
-              ) : posts.length > 0 ? (
-                getCurrentPageItems().map((post, index) => (
+              ) : routines.length > 0 ? (
+                getCurrentPageItems().map((routine, index) => (
                   <tr 
-                    key={post.id}
+                    key={routine.id}
                     style={{ 
                       backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8f9fa',
                       transition: 'all 0.2s'
                     }}
                   >
                     <td style={{ padding: '8px', borderBottom: '1px solid #dee2e6', fontSize: '14px', textAlign: 'center' }}>{index + 1}</td>
-                    <td style={{ padding: '8px', borderBottom: '1px solid #dee2e6', fontSize: '14px', textAlign: 'left' }}>{post.title}</td>
+                    <td style={{ padding: '8px', borderBottom: '1px solid #dee2e6', fontSize: '14px', textAlign: 'center' }}>{routine.skinType}</td>
+                    <td style={{ padding: '8px', borderBottom: '1px solid #dee2e6', fontSize: '14px', textAlign: 'left' }}>{routine.title}</td>
                     <td style={{ padding: '8px', borderBottom: '1px solid #dee2e6', fontSize: '14px', textAlign: 'left' }}>
                       <div style={{ 
                         maxWidth: '100%', 
@@ -437,30 +437,36 @@ const BlogManager = () => {
                         textOverflow: 'ellipsis',
                         whiteSpace: 'nowrap'
                       }}>
-                        {post.content}
+                        {routine.content}
                       </div>
                     </td>
                     <td style={{ padding: '8px', borderBottom: '1px solid #dee2e6', fontSize: '14px', textAlign: 'center' }}>
-                      {post.imageUrl ? (
-                        <img 
-                          src={post.imageUrl} 
-                          alt="Ảnh bài viết" 
-                          style={{ 
-                            width: '100px', 
-                            height: '50px', 
-                            objectFit: 'cover', 
-                            borderRadius: '4px'
-                          }} 
-                        />
-                      ) : (
-                        'Không có ảnh'
-                      )}
-                    </td>
-                    <td style={{ padding: '8px', borderBottom: '1px solid #dee2e6', fontSize: '14px', textAlign: 'center' }}>{post.createdAt}</td>
-                    <td style={{ padding: '8px', borderBottom: '1px solid #dee2e6', fontSize: '14px', textAlign: 'center' }}>
                       <button 
                         className="btn-view"
-                        onClick={() => navigate(`/Blog/${post.id}`)}
+                        onClick={() => {
+                          // Chuyển đổi loại da sang định dạng URL
+                          let urlSkinType = '';
+                          const skinType = routine.skinType.toLowerCase();
+                          
+                          if (skinType.includes('dầu') || skinType.includes('dau')) {
+                            urlSkinType = 'da-dầu';
+                          } else if (skinType.includes('khô') || skinType.includes('kho')) {
+                            urlSkinType = 'da-khô';
+                          } else if (skinType.includes('thường') || skinType.includes('thuong')) {
+                            urlSkinType = 'da-thường';
+                          } else if (skinType.includes('hỗn hợp') || skinType.includes('hon hop')) {
+                            urlSkinType = 'da-hỗn-hợp';
+                          } else if (skinType.includes('nhạy cảm') || skinType.includes('nhay cam')) {
+                            urlSkinType = 'da-nhạy-cảm';
+                          } else {
+                            // Nếu không khớp với các loại da trên, chuyển đổi chung
+                            urlSkinType = 'da-' + skinType.replace(/\s+/g, '-');
+                          }
+                          
+                          navigate(`/quy-trinh-cham-soc/${urlSkinType}`, { 
+                            state: { skinType: routine.skinType } 
+                          });
+                        }}
                         style={{
                           padding: '5px 10px',
                           marginRight: '5px',
@@ -476,7 +482,10 @@ const BlogManager = () => {
                       </button>
                       <button 
                         className="btn-edit"
-                        onClick={() => navigate(`/Blog/CreateEditPost/EditPost/${post.id}`)}
+                        onClick={() => {
+                          console.log('Đang chuyển hướng đến trang sửa quy trình:', `/Routine/Edit/${routine.id}`);
+                          navigate(`/Routine/Edit/${routine.id}`);
+                        }}
                         style={{
                           padding: '5px 10px',
                           marginRight: '5px',
@@ -491,7 +500,7 @@ const BlogManager = () => {
                       </button>
                       <button 
                         className="btn-delete"
-                        onClick={() => handleOpenDeleteDialog(post)}
+                        onClick={() => handleOpenDeleteDialog(routine)}
                         style={{
                           padding: '5px 10px',
                           backgroundColor: '#DC3545',
@@ -509,7 +518,7 @@ const BlogManager = () => {
               ) : (
                 <tr>
                   <td 
-                    colSpan="6" 
+                    colSpan="5" 
                     style={{ 
                       padding: '30px', 
                       textAlign: 'center', 
@@ -529,7 +538,7 @@ const BlogManager = () => {
         </div>
 
         {/* Pagination */}
-        {posts.length > 0 && (
+        {routines.length > 0 && (
           <div style={{ 
             display: 'flex', 
             justifyContent: 'center', 
@@ -550,12 +559,12 @@ const BlogManager = () => {
         )}
       </div>
 
-      {/* Dialog xác nhận xóa bài viết */}
+      {/* Dialog xác nhận xóa quy trình chăm sóc da */}
       <Dialog open={deleteDialogOpen} onClose={handleCloseDeleteDialog}>
-        <DialogTitle>Xác nhận xóa bài viết</DialogTitle>
+        <DialogTitle>Xác nhận xóa quy trình chăm sóc da</DialogTitle>
         <DialogContent>
           <Typography>
-            Bạn có chắc chắn muốn xóa bài viết "{postToDelete?.title}" không?
+            Bạn có chắc chắn muốn xóa quy trình "{routineToDelete?.title}" không?
           </Typography>
           <Typography variant="body2" style={{ marginTop: '10px', color: '#dc3545' }}>
             Lưu ý: Hành động này không thể khôi phục lại.
@@ -571,7 +580,7 @@ const BlogManager = () => {
             Hủy
           </Button>
           <Button 
-            onClick={handleDeletePost} 
+            onClick={handleDeleteRoutine} 
             color="error" 
             disabled={isDeleting}
             variant="contained"
@@ -585,4 +594,4 @@ const BlogManager = () => {
   );
 };
 
-export default BlogManager;
+export default RoutineManager;
