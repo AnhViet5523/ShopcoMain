@@ -45,9 +45,8 @@ const Feedback = () => {
     { id: 'viewCustomer', name: 'Hồ sơ khách hàng', icon: '📝' },
     { id: 'viewSupport', name: 'Đơn hỗ trợ', icon: '📫' },
     { id: 'voucher', name: 'Vouchers', icon: '🎫' },
-    { id: 'feedback', name: 'Feedback', icon: '📢' },
-    { id: 'blogManager', name: 'Blog', icon: '📰' },
-    { id: 'routine', name: 'Quy trình chăm sóc da', icon: '🧖‍♂️' }
+    { id: 'feedback', name: 'Đánh giá sản phẩm', icon: '📢' },
+    { id: 'blogManager', name: 'Blog', icon: '📰' }
   ];
 
   // Lấy danh sách đánh giá
@@ -263,6 +262,10 @@ const Feedback = () => {
     setOpenReplyDialog(false);
     setSelectedReview(null);
     setReplyContent('');
+    // Đợi animation dialog đóng xong mới reset error
+    setTimeout(() => {
+      setError(null);
+    }, 300);
   };
 
   const handleReplyContentChange = (e) => {
@@ -274,17 +277,25 @@ const Feedback = () => {
     
     setReplyLoading(true);
     try {
+      // Gọi API phản hồi
       await reviewService.postReply(selectedReview.reviewId, replyContent);
       
-      // Cập nhật state reviews và originalReviews
-      const updatedReviews = reviews.map(review => 
-        review.reviewId === selectedReview.reviewId 
-          ? { ...review, staffResponse: replyContent } 
-          : review
+      // Cập nhật state một cách an toàn
+      setReviews(prevReviews => 
+        prevReviews.map(review => 
+          review.reviewId === selectedReview.reviewId 
+            ? { ...review, staffResponse: replyContent } 
+            : review
+        )
       );
       
-      setReviews(updatedReviews);
-      setOriginalReviews(updatedReviews);
+      setOriginalReviews(prevOriginal => 
+        prevOriginal.map(review => 
+          review.reviewId === selectedReview.reviewId 
+            ? { ...review, staffResponse: replyContent } 
+            : review
+        )
+      );
       
       setSnackbar({
         open: true,
@@ -292,6 +303,7 @@ const Feedback = () => {
         severity: 'success'
       });
       
+      // Đóng dialog sau khi thành công
       handleCloseReplyDialog();
     } catch (error) {
       console.error('Lỗi khi gửi phản hồi:', error);

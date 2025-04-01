@@ -25,24 +25,75 @@ const BestSellers = () => {
             try {
                 setLoading(true);
                 const allProducts = await productService.getAllProducts();
-                const soldPromises = allProducts.map(async (product) => {
-                    try {
-                        const totalSold = await orderService.countBoughtProducts(product.productId);
+                
+                // Xử lý ảnh và lấy số lượng đã bán
+                const productsWithDetails = allProducts.map(product => {
+                    // Xử lý ảnh
+                    if (product.images && product.images.length > 0) {
+                        let mainImage = product.images.find(img => img.isMainImage === true);
+                        if (!mainImage) {
+                            mainImage = product.images.find(img => img.displayOrder === 0);
+                        }
+                        
+                        if (mainImage) {
+                            return {
+                                ...product,
+                                mainImage: mainImage.imgUrl || mainImage.imageUrl || '/images/default-product.jpg',
+                                images: product.images
+                            };
+                        }
+                        
                         return {
                             ...product,
-                            soldCount: totalSold?.totalSold || 0
+                            mainImage: product.images[0]?.imgUrl || product.images[0]?.imageUrl || '/images/default-product.jpg',
+                            images: product.images
+                        };
+                    }
+                    // Nếu sản phẩm có imgURL
+                    else if (product.imgURL) {
+                        return {
+                            ...product,
+                            mainImage: product.imgURL,
+                            images: [{ imgUrl: product.imgURL }]
+                        };
+                    }
+                    // Nếu không có ảnh, sử dụng ảnh mặc định
+                    return {
+                        ...product,
+                        mainImage: '/images/default-product.jpg',
+                        images: []
+                    };
+                });
+
+                // Lấy số lượng đã bán và rating cho mỗi sản phẩm
+                const soldPromises = productsWithDetails.map(async (product) => {
+                    try {
+                        const [soldData, ratingData] = await Promise.all([
+                            orderService.countBoughtProducts(product.productId),
+                            productService.getProductAverageRating(product.productId)
+                        ]);
+
+                        return {
+                            ...product,
+                            soldCount: soldData?.totalSold || 0,
+                            rating: ratingData.averageRating,
+                            ratingCount: ratingData.totalReviews
                         };
                     } catch (error) {
-                        console.error(`Error fetching sold count for product ${product.productId}:`, error);
+                        console.error(`Error fetching details for product ${product.productId}:`, error);
                         return {
                             ...product,
-                            soldCount: 0
+                            soldCount: 0,
+                            rating: 0,
+                            ratingCount: 0
                         };
                     }
                 });
-                const productsWithSoldCount = await Promise.all(soldPromises);
-                const sortedProducts = productsWithSoldCount.sort((a, b) => b.soldCount - a.soldCount);
+
+                const productsWithAllDetails = await Promise.all(soldPromises);
+                const sortedProducts = productsWithAllDetails.sort((a, b) => b.soldCount - a.soldCount);
                 const topProducts = sortedProducts.slice(0, 12);
+                
                 setProducts(topProducts);
                 if (topProducts.length === 0) {
                     setError('Không tìm thấy sản phẩm bán chạy');

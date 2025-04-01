@@ -1,0 +1,115 @@
+.highlight-yellow {
+    color: #ffbb02; 
+    font-size: 1.5rem; 
+    font-weight: bold; 
+}
+
+.list-black {
+    color: black; 
+    font-size: 1rem; 
+}
+
+.product-item {
+    margin-bottom: 10px; 
+    cursor: pointer; 
+}
+
+.product-title {
+    color: #ffbb02; 
+    font-weight: bold; 
+}
+
+.product-name {
+    color: black; 
+    transition: color 0.3s, text-decoration 0.3s;
+}
+
+.product-name:hover {
+    color: blue; 
+    text-decoration: underline; 
+}
+
+body {
+    margin: 0; 
+    padding: 0; 
+}
+
+.container {
+    max-width: 100%; 
+    overflow: hidden; 
+}
+
+/* Thêm các style mới để cải thiện căn chỉnh */
+@media (max-width: 900px) {
+    .highlight-yellow {
+        font-size: 1.2rem;
+        margin-top: 20px;
+    }
+    
+    .list-black {
+        font-size: 0.9rem;
+    }
+}
+
+/* Thêm padding cho container nội dung */
+.content-container {
+    padding: 10px;
+}
+
+/* Tăng margin cho các mục danh sách */
+.list-black li {
+    margin-bottom: 8px;
+}
+
+/* Styles cho container ảnh với kích thước nhỏ hơn */
+.image-container {
+    width: 90%; /* Giảm chiều rộng xuống 90% */
+    height: 0;
+    padding-bottom: 80%; /* Giảm tỷ lệ khung xuống 80% */
+    position: relative;
+    overflow: hidden;
+    margin: 0 auto; /* Căn giữa container */
+    max-height: 500px; /* Giới hạn chiều cao tối đa */
+}
+
+.skin-image {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    top: 0;
+    left: 0;
+    border-radius: 8px; /* Thêm bo góc để ảnh đẹp hơn */
+}
+
+/* Style cho danh sách sản phẩm để đảm bảo chiều cao tương tự với quy trình */
+.product-list-container {
+    min-height: 500px; /* Điều chỉnh giá trị này tùy theo nội dung quy trình */
+    display: flex;
+    flex-direction: column;
+}
+
+/* Tăng khoảng cách giữa các sản phẩm */
+.product-item {
+    margin-bottom: 15px;
+    padding: 8px 0;
+    cursor: pointer;
+    border-bottom: 1px dashed #eee;
+}
+
+/* Chỉnh lại padding cho container */
+.content-container {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Đảm bảo danh sách sản phẩm và quy trình có chiều cao tương tự */
+.routine-container, .products-container {
+    flex-grow: 1;
+    min-height: 500px; /* Điều chỉnh cho phù hợp */
+}
+
+
+
+

@@ -90,25 +90,27 @@ const CreatePost = ({ editMode }) => {
       setLoading(true);
       setError(null);
 
+      // Định dạng lại nội dung trước khi gửi
+      const formattedContent = formatContent(post.content);
+
       const postData = {
         ...post,
+        content: formattedContent,
         image: imageFile // Thêm file ảnh nếu có
       };
 
       // Đảm bảo postId/id trong dữ liệu gửi đi khớp với ID trên URL khi chỉnh sửa
       if (editMode) {
-        postData.postId = parseInt(id); // Thêm postId để tránh lỗi "ID không trùng khớp"
+        postData.postId = parseInt(id);
       }
 
       let response;
       
       if (editMode) {
-        // Gọi API để cập nhật bài viết
         response = await blogService.updatePost(id, postData);
         console.log('Update post response:', response);
         alert('Cập nhật bài viết thành công!');
       } else {
-        // Gọi API để tạo bài viết mới
         response = await blogService.createPost(postData);
         console.log('Create post response:', response);
         alert('Tạo bài viết mới thành công!');
@@ -130,6 +132,69 @@ const CreatePost = ({ editMode }) => {
       setLoading(false);
     }
   };
+
+  // Hàm định dạng nội dung
+  const formatContent = (content) => {
+    try {
+      // Tách nội dung thành các dòng
+      const lines = content.split('\n');
+      let formattedLines = [];
+      let currentSection = [];
+      
+      lines.forEach((line, index) => {
+        const trimmedLine = line.trim();
+        
+        // Nếu là dòng trống và có nội dung trong section hiện tại
+        if (!trimmedLine && currentSection.length > 0) {
+          // Thêm section hiện tại vào kết quả
+          formattedLines.push(currentSection.join('\n'));
+          currentSection = [];
+        }
+        // Nếu là tiêu đề (bắt đầu bằng số)
+        else if (/^\d+(\.\d+)?\.?\s+.+/.test(trimmedLine)) {
+          // Nếu có section đang xử lý, thêm vào kết quả
+          if (currentSection.length > 0) {
+            formattedLines.push(currentSection.join('\n'));
+            currentSection = [];
+          }
+          // Thêm tiêu đề vào kết quả
+          formattedLines.push(trimmedLine);
+        }
+        // Nếu là nội dung thông thường
+        else if (trimmedLine) {
+          currentSection.push(trimmedLine);
+        }
+      });
+      
+      // Thêm section cuối cùng nếu có
+      if (currentSection.length > 0) {
+        formattedLines.push(currentSection.join('\n'));
+      }
+      
+      // Kết hợp tất cả các phần với hai dòng mới
+      return formattedLines.join('\n\n');
+    } catch (error) {
+      console.error('Error formatting content:', error);
+      return content; // Trả về nội dung gốc nếu có lỗi
+    }
+  };
+
+  // Thêm hướng dẫn sử dụng
+  const contentHelperText = `
+Hướng dẫn định dạng nội dung:
+1. Tiêu đề chính: Bắt đầu bằng số và dấu chấm (VD: "1. Giới thiệu")
+2. Tiêu đề phụ: Bắt đầu bằng số, dấu chấm, số (VD: "1.1. Nội dung phụ")
+3. Xuống dòng: Nhấn Enter hai lần để tạo đoạn văn mới
+4. Ví dụ cấu trúc:
+
+1. Giới thiệu
+Nội dung giới thiệu ở đây...
+
+1.1. Phần phụ
+Nội dung phần phụ ở đây...
+
+2. Nội dung chính
+Nội dung chính ở đây...`;
 
   // Xử lý quay lại
   const handleGoBack = () => {
@@ -294,6 +359,16 @@ const CreatePost = ({ editMode }) => {
               onChange={(e) => handleInputChange('content', e.target.value)}
               sx={{ mb: 4 }}
               required
+              helperText={contentHelperText}
+              FormHelperTextProps={{
+                sx: {
+                  whiteSpace: 'pre-line',
+                  marginTop: '8px',
+                  padding: '8px',
+                  backgroundColor: '#f5f5f5',
+                  borderRadius: '4px'
+                }
+              }}
             />
 
             <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>

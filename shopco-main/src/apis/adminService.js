@@ -505,149 +505,68 @@ const adminService = {
         }
     },
 
-    getSkinCareRoutines: async () => {
+    getTotalRevenue: async () => {
         try {
-            console.log('Đang tải danh sách quy trình chăm sóc da...');
+            // Lấy tất cả thanh toán
+            const payments = await axiosClient.get('/api/Payments');
             
-            // Thêm timestamp để tránh cache
-            const timestamp = new Date().getTime();
-            
-            // Tạo CancelToken để có thể hủy request khi cần thiết
-            const source = axios.CancelToken.source();
-            
-            // Thiết lập timeout dài hơn (30 giây)
-            const timeout = setTimeout(() => {
-                source.cancel('Thời gian phản hồi quá lâu');
-            }, 30000);
-            
-            try {
-                const response = await axiosClient.get(`/api/SkincareRoutines?_t=${timestamp}`, {
-                    headers: {
-                        'Cache-Control': 'no-cache',
-                        'Pragma': 'no-cache',
-                        'Expires': '0'
-                    },
-                    cancelToken: source.token,
-                    // Tăng timeout lên 30 giây
-                    timeout: 30000
-                });
+            // Tính tổng doanh thu từ các thanh toán thành công
+            const totalRevenue = payments.data
+                .filter(payment => payment.paymentStatus === "Success")
+                .reduce((total, payment) => total + payment.amount, 0);
                 
-                // Xóa timeout khi request thành công
-                clearTimeout(timeout);
-                
-                console.log('Raw Response in Service:', response);
-                
-                // Xử lý nhiều định dạng response
-                if (response && response["$values"]) {
-                    return response["$values"];
-                }
-                
-                return response;
-            } catch (requestError) {
-                clearTimeout(timeout);
-                throw requestError;
-            }
+            return totalRevenue;
         } catch (error) {
-            console.error('Lỗi khi tải danh sách quy trình chăm sóc da:', error);
-            throw error;
-        }
-    },
-    
-    // Thêm phương thức mới để lấy quy trình chăm sóc da theo ID
-    getSkinCareRoutineById: async (routineId) => {
-        try {
-            console.log(`Đang tải quy trình chăm sóc da ID=${routineId}...`);
-            
-            // Thêm timestamp để tránh cache
-            const timestamp = new Date().getTime();
-            
-            const response = await axiosClient.get(`/api/SkincareRoutines/${routineId}?_t=${timestamp}`, {
-                headers: {
-                    'Cache-Control': 'no-cache',
-                    'Pragma': 'no-cache',
-                    'Expires': '0'
-                },
-                timeout: 30000
-            });
-            
-            console.log(`Raw Response for routine ID=${routineId}:`, response);
-            
-            return response;
-        } catch (error) {
-            console.error(`Lỗi khi tải quy trình chăm sóc da ID=${routineId}:`, error);
-            throw error;
-        }
-    },
-    
-    // Thêm phương thức mới để cập nhật quy trình chăm sóc da
-    updateSkincareRoutine: async (routineId, routineData) => {
-        try {
-            console.log(`Đang cập nhật quy trình chăm sóc da ID=${routineId}...`, routineData);
-            
-            const response = await axiosClient.put(`/api/SkincareRoutines/${routineId}`, routineData, {
-                timeout: 30000
-            });
-            
-            console.log(`Kết quả cập nhật quy trình ID=${routineId}:`, response);
-            
-            return response;
-        } catch (error) {
-            console.error(`Lỗi khi cập nhật quy trình chăm sóc da ID=${routineId}:`, error);
-            throw error;
-        }
-    },
-    
-    // Thêm phương thức mới để xóa quy trình chăm sóc da
-    deleteSkincareRoutine: async (routineId) => {
-        try {
-            console.log(`Đang xóa quy trình chăm sóc da ID=${routineId}...`);
-            
-            const response = await axiosClient.delete(`/api/SkincareRoutines/${routineId}`, {
-                timeout: 30000
-            });
-            
-            console.log(`Kết quả xóa quy trình ID=${routineId}:`, response);
-            
-            return response;
-        } catch (error) {
-            console.error(`Lỗi khi xóa quy trình chăm sóc da ID=${routineId}:`, error);
+            console.error('Lỗi khi lấy tổng doanh thu:', error);
             throw error;
         }
     },
 
-    // Thêm phương thức mới để cập nhật hình ảnh cho quy trình chăm sóc da
-    updateSkincareRoutineImage: async (routineId, imageUrl) => {
+    getMonthlyRevenue: async (year) => {
         try {
-            console.log(`Đang cập nhật hình ảnh cho quy trình chăm sóc da ID=${routineId}...`);
+            // Lấy tất cả thanh toán
+            const payments = await axiosClient.get('/api/Payments');
             
-            const response = await axiosClient.put(`/api/SkincareRoutines/${routineId}/image`, 
-                { imageUrl }, 
-                { timeout: 30000 }
-            );
+            // Khởi tạo mảng 12 tháng với doanh thu 0
+            const monthlyRevenue = Array(12).fill(0);
             
-            console.log(`Kết quả cập nhật hình ảnh quy trình ID=${routineId}:`, response);
+            // Lọc và tính tổng doanh thu theo tháng cho năm được chọn
+            payments.data.forEach(payment => {
+                if (payment.paymentStatus === "Success") {
+                    const paymentDate = new Date(payment.paymentDate);
+                    if (paymentDate.getFullYear() === year) {
+                        const month = paymentDate.getMonth();
+                        monthlyRevenue[month] += payment.amount;
+                    }
+                }
+            });
             
-            return response;
+            // Chuyển đổi dữ liệu sang định dạng mong muốn
+            return monthlyRevenue.map((revenue, index) => ({
+                month: index + 1,
+                revenue: revenue
+            }));
         } catch (error) {
-            console.error(`Lỗi khi cập nhật hình ảnh quy trình chăm sóc da ID=${routineId}:`, error);
+            console.error('Lỗi khi lấy doanh thu theo tháng:', error);
             throw error;
         }
     },
-    
-    // Thêm phương thức mới để tạo quy trình chăm sóc da
-    createSkincareRoutine: async (routineData) => {
+
+    // Thêm phương thức mới để lấy dữ liệu từ API summary
+    getPaymentSummary: async () => {
         try {
-            console.log(`Đang tạo quy trình chăm sóc da mới...`, routineData);
-            
-            const response = await axiosClient.post(`/api/SkincareRoutines`, routineData, {
-                timeout: 30000
-            });
-            
-            console.log(`Kết quả tạo quy trình chăm sóc da:`, response);
-            
-            return response;
+            const response = await axiosClient.get('/api/Admin/summary');
+            // Kiểm tra và xử lý dữ liệu trả về
+            if (response && response.data && response.data.$values) {
+                return response.data.$values;
+            } else if (Array.isArray(response)) {
+                return response;
+            } else if (response && Array.isArray(response.$values)) {
+                return response.$values;
+            }
+            return [];
         } catch (error) {
-            console.error(`Lỗi khi tạo quy trình chăm sóc da:`, error);
+            console.error('Lỗi khi lấy dữ liệu tổng quan thanh toán:', error);
             throw error;
         }
     },

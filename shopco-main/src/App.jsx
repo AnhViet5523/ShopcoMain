@@ -10,7 +10,11 @@ import Info from "./pages/Account/Info";
 import Order from "./pages/Account/Order";
 import Support from "./pages/Account/Support";  
 import CategoryContent from "./components/CategoryContent";
-
+import DaDau from "./pages/CareProcess/DaDau/DaDau";
+import DaKho from "./pages/CareProcess/DaKho/DaKho";
+import DaThuong from "./pages/CareProcess/DaThuong/DaThuong";
+import DaHonHop from "./pages/CareProcess/DaHonHop/DaHonHop";
+import DaNhayCam from "./pages/CareProcess/DaNhayCam/DaNhayCam";
 import Intro from "./pages/PagesOfFooter/Intro";
 import Buy from "./pages/PagesOfFooter/Buy";
 import Term from "./pages/PagesOfFooter/Term";
@@ -50,9 +54,6 @@ import BestSellers from "./components/BestSellers";
 import BlogManager from "./pages/Manager/BlogManager";
 import BlogStaff from "./pages/Staff/BlogStaff";
 import CreatePost from "./pages/Blog/CreateEditPost/CreatePost";
-import RoutineManager from "./pages/Manager/Routine";
-import CareDetail from "./pages/CareProcess/CareDetail";
-import RoutineEdit from "./pages/Manager/RoutineEdit";
 
 // Component để hủy request khi chuyển trang
 function NavigationHandler() {
@@ -155,38 +156,12 @@ export default function App() {
           } />
           <Route path="/bestsellers" element={<BestSellers />} />
 
-
-          
-          {/* Route mới cho quy trình chăm sóc da */}
-          <Route path="/quy-trinh-cham-soc/:skinType" element={<CareDetail />} />
-          <Route path="/quy-trinh-cham-soc/id/:id" element={<CareDetail />} />
-          
-          {/* Route cho trang quản lý và chỉnh sửa quy trình chăm sóc da */}
-          <Route
-            path="/Routine"
-            element={
-              <ProtectedRoute requiredRole="Manager">
-                <RoutineManager />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/Routine/Edit/:id"
-            element={
-              <ProtectedRoute requiredRole="Manager">
-                <RoutineEdit />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/Routine/Create"
-            element={
-              <ProtectedRoute requiredRole="Manager">
-                <RoutineEdit />
-              </ProtectedRoute>
-            }
-          />
-          
+          {/* Static Pages */}
+          <Route path="/da-dau" element={<DaDau />} />
+          <Route path="/da-kho" element={<DaKho />} />
+          <Route path="/da-thuong" element={<DaThuong />} />
+          <Route path="/da-hon-hop" element={<DaHonHop />} />
+          <Route path="/da-nhay-cam" element={<DaNhayCam />} />
           <Route path="/intro" element={<Intro />} />
           <Route path="/buy" element={<Buy />} />
           <Route path="/term" element={<Term />} />
@@ -336,15 +311,6 @@ export default function App() {
             element={
               <ProtectedRoute requiredRole="Manager">
                 <BlogManager />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/routine"
-            element={
-              <ProtectedRoute requiredRole="Manager">
-                <RoutineManager />
               </ProtectedRoute>
             }
           />

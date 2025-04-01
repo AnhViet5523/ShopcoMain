@@ -114,3 +114,95 @@
       width: 100%;
     }
   }
+  
+  /* Styling cho nội dung blog */
+  .blog-content {
+    line-height: 1.8;
+    font-size: 1rem;
+    color: #333;
+  }
+  
+  .blog-content .blog-heading {
+    color: #059669;
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+    font-weight: 600;
+    scroll-margin-top: 80px;
+  }
+  
+  .blog-content .blog-heading-2 {
+    font-size: 1.8rem;
+    border-bottom: 2px solid #e5e7eb;
+    padding-bottom: 0.5rem;
+  }
+  
+  .blog-content .blog-heading-3 {
+    font-size: 1.5rem;
+  }
+  
+  .blog-content .blog-heading-4 {
+    font-size: 1.25rem;
+  }
+  
+  .blog-content .blog-paragraph {
+    margin-bottom: 1.5rem;
+    line-height: 1.8;
+  }
+  
+  /* Styling cho mục lục */
+  .blog-toc {
+    background-color: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: 8px;
+    margin-bottom: 2rem;
+    border: 1px solid #e5e7eb;
+  }
+  
+  .blog-toc-title {
+    color: #059669;
+    font-weight: bold;
+    font-size: 1.25rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid #059669;
+  }
+  
+  .blog-toc-list {
+    list-style: none;
+    padding-left: 0;
+  }
+  
+  .blog-toc-item {
+    margin-bottom: 0.5rem;
+    color: #374151;
+  }
+  
+  .blog-toc-link {
+    color: #059669;
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+  
+  .blog-toc-link:hover {
+    color: #047857;
+    text-decoration: underline;
+  }
+  
+  /* Responsive styles */
+  @media (max-width: 768px) {
+    .blog-content .blog-heading-2 {
+      font-size: 1.5rem;
+    }
+    
+    .blog-content .blog-heading-3 {
+      font-size: 1.3rem;
+    }
+    
+    .blog-content .blog-heading-4 {
+      font-size: 1.1rem;
+    }
+    
+    .blog-content {
+      font-size: 0.95rem;
+    }
+  }

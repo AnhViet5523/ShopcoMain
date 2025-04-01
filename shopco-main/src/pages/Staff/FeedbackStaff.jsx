@@ -44,7 +44,7 @@ const FeedbackStaff = () => {
     { id: 'customerStaff', name: 'Hồ sơ khách hàng', icon: '📝' },
     { id: 'supportStaff', name: 'Đơn hỗ trợ', icon: '📫' },
     { id: 'voucherStaff', name: 'Vouchers', icon: '🎫' },
-    { id: 'feedbackStaff', name: 'Feedback', icon: '📢' },
+    { id: 'feedbackStaff', name: 'Đánh giá sản phẩm', icon: '📢' },
     { id: 'blogStaff', name: 'Blog', icon: '📰' }
   ];
   // Lấy danh sách đánh giá
@@ -260,6 +260,10 @@ const FeedbackStaff = () => {
     setOpenReplyDialog(false);
     setSelectedReview(null);
     setReplyContent('');
+    // Đợi animation dialog đóng xong mới reset error
+    setTimeout(() => {
+      setError(null);
+    }, 300);
   };
 
   const handleReplyContentChange = (e) => {
@@ -271,17 +275,25 @@ const FeedbackStaff = () => {
     
     setReplyLoading(true);
     try {
+      // Gọi API phản hồi
       await reviewService.postReply(selectedReview.reviewId, replyContent);
       
-      // Cập nhật state reviews và originalReviews
-      const updatedReviews = reviews.map(review => 
-        review.reviewId === selectedReview.reviewId 
-          ? { ...review, staffResponse: replyContent } 
-          : review
+      // Cập nhật state một cách an toàn
+      setReviews(prevReviews => 
+        prevReviews.map(review => 
+          review.reviewId === selectedReview.reviewId 
+            ? { ...review, staffResponse: replyContent } 
+            : review
+        )
       );
       
-      setReviews(updatedReviews);
-      setOriginalReviews(updatedReviews);
+      setOriginalReviews(prevOriginal => 
+        prevOriginal.map(review => 
+          review.reviewId === selectedReview.reviewId 
+            ? { ...review, staffResponse: replyContent } 
+            : review
+        )
+      );
       
       setSnackbar({
         open: true,
@@ -289,6 +301,7 @@ const FeedbackStaff = () => {
         severity: 'success'
       });
       
+      // Đóng dialog sau khi thành công
       handleCloseReplyDialog();
     } catch (error) {
       console.error('Lỗi khi gửi phản hồi:', error);

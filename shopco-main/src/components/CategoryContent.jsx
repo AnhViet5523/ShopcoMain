@@ -7,6 +7,7 @@ import { useState, useEffect } from 'react';
 import productService from '../apis/productService';
 import categoryService from '../apis/categoryService';
 import productImageService from '../apis/productImageService';
+import orderService from '../apis/orderService';
 
 // Thêm constant cho thứ tự danh mục
 const CATEGORY_ORDER = [
@@ -261,7 +262,7 @@ const CategoryContent = () => {
         fetchAllProductImages();
     }, []);
 
-    // Sửa lại hàm fetchProductsByCategory để cập nhật hình ảnh cho sản phẩm
+    // Sửa lại hàm fetchProductsByCategory để lấy rating và số lượng đã bán cho mỗi sản phẩm
     const fetchProductsByCategory = async (categoryId) => {
         try {
             setLoading(true);
@@ -285,31 +286,104 @@ const CategoryContent = () => {
             }
             
             // Lọc sản phẩm theo categoryId
-            const data = _products.filter(x => x.categoryId == categoryId);            
+            const filteredProducts = _products.filter(x => x.categoryId == categoryId);            
             
-            const mappedProducts = data.map(product => ({
-                id: product.productId,
-                name: product.productName,
-                price: product.price,
-                brand: product.brand,
-                skinType: product.skinType,
-                categoryId: product.categoryId,
-                description: product.description,
-                capacity: product.capacity,
-                image: product.imgURL || getImageUrl(product) || '/placeholder.jpg',
-                imgUrl: getImageUrl(product) || product.imgURL || '/placeholder.jpg',
-                quantity: product.quantity,
-                status: product.status
-            }));
+            // Xử lý ảnh và thông tin chi tiết cho mỗi sản phẩm
+            const productsWithImages = filteredProducts.map(product => {
+                // Xử lý ảnh
+                if (product.images && product.images.length > 0) {
+                    let mainImage = product.images.find(img => img.isMainImage === true);
+                    if (!mainImage) {
+                        mainImage = product.images.find(img => img.displayOrder === 0);
+                    }
+                    
+                    if (mainImage) {
+                        return {
+                            ...product,
+                            mainImage: mainImage.imgUrl || mainImage.imageUrl || '/images/default-product.jpg',
+                            images: product.images
+                        };
+                    }
+                    
+                    return {
+                        ...product,
+                        mainImage: product.images[0]?.imgUrl || product.images[0]?.imageUrl || '/images/default-product.jpg',
+                        images: product.images
+                    };
+                }
+                else if (product.imgURL) {
+                    return {
+                        ...product,
+                        mainImage: product.imgURL,
+                        images: [{ imgUrl: product.imgURL }]
+                    };
+                }
+                return {
+                    ...product,
+                    mainImage: '/images/default-product.jpg',
+                    images: []
+                };
+            });
+
+            // Lấy số lượng đã bán và rating cho mỗi sản phẩm
+            const productsWithDetails = await Promise.all(
+                productsWithImages.map(async (product) => {
+                    try {
+                        const [soldData, ratingData] = await Promise.all([
+                            orderService.countBoughtProducts(product.productId),
+                            productService.getProductAverageRating(product.productId)
+                        ]);
+
+                        return {
+                            ...product,
+                            id: product.productId,
+                            name: product.productName,
+                            price: product.price,
+                            brand: product.brand,
+                            skinType: product.skinType,
+                            categoryId: product.categoryId,
+                            description: product.description,
+                            capacity: product.capacity,
+                            image: product.mainImage,
+                            imgUrl: product.mainImage,
+                            quantity: product.quantity,
+                            status: product.status,
+                            soldCount: soldData?.totalSold || 0,
+                            rating: ratingData.averageRating,
+                            ratingCount: ratingData.totalReviews
+                        };
+                    } catch (error) {
+                        console.error(`Error fetching details for product ${product.productId}:`, error);
+                        return {
+                            ...product,
+                            id: product.productId,
+                            name: product.productName,
+                            price: product.price,
+                            brand: product.brand,
+                            skinType: product.skinType,
+                            categoryId: product.categoryId,
+                            description: product.description,
+                            capacity: product.capacity,
+                            image: product.mainImage,
+                            imgUrl: product.mainImage,
+                            quantity: product.quantity,
+                            status: product.status,
+                            soldCount: 0,
+                            rating: 0,
+                            ratingCount: 0
+                        };
+                    }
+                })
+            );
             
-            console.log('Sản phẩm trong category:', mappedProducts.length);
+            console.log('Sản phẩm trong category:', productsWithDetails.length);
             
             // Lưu danh sách sản phẩm của category
-            setProducts(mappedProducts);
-            setCategoryProducts(mappedProducts);
+            setProducts(productsWithDetails);
+            setCategoryProducts(productsWithDetails);
             
             // KHÔNG ghi đè danh sách thương hiệu, chỉ log để debug
-            const categoryBrands = [...new Set(mappedProducts.filter(p => p.brand).map(p => p.brand))];
+            const categoryBrands = [...new Set(productsWithDetails.filter(p => p.brand).map(p => p.brand))];
             console.log('Thương hiệu trong category hiện tại:', categoryBrands.length, 'thương hiệu');
             console.log('Tổng số thương hiệu hiển thị:', brands.length, 'thương hiệu');
             

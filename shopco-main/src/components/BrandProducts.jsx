@@ -32,7 +32,64 @@ const BrandProducts = () => {
       const data = await productService.getProductsByBrand(brandName);
       
       console.log('Products data:', data);
-      setProducts(data);
+
+      // Xử lý ảnh và lấy rating cho mỗi sản phẩm
+      if (Array.isArray(data)) {
+        // Xử lý ảnh cho mỗi sản phẩm
+        const productsWithImages = data.map(product => {
+          // Nếu sản phẩm đã có ảnh từ API
+          if (product.images && product.images.length > 0) {
+            let mainImage = product.images.find(img => img.isMainImage === true);
+            if (!mainImage) {
+              mainImage = product.images.find(img => img.displayOrder === 0);
+            }
+            
+            if (mainImage) {
+              return {
+                ...product,
+                mainImage: mainImage.imgUrl || mainImage.imageUrl || '/images/default-product.jpg',
+                images: product.images
+              };
+            }
+            
+            return {
+              ...product,
+              mainImage: product.images[0]?.imgUrl || product.images[0]?.imageUrl || '/images/default-product.jpg',
+              images: product.images
+            };
+          }
+          // Nếu sản phẩm có imgURL
+          else if (product.imgURL) {
+            return {
+              ...product,
+              mainImage: product.imgURL,
+              images: [{ imgUrl: product.imgURL }]
+            };
+          }
+          // Nếu không có ảnh, sử dụng ảnh mặc định
+          return {
+            ...product,
+            mainImage: '/images/default-product.jpg',
+            images: []
+          };
+        });
+
+        // Lấy điểm đánh giá trung bình cho mỗi sản phẩm
+        const productsWithRatings = await Promise.all(
+          productsWithImages.map(async (product) => {
+            const { averageRating, totalReviews } = await productService.getProductAverageRating(product.productId);
+            return {
+              ...product,
+              rating: averageRating,
+              ratingCount: totalReviews,
+            };
+          })
+        );
+
+        setProducts(productsWithRatings);
+      } else {
+        setProducts([]);
+      }
       setLoading(false);
     } catch (err) {
       console.error('Error fetching products:', err);
