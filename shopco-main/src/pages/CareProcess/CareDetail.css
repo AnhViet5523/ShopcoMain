@@ -1,0 +1,304 @@
+.skin-image {
+    width: 100%;
+    max-width: 500px;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease;
+}
+
+.skin-image:hover {
+    transform: scale(1.02);
+}
+
+.content-container {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    animation: fadeIn 0.5s ease-in;
+}
+
+.routine-container {
+    flex-grow: 1;
+    background-color: white;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    min-height: 300px;
+    animation: fadeIn 0.3s ease-in;
+}
+
+.products-container {
+    flex-grow: 1;
+    background-color: white;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    min-height: 300px;
+    animation: fadeIn 0.3s ease-in;
+}
+
+.product-item {
+    cursor: pointer;
+    padding: 12px 15px;
+    margin-bottom: 15px;
+    border-radius: 8px;
+    transition: all 0.3s;
+    background-color: #f9f9f9;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    border-left: 3px solid #ffbb02;
+}
+
+.product-item:hover {
+    background-color: #fffbea;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+}
+
+.product-title {
+    font-weight: bold;
+    color: #4a4a4a;
+    margin-right: 5px;
+}
+
+.product-name {
+    color: #333;
+    font-weight: 500;
+}
+
+.product-details {
+    margin-top: 8px;
+    font-size: 0.9em;
+    color: #666;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.product-brand {
+    font-style: italic;
+}
+
+.product-price {
+    font-weight: bold;
+    color: #e67e22;
+}
+
+.highlight-yellow {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0) 65%, rgba(255, 187, 2, 0.3) 65%);
+    display: inline;
+}
+
+.list-black {
+    color: #333 !important;
+}
+
+.image-container {
+    position: relative;
+    overflow: hidden;
+    border-radius: 10px;
+    transition: transform 0.3s;
+}
+
+.image-container:hover {
+    transform: scale(1.02);
+}
+
+.list-black ul, .list-black ol {
+    margin-top: 10px;
+    padding-left: 25px;
+}
+
+.list-black li {
+    margin-bottom: 8px;
+    line-height: 1.5;
+}
+
+/* Thêm CSS mới cho giao diện như trong ảnh */
+.routine-title {
+    font-size: 26px !important;
+    font-weight: bold !important;
+    text-align: center !important;
+    color: #ffbb02 !important;
+    margin-bottom: 20px !important;
+    position: relative;
+    display: inline-block;
+    width: 100%;
+}
+
+.routine-title::before, .routine-title::after {
+    content: '🌿';
+    margin: 0 10px;
+}
+
+.dac-diem {
+    display: block;
+    margin-bottom: 12px;
+    font-weight: bold;
+    color: #ff9800;
+    font-size: 18px;
+}
+
+.dac-diem::before {
+    content: '•';
+    color: #ff9800;
+    margin-right: 10px;
+    font-size: 20px;
+}
+
+.feature-list {
+    list-style-type: none;
+    padding-left: 10px;
+    margin-bottom: 20px;
+}
+
+.feature-list li {
+    position: relative;
+    padding-left: 20px;
+    margin-bottom: 10px;
+    line-height: 1.6;
+}
+
+.feature-list li::before {
+    content: '•';
+    position: absolute;
+    left: 0;
+    color: #333;
+    font-weight: bold;
+}
+
+.buoi-sang, .buoi-toi {
+    display: block;
+    font-weight: bold;
+    margin: 20px 0 12px;
+    padding-left: 28px;
+    position: relative;
+    color: #ffbb02;
+    font-size: 17px;
+}
+
+.buoi-sang::before {
+    content: '☀️';
+    position: absolute;
+    left: 0;
+    top: 0;
+}
+
+.buoi-toi::before {
+    content: '🌙';
+    position: absolute;
+    left: 0;
+    top: 0;
+}
+
+.step-list {
+    list-style-type: none;
+    counter-reset: step-counter;
+    padding-left: 0;
+}
+
+.step-list li {
+    counter-increment: step-counter;
+    position: relative;
+    padding-left: 30px;
+    margin-bottom: 10px;
+    line-height: 1.6;
+}
+
+.step-list li::before {
+    content: counter(step-counter) ".";
+    position: absolute;
+    left: 0;
+    font-weight: bold;
+    color: #333;
+}
+
+.step-item, .feature-item {
+    padding-left: 20px;
+    margin-bottom: 10px;
+    line-height: 1.6;
+    position: relative;
+}
+
+.step-item::before {
+    content: "•";
+    position: absolute;
+    left: 0;
+    color: #333;
+}
+
+.feature-item::before {
+    content: "•";
+    position: absolute;
+    left: 0;
+    color: #333;
+}
+
+.routine-formatted-content {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.routine-formatted-content p {
+    margin-bottom: 10px;
+    line-height: 1.6;
+}
+
+/* Thêm CSS mới cho nút tìm sản phẩm */
+.find-products-button {
+    display: inline-block;
+    padding: 12px 25px;
+    background-color: #ffbb02;
+    color: white;
+    border-radius: 30px;
+    text-align: center;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin: 20px auto;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.find-products-button:hover {
+    background-color: #ff9800;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+@media (max-width: 768px) {
+    .content-container {
+        padding: 15px;
+    }
+    
+    .routine-container, .products-container {
+        padding: 15px;
+    }
+    
+    .routine-title {
+        font-size: 22px !important;
+    }
+    
+    .routine-title::before, .routine-title::after {
+        margin: 0 5px;
+    }
+
+    .buoi-sang, .buoi-toi {
+        font-size: 16px;
+        padding-left: 25px;
+    }
+
+    .dac-diem {
+        font-size: 16px;
+    }
+
+    .feature-list li, .step-list li {
+        margin-bottom: 8px;
+    }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+} 

@@ -23,13 +23,20 @@ const excludeFromCancellation = [
     '/api/Payments/', // Thêm Payments vào danh sách loại trừ
     '/api/feedbacks/', // Thêm feedbacks vào danh sách loại trừ để tránh hủy requests
     '/api/Quiz/', // Thêm Quiz vào danh sách loại trừ để tránh hủy requests quiz
-    '/api/QuizAnswers' // Thêm QuizAnswers vào danh sách loại trừ
+    '/api/QuizAnswers', // Thêm QuizAnswers vào danh sách loại trừ
+    '/api/SkincareRoutines', // Thêm SkincareRoutines vào danh sách loại trừ để tránh hủy requests
+    '/api/SkincareRoutines/skintype/' // Thêm SkincareRoutines/skintype/ vào danh sách loại trừ
 ];
 
 // Hàm kiểm tra xem một endpoint có nên được loại trừ khỏi cơ chế hủy không
 const shouldExcludeFromCancellation = (endpoint, method) => {
     // Bổ sung thêm kiểm tra cho /api/Orders/id
     if (endpoint.match(/\/api\/Orders\/\d+/)) {
+        return true;
+    }
+    
+    // Kiểm tra đặc biệt cho SkincareRoutines/skintype
+    if (endpoint.match(/\/api\/SkincareRoutines\/skintype\/[^/]+/)) {
         return true;
     }
     
@@ -173,6 +180,18 @@ axiosClient.interceptors.response.use(
         if (!response.data) {
             console.warn('API response.data is undefined, returning empty object');
             return {};
+        }
+        
+        // Xử lý đặc biệt cho các response từ SkincareRoutines API
+        if (endpoint && (
+            endpoint.includes('/api/SkincareRoutines/skintype/') || 
+            endpoint.includes('/api/SkincareRoutines/categories/skintype/')
+        )) {
+            // Log xem response có cấu trúc $values không để debug
+            if (response.data && response.data.$values) {
+                console.log('Phát hiện cấu trúc $values trong response:', endpoint);
+                return response.data;
+            }
         }
         
         console.log('API Response:', response.data);

@@ -81,6 +81,7 @@ const ProductStaff = () => {
   const [reorderedImages, setReorderedImages] = useState([]);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [reorderChanged, setReorderChanged] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState(null); // Thêm state để lưu URL xem trước của ảnh
 
   // Thêm state cho chức năng nhập kho
   const [openImportDialog, setOpenImportDialog] = useState(false);
@@ -1414,7 +1415,15 @@ const ProductStaff = () => {
   // Hàm xử lý khi chọn file ảnh mới
   const handleImageFileChange = (event) => {
     if (event.target.files && event.target.files[0]) {
-      setNewImageFile(event.target.files[0]);
+      const file = event.target.files[0];
+      setNewImageFile(file);
+      
+      // Tạo URL xem trước cho ảnh được chọn
+      const fileUrl = URL.createObjectURL(file);
+      setPreviewUrl(fileUrl);
+      
+      // Khi người dùng chọn file ảnh mới, đánh dấu là có thay đổi để nút Lưu được kích hoạt
+      setReorderChanged(true);
     }
   };
 
@@ -1456,6 +1465,12 @@ const ProductStaff = () => {
         images: productDetail.images || []
       });
 
+      // Xóa URL xem trước khi đã cập nhật ảnh thành công
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+        setPreviewUrl(null);
+      }
+      
       setNewImageFile(null);
       setSelectedImage(null);
     } catch (error) {
@@ -1565,8 +1580,30 @@ const ProductStaff = () => {
 
   // Hàm xử lý xóa ảnh
   const handleDeleteImage = async (imageId) => {
-    if (window.confirm('Bạn có chắc chắn muốn xóa ảnh này?')) {
-      try {
+    try {
+      // Trước khi xóa, kiểm tra xem sản phẩm còn bao nhiêu ảnh
+      const productImages = await productImageService.getProductImages(selectedProduct.ProductID);
+      
+      // Xử lý response để lấy mảng ảnh
+      let allImages = [];
+      if (Array.isArray(productImages)) {
+        allImages = productImages;
+      } else if (productImages && productImages.$values && Array.isArray(productImages.$values)) {
+        allImages = productImages.$values;
+      } else if (productImages && typeof productImages === 'object') {
+        allImages = [productImages];
+      }
+      
+      console.log(`Sản phẩm hiện có ${allImages.length} ảnh`);
+      
+      // Kiểm tra nếu chỉ còn 5 ảnh thì không cho xóa
+      if (allImages.length <= 5) {
+        alert('Không thể xóa ảnh vì sản phẩm cần có tối thiểu 5 ảnh. Hãy thêm ảnh mới trước khi xóa ảnh này.');
+        return;
+      }
+      
+      // Nếu có nhiều hơn 5 ảnh, tiến hành xác nhận và xóa
+      if (window.confirm('Bạn có chắc chắn muốn xóa ảnh này?')) {
         setUploadingImage(true);
         await productImageService.deleteProductImage(imageId);
         alert('Xóa ảnh thành công');
@@ -1595,12 +1632,12 @@ const ProductStaff = () => {
         
         // Cập nhật lại trang sản phẩm
         await fetchProducts(categoryMapping);
-      } catch (error) {
-        console.error('Lỗi khi xóa ảnh:', error);
-        alert('Không thể xóa ảnh. Vui lòng thử lại sau.');
-      } finally {
-        setUploadingImage(false);
       }
+    } catch (error) {
+      console.error('Lỗi khi xóa ảnh:', error);
+      alert('Không thể xóa ảnh. Vui lòng thử lại sau.');
+    } finally {
+      setUploadingImage(false);
     }
   };
 
@@ -1674,30 +1711,13 @@ const ProductStaff = () => {
       // Đóng dialog chỉnh sửa ảnh
       setOpenEditImageDialog(false);
       
-      // Cập nhật lại thông tin sản phẩm
-      const productDetail = await productService.getProductById(selectedProduct.ProductID);
-      
-      // Xử lý hình ảnh sản phẩm
-      let images = [];
-      if (productDetail.images && productDetail.images.length > 0) {
-        images = productDetail.images;
-      } else if (productDetail.imgURL) {
-        images = [{ imgUrl: productDetail.imgURL }];
-      } else {
-        images = [{ imgUrl: '/images/default-product.jpg' }];
+      // Xóa URL xem trước khi đã thêm ảnh thành công
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+        setPreviewUrl(null);
       }
       
-      // Cập nhật state
-      setProductImages(images);
-      setSelectedProduct({
-        ...selectedProduct,
-        ImgURL: productDetail.imgURL || productDetail.ImgURL,
-        images: images
-      });
-      
-      // Reset các state
       setNewImageFile(null);
-      setSelectedImage(null);
       
       // Mở lại dialog với dữ liệu mới
       handleOpenEditImages();
@@ -3002,47 +3022,6 @@ const ProductStaff = () => {
                 </div>
               ) : (
                 <>
-                  {/* Phần thêm ảnh mới */}
-                  <div style={{ 
-                    marginBottom: '20px', 
-                    padding: '16px', 
-                    border: '1px dashed #ccc', 
-                    borderRadius: '4px',
-                    opacity: reorderedImages.length >= 5 ? 0.6 : 1
-                  }}>
-                    <div style={{ fontWeight: 'bold', marginBottom: '10px' }}>
-                      Thêm ảnh mới {reorderedImages.length >= 5 && "(Đã đạt giới hạn 5 ảnh)"}
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <Button
-                        variant="outlined"
-                        component="label"
-                        disabled={reorderedImages.length >= 5}
-                      >
-                        Chọn ảnh
-                        <input
-                          type="file"
-                          hidden
-                          accept="image/*"
-                          onChange={handleImageFileChange}
-                          onClick={() => setSelectedImage(null)}
-                          disabled={reorderedImages.length >= 5}
-                        />
-                      </Button>
-                      <span style={{ flex: 1 }}>
-                        {newImageFile ? newImageFile.name : 'Chưa chọn file nào'}
-                      </span>
-                      <Button
-                        variant="contained"
-                        color="primary"
-                        onClick={handleAddNewImage}
-                        disabled={!newImageFile || selectedImage !== null || reorderedImages.length >= 5}
-                      >
-                        Thêm ảnh
-                      </Button>
-                    </div>
-                  </div>
-
                   {/* Hiển thị danh sách ảnh để sửa - Bố cục mới */}
                   <div style={{ fontWeight: 'bold', marginBottom: '10px' }}>Danh sách ảnh ({reorderedImages.length}/5)</div>
                   
@@ -3232,6 +3211,37 @@ const ProductStaff = () => {
                                             {newImageFile ? newImageFile.name : 'Chưa chọn file nào'}
                                           </Typography>
                                         </Box>
+                                        
+                                        {/* Hiển thị xem trước ảnh nếu có */}
+                                        {previewUrl && (
+                                          <Box 
+                                            sx={{ 
+                                              mt: 2,
+                                              display: 'flex',
+                                              justifyContent: 'center',
+                                              flexDirection: 'column',
+                                              alignItems: 'center',
+                                            }}
+                                          >
+                                            <Typography variant="caption" gutterBottom>
+                                              Xem trước ảnh:
+                                            </Typography>
+                                            <Box 
+                                              component="img"
+                                              src={previewUrl}
+                                              alt="Xem trước"
+                                              sx={{
+                                                maxWidth: '100%', 
+                                                maxHeight: '150px',
+                                                objectFit: 'contain',
+                                                border: '1px solid #ddd',
+                                                borderRadius: '4px',
+                                                p: 1
+                                              }}
+                                            />
+                                          </Box>
+                                        )}
+                                        
                                         {newImageFile && (
                                           <Box 
                                             sx={{ 
@@ -3260,15 +3270,7 @@ const ProductStaff = () => {
                                         >
                                           {selectedImageObj.isMainImage ? 'Ảnh đại diện' : 'Đặt làm ảnh đại diện'}
                                         </Button>
-                                        <Button
-                                          variant="contained"
-                                          color="error"
-                                          size="small"
-                                          onClick={() => handleDeleteImage(selectedImage)}
-                                          fullWidth
-                                        >
-                                          Xóa ảnh này
-                                        </Button>
+                                        
                                       </Box>
                                     </Box>
                                   </Box>
@@ -3342,7 +3344,7 @@ const ProductStaff = () => {
                 onClick={handleReorderImages} 
                 color="primary" 
                 variant="contained"
-                disabled={uploadingImage || !reorderChanged}
+                disabled={uploadingImage || (!reorderChanged && !newImageFile)}
               >
                 Lưu thay đổi
               </Button>
