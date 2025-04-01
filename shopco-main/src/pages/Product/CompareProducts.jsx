@@ -12,14 +12,11 @@ import {
   Avatar,
   Divider,
   CircularProgress,
-  Breadcrumbs,
-  Link as MuiLink
+  Breadcrumbs
 } from '@mui/material';
 import { useNavigate, Link } from 'react-router-dom';
 import CloseIcon from '@mui/icons-material/Close';
 import HomeIcon from '@mui/icons-material/Home';
-import CompareArrowsIcon from '@mui/icons-material/CompareArrows';
-import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 import MoreHorizIcon from '@mui/icons-material/MoreHoriz';
 import productService from '../../apis/productService';
 import productImageService from '../../apis/productImageService';
@@ -37,7 +34,6 @@ export default function CompareProducts() {
   const [usernames, setUsernames] = useState({});
   const [productImages, setProductImages] = useState({});
   const [imagesLoading, setImagesLoading] = useState(false);
-  const [productImageLoading, setProductImageLoading] = useState({});
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -131,7 +127,6 @@ export default function CompareProducts() {
   const fetchProductImages = async (productId) => {
     try {
       setImagesLoading(true);
-      setProductImageLoading(prev => ({...prev, [productId]: true}));
       
       const images = await productImageService.getProductImages(productId);
       
@@ -157,7 +152,6 @@ export default function CompareProducts() {
       console.error(`Lỗi khi lấy ảnh cho sản phẩm ${productId}:`, error);
     } finally {
       setImagesLoading(false);
-      setProductImageLoading(prev => ({...prev, [productId]: false}));
     }
   };
 
@@ -417,25 +411,19 @@ export default function CompareProducts() {
     <>
       <Header />
       <Box sx={{ 
+        bgcolor: "#f9f9f9", 
         borderBottom: '1px solid #eaeaea',
-        py: 0,
-        background: '#f9f9f9',
+        py: 1,
         width: '99vw'
       }}>
-        <Container maxWidth="lg" sx={{ px: { xs: 2, sm: 3 } }}>
-          {/* Breadcrumbs */}
-          <Box sx={{ display: 'flex', alignItems: 'center', py: 1 }}>
+        <Container maxWidth="lg">
+          <Breadcrumbs aria-label="breadcrumb" sx={{ my: 2 }}>
             <Link to="/" style={{ color: 'inherit', textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
-              <HomeIcon sx={{ fontSize: '1rem', mr: 0.5 }} />
-              <Typography variant="body2" component="span">
-                Trang chủ
-              </Typography>
+              <HomeIcon sx={{ mr: 0.5 }} fontSize="inherit" />
+              Trang chủ
             </Link>
-            <Typography variant="body2" component="span" sx={{ mx: 1 }}></Typography>
-            <Typography variant="body2" component="span" color="text.secondary">
-              
-            </Typography>
-          </Box>
+            <Typography color="text.primary">So sánh sản phẩm</Typography>
+          </Breadcrumbs>
         </Container>
       </Box>
       
@@ -765,7 +753,7 @@ export default function CompareProducts() {
                   ))}
                   
                   {/* Lặp lại cho các nhóm thông tin chi tiết */}
-                  {detailedFields.map((field, index) => (
+                  {detailedFields.map((field) => (
                     <React.Fragment key={field.label}>
                       {/* Tiêu đề cho mỗi mục thông tin chi tiết */}
                       <tr>
