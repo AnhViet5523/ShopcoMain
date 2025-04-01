@@ -311,7 +311,7 @@ const Header = () => {
                 }}
                 onClick={handleQuizClick}
               >
-                Quiz
+                Kiểm tra loại da
               </Button>
 
               <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
