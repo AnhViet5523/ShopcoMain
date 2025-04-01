@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { Box, Container, Typography, Paper, CircularProgress, Button, List, ListItem, ListItemIcon, ListItemText, TextField, IconButton, Divider } from '@mui/material';
+import { Box, Container, Typography, Paper, CircularProgress, Button, List, ListItem, ListItemIcon, ListItemText, TextField, Divider } from '@mui/material';
 import { ArrowBack, Edit, Save, Cancel, CloudUpload } from '@mui/icons-material';
 import ArrowRightIcon from '@mui/icons-material/ArrowRight';
 import DOMPurify from 'dompurify';
@@ -112,7 +112,7 @@ const BlogDetail = () => {
       while ((match = headingRegex.exec(contentCopy)) !== null) {
         const fullHeading = match[0]; // Toàn bộ tiêu đề, ví dụ: "1. Tiêu đề chính"
         const headingNumber = match[1]; // Số, ví dụ: "1" hoặc "1.1"
-        const headingText = match[3]; // Phần text của tiêu đề, ví dụ: "Tiêu đề chính"
+        // Phần text của tiêu đề không được sử dụng trực tiếp
         const sectionId = `section-${index}`;
         
         // Xác định level dựa trên số lượng dấu chấm trong headingNumber
@@ -120,7 +120,7 @@ const BlogDetail = () => {
         
         extractedSections.push({
           id: sectionId,
-          title: headingText, // Chỉ lấy phần text
+          title: fullHeading.substring(fullHeading.indexOf(' ') + 1), // Chỉ lấy phần text
           fullTitle: fullHeading, // Lấy cả tiêu đề đầy đủ
           level: level
         });
@@ -157,8 +157,9 @@ const BlogDetail = () => {
           setSections(paragraphSections);
         }
       }
-    } catch (error) {
-      console.error('Error generating sections:', error);
+    } catch (err) {
+      // Sử dụng tên biến khác để tránh warning
+      console.error('Error generating sections:', err);
     }
   };
   
@@ -181,7 +182,7 @@ const BlogDetail = () => {
       // Tìm các tiêu đề có dạng số
       htmlContent = htmlContent.replace(
         /^(\d+(\.\d+)?)\.?\s+(.+)$/gm, 
-        (match, number, dot, text) => {
+        (match, number) => {
           const level = (number.match(/\./g) || []).length + 2; // level 2 = h2, level 3 = h3, etc.
           const sectionId = `section-${sections.findIndex(s => s.fullTitle === match) || Math.random().toString(36).substr(2, 9)}`;
           return `<h${level} id="${sectionId}">${match}</h${level}>`;
@@ -196,8 +197,8 @@ const BlogDetail = () => {
       }).join('');
       
       return { __html: DOMPurify.sanitize(htmlContent) };
-    } catch (error) {
-      console.error('Error creating markup:', error);
+    } catch (err) {
+      console.error('Error creating markup:', err);
       
       // Nếu có lỗi, trả về nội dung dạng văn bản đơn giản
       return { 
@@ -361,7 +362,13 @@ const BlogDetail = () => {
                 variant="contained" 
                 startIcon={<ArrowBack />} 
                 onClick={goBack}
-                sx={{ bgcolor: '#059669', '&:hover': { bgcolor: '#047857' } }}
+                className="blog-back-button"
+                sx={{ 
+                  bgcolor: '#059669', 
+                  '&:hover': { 
+                    bgcolor: '#047857' 
+                  } 
+                }}
               >
                 Quay lại
               </Button>
@@ -393,7 +400,13 @@ const BlogDetail = () => {
               variant="contained" 
               startIcon={<ArrowBack />} 
               onClick={goBack}
-              sx={{ mt: 2, bgcolor: '#059669', '&:hover': { bgcolor: '#047857' } }}
+              className="blog-back-button"
+              sx={{ 
+                bgcolor: '#059669', 
+                '&:hover': { 
+                  bgcolor: '#047857' 
+                } 
+              }}
             >
               Quay lại
             </Button>
@@ -415,28 +428,29 @@ const BlogDetail = () => {
         month: '2-digit',
         year: 'numeric',
       }).format(date);
-    } catch (error) {
+    } catch (err) {
+      console.error('Lỗi định dạng ngày tháng:', err);
       return 'Chưa xác định';
     }
   };
 
   return (
-    <Box sx={{ bgcolor: "#f0f0f0", minHeight: "100vh", width: '99vw' }}>
+    <Box sx={{ bgcolor: "#f4f9f5", minHeight: "100vh", width: '99vw' }}>
       <Header />
       <Box sx={{ width: '100%' }}>
         {/* Phần ảnh bìa */}
         <Box 
+          className="blog-banner-container"
           sx={{ 
-            width: '100%', 
-            height: 'auto',
-            maxHeight: '60vh',
-            display: 'flex',
-            justifyContent: 'center',
-            mb: 4
+            width: '100%',
+            mb: 0,
+            padding: 0,
+            position: 'relative',
+            overflow: 'hidden'
           }}
         >
           {isEditMode ? (
-            <Box sx={{ width: '100%', maxWidth: '1200px', textAlign: 'center' }}>
+            <Box sx={{ width: '100%', textAlign: 'center' }}>
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mb: 2 }}>
                 <Button
                   variant="outlined"
@@ -483,15 +497,10 @@ const BlogDetail = () => {
                   component="img"
                   src={imagePreview || editedPost.imageUrl}
                   alt="Xem trước ảnh bìa"
-                  sx={{
-                    width: '100%',
-                    maxWidth: '800px',
-                    height: 'auto',
-                    objectFit: 'contain'
-                  }}
-                  onError={(e) => {
+                  className="blog-banner-image"
+                  onError={(err) => {
                     console.log('Preview image failed to load');
-                    e.target.src = '/images/blog-placeholder.jpg';
+                    err.target.src = '/images/blog-placeholder.jpg';
                   }}
                 />
               )}
@@ -502,15 +511,10 @@ const BlogDetail = () => {
                 component="img"
                 src={post.imageUrl}
                 alt={post.title}
-                sx={{
-                  width: '100%',
-                  maxWidth: '1200px',
-                  height: 'auto',
-                  objectFit: 'contain'
-                }}
-                onError={(e) => {
+                className="blog-banner-image" 
+                onError={(err) => {
                   console.log('Image failed to load, using fallback');
-                  e.target.src = '/images/blog-placeholder.jpg';
+                  err.target.src = '/images/blog-placeholder.jpg';
                 }}
               />
             ) : (
@@ -518,11 +522,10 @@ const BlogDetail = () => {
                 component="img"
                 src="/images/blog-placeholder.jpg"
                 alt="Ảnh mặc định"
-                sx={{
-                  width: '100%',
-                  maxWidth: '1200px',
-                  height: 'auto',
-                  objectFit: 'contain'
+                className="blog-banner-image"
+                onError={(err) => {
+                  console.log('Default image failed to load');
+                  err.target.style.display = 'none';
                 }}
               />
             )
@@ -533,23 +536,25 @@ const BlogDetail = () => {
         <Container 
           maxWidth="md" 
           sx={{ 
-            px: { xs: 2, sm: 3, md: 4 } 
+            px: { xs: 2, sm: 3, md: 4 },
+            py: 4
           }}
         >
           <Paper 
-            elevation={3} 
+            elevation={1} 
             sx={{ 
               p: { xs: 2, sm: 3, md: 4 }, 
               mb: 6,
               borderRadius: 2,
+              backgroundColor: '#fff'
             }}
           >
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
               <Button 
-                variant="outlined" 
+                variant="contained" 
                 startIcon={<ArrowBack />} 
                 onClick={goBack}
-                sx={{ borderColor: '#059669', color: '#059669', '&:hover': { borderColor: '#047857', color: '#047857' } }}
+                className="blog-back-button"
               >
                 Quay lại
               </Button>
@@ -617,6 +622,7 @@ const BlogDetail = () => {
               />
             ) : (
               <Typography variant="h4" component="h1" gutterBottom 
+                className="blog-title"
                 sx={{ 
                   fontWeight: 'bold', 
                   mb: 3, 
@@ -644,12 +650,12 @@ const BlogDetail = () => {
                   bgcolor: '#f5f5f5'
                 }}
               >
-                <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 2 }}>
+                <Typography variant="h6" className="blog-toc-title" sx={{ fontWeight: 'bold', mb: 2 }}>
                   Mục lục bài viết
                 </Typography>
                 
                 <List dense>
-                  {sections.map((section, index) => (
+                  {sections.map((section) => (
                     <ListItem 
                       key={section.id} 
                       button 
