@@ -160,92 +160,88 @@ const CareDetail = () => {
         <>
             <Header />
             <Box sx={{ flexGrow: 1, py: 4, bgcolor: '#f5f5f5', width: "100vw", overflowX: "hidden" }}>
-                <Grid container spacing={3} justifyContent="center" sx={{ width: '100%', margin: 0 }}>
-                    {/* Grid cho ảnh - hiển thị trên mọi màn hình */}
-                    <Grid item xs={12} md={6}>
-                        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }} className="image-container">
-                            {loading ? (
-                                <CircularProgress color="warning" />
-                            ) : (
-                                <img
-                                    src={routineData?.imageUrl || '/images/default-skincare.jpg'}
-                                    alt={`Quy trình chăm sóc da ${skinType}`}
-                                    style={{ width: '100%', maxHeight: '500px', objectFit: 'contain' }}
-                                />
-                            )}
-                        </Box>
-                    </Grid>
+                <Box className="care-detail-container">
+                    {/* Phần ảnh ở trên */}
+                    <Box className="image-container">
+                        {loading ? (
+                            <CircularProgress color="warning" />
+                        ) : (
+                            <img
+                                src={routineData?.imageUrl || '/images/default-skincare.jpg'}
+                                alt={`Quy trình chăm sóc da ${skinType}`}
+                                className="care-banner-image"
+                            />
+                        )}
+                    </Box>
                     
-                    {/* Grid cho nội dung */}
-                    <Grid item xs={12} md={6}>
-                        <Box className="content-container">
-                            <Typography variant="h5" gutterBottom sx={{ color: '#ffbb02', fontWeight: 'bold', textAlign: 'center' }} className="highlight-yellow">
-                                🌿 {routineData?.title || 'Quy trình chăm sóc da'} 🌿
+                    {/* Phần nội dung ở dưới */}
+                    <Box className="content-container">
+                        <Typography variant="h5" gutterBottom sx={{ color: '#ffbb02', fontWeight: 'bold', textAlign: 'center' }} className="highlight-yellow">
+                            🌿 {routineData?.title || 'Quy trình chăm sóc da'} 🌿
+                        </Typography>
+                    
+                        {loading ? (
+                            <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
+                                <CircularProgress color="warning" />
+                            </Box>
+                        ) : error ? (
+                            <Typography color="error" sx={{ textAlign: 'center', my: 4 }}>
+                                {error}
                             </Typography>
-                        
-                            {loading ? (
-                                <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
-                                    <CircularProgress color="warning" />
-                                </Box>
-                            ) : error ? (
-                                <Typography color="error" sx={{ textAlign: 'center', my: 4 }}>
-                                    {error}
-                                </Typography>
-                            ) : showRoutine ? (
-                                <Box className="routine-container">
-                                    {routineData ? (
-                                        <div 
-                                            dangerouslySetInnerHTML={{ 
-                                                __html: routineData.content 
-                                                    ? routineData.content
-                                                        .replace(/\n/g, '<br>')
-                                                        .replace(/- /g, '• ')
-                                                        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                                                        .replace(/\*(.*?)\*/g, '<em>$1</em>')
-                                                    : '' 
-                                            }} 
-                                            className="routine-content" 
-                                        />
-                                    ) : (
-                                        <Typography color="error" sx={{ textAlign: 'center', my: 4 }}>
-                                            Không tìm thấy quy trình chăm sóc cho loại da: {skinType}
-                                        </Typography>
-                                    )}
-                                </Box>
-                            ) : (
-                                <Box className="products-container">
-                                    <Typography variant="body1" paragraph sx={{ color: '#ffbb02', fontWeight: 'bold' }} className="list-black">
-                                        {products.map((product) => (
-                                            <div key={product.id} className="product-item" onClick={() => handleProductClick(product.id)}>
-                                                <span className="product-title">{product.title}</span> <span className="product-name">{product.name}</span>
-                                            </div>
-                                        ))}
+                        ) : showRoutine ? (
+                            <Box className="routine-container">
+                                {routineData ? (
+                                    <div 
+                                        dangerouslySetInnerHTML={{ 
+                                            __html: routineData.content 
+                                                ? routineData.content
+                                                    .replace(/\n/g, '<br>')
+                                                    .replace(/- /g, '• ')
+                                                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                                                    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                                                : '' 
+                                        }} 
+                                        className="routine-content" 
+                                    />
+                                ) : (
+                                    <Typography color="error" sx={{ textAlign: 'center', my: 4 }}>
+                                        Không tìm thấy quy trình chăm sóc cho loại da: {skinType}
                                     </Typography>
-                                </Box>
-                            )}
-                            
-                            <Box sx={{ display: 'flex', gap: 2, mt: 2, justifyContent: 'center' }}>
-                                <Button 
-                                    variant="contained" 
-                                    sx={{ bgcolor: '#ffbb02', color: 'white' }}
-                                    onClick={showRoutine ? handleFindProducts : handleShowRoutine}
-                                >
-                                    {showRoutine ? "Tìm Sản Phẩm Phù Hợp" : "Xem Quy Trình"}
-                                </Button>
-
-                                {!showRoutine && (
-                                    <Button 
-                                        variant="contained" 
-                                        sx={{ bgcolor: '#ff7b02', color: 'white' }}
-                                        onClick={handleBuyCombo}
-                                    >
-                                        Mua cả combo
-                                    </Button>
                                 )}
                             </Box>
+                        ) : (
+                            <Box className="products-container">
+                                <Typography variant="body1" paragraph sx={{ color: '#ffbb02', fontWeight: 'bold' }} className="list-black">
+                                    {products.map((product) => (
+                                        <div key={product.id} className="product-item" onClick={() => handleProductClick(product.id)}>
+                                            <span className="product-title">{product.title}</span> <span className="product-name">{product.name}</span>
+                                        </div>
+                                    ))}
+                                </Typography>
+                            </Box>
+                        )}
+                        
+                        <Box sx={{ display: 'flex', gap: 2, mt: 2, justifyContent: 'center' }}>
+                            <Button 
+                                variant="contained" 
+                                sx={{ bgcolor: '#ffbb02', color: 'white' }}
+                                onClick={showRoutine ? handleFindProducts : handleShowRoutine}
+                            >
+                                {showRoutine ? "Tìm Sản Phẩm Phù Hợp" : "Xem Quy Trình"}
+                            </Button>
+
+                            {!showRoutine && (
+                                <Button 
+                                    variant="contained" 
+                                    sx={{ bgcolor: '#ff7b02', color: 'white' }}
+                                    onClick={handleBuyCombo}
+                                >
+                                    Mua cả combo
+                                </Button>
+                            )}
                         </Box>
-                    </Grid>
-                </Grid>
+                    </Box>
+                </Box>
             </Box>
             <Footer />
         </>
