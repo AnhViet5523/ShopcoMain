@@ -140,6 +140,10 @@ const Order = () => {
         color = 'error';
         status = 'Đã hủy';
         break;
+      case 'Cancelling':
+        color = 'error';
+        status = 'Đang hủy';
+        break;
       default:
         color = 'default';
     }
@@ -152,8 +156,8 @@ const Order = () => {
       // Tab "Tất cả" - hiển thị toàn bộ đơn hàng
       return orders;
     } else if (tabIndex === 1) {
-      // Tab "Đang xử lý" - chỉ hiển thị đơn hàng trạng thái Pending
-      return orders.filter(order => order.orderStatus === 'Pending');
+      // Tab "Đang xử lý" - chỉ hiển thị đơn hàng trạng thái Pending hoặc Cancelling
+      return orders.filter(order => order.orderStatus === 'Pending' || order.orderStatus === 'Cancelling');
     } else if (tabIndex === 2) {
       // Tab "Đang vận chuyển" - hiển thị đơn hàng có trạng thái Paid
       return orders.filter(order => order.orderStatus === 'Paid');
@@ -203,7 +207,13 @@ const Order = () => {
         reason,
         requestDate
       });
-      const updatedOrders = orders.filter(order => order.orderId !== selectedOrderId);
+      
+      // Cập nhật trạng thái đơn hàng thành 'Cancelling' thay vì loại bỏ khỏi danh sách
+      const updatedOrders = orders.map(order => 
+        order.orderId === selectedOrderId 
+          ? { ...order, orderStatus: 'Cancelling' } 
+          : order
+      );
       setOrders(updatedOrders);
       handleCloseDialog();
     } catch (error) {
@@ -418,6 +428,20 @@ const Order = () => {
                                 )}
                                 <Typography variant="subtitle1" sx={{ color: '#FF6600', fontWeight: 'bold', ml: 'auto' }}>
                                   {formatCurrency(order.totalAmount)}
+                                </Typography>
+                              </Box>
+
+                              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                                  Trạng thái: {renderOrderStatus(order.orderStatus)}
+                                  {order.orderStatus === 'Cancelling' && (
+                                    <Chip 
+                                      label="Đang chờ xác nhận hủy" 
+                                      size="small" 
+                                      color="warning" 
+                                      sx={{ ml: 1, fontSize: '0.7rem' }} 
+                                    />
+                                  )}
                                 </Typography>
                               </Box>
 
