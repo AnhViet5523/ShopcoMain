@@ -259,9 +259,10 @@ const adminService = {
         }
     },
 
-    approveCancellation: async (cancelRequestId) => {
+    approveCancellation: async (orderId) => {
         try {
-            const response = await axiosClient.put(`/api/Admin/${cancelRequestId}/cancelrequest/approve`);
+            console.log('Approving cancellation for order ID:', orderId);
+            const response = await axiosClient.put(`/api/Admin/${orderId}/cancelrequest/approve`);
             return response.data;
         } catch (error) {
             console.error('Error approving cancellation:', error);
@@ -269,9 +270,10 @@ const adminService = {
         }
     },
 
-    rejectCancellation: async (cancelRequestId) => {
+    rejectCancellation: async (orderId) => {
         try {
-            const response = await axiosClient.put(`/api/Admin/${cancelRequestId}/cancelrequest/reject`);
+            console.log('Rejecting cancellation for order ID:', orderId);
+            const response = await axiosClient.put(`/api/Admin/${orderId}/cancelrequest/reject`);
             return response;
         } catch (error) {
             console.error('Error rejecting cancellation:', error);

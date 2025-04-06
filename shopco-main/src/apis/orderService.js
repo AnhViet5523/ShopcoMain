@@ -2,12 +2,15 @@ import axiosClient from './axiosClient';
 
 const orderService = {
     getOrders: async (userId) => {
-
         try {
-            const response = await axiosClient.get('/api/Orders');
-            const values = response['$values'];
-            const orderByUser = values.filter(order => order.userId === userId);
-            return orderByUser;
+            const response = await axiosClient.get('/api/Orders/all');
+            
+            // Nếu cần lọc theo userId
+            if (userId) {
+                return response.filter(order => order.userId === userId);
+            }
+            
+            return response;
         } catch (error) {
             console.error('Error:', error);
             throw error; 
