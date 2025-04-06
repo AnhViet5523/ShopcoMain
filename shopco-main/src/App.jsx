@@ -10,11 +10,8 @@ import Info from "./pages/Account/Info";
 import Order from "./pages/Account/Order";
 import Support from "./pages/Account/Support";  
 import CategoryContent from "./components/CategoryContent";
-import DaDau from "./pages/CareProcess/DaDau/DaDau";
-import DaKho from "./pages/CareProcess/DaKho/DaKho";
-import DaThuong from "./pages/CareProcess/DaThuong/DaThuong";
-import DaHonHop from "./pages/CareProcess/DaHonHop/DaHonHop";
-import DaNhayCam from "./pages/CareProcess/DaNhayCam/DaNhayCam";
+// Các component riêng lẻ cho từng loại da đã được thay thế bằng component CareDetail
+import CareDetail from "./pages/CareProcess/CareDetail";
 import Intro from "./pages/PagesOfFooter/Intro";
 import Buy from "./pages/PagesOfFooter/Buy";
 import Term from "./pages/PagesOfFooter/Term";
@@ -157,11 +154,14 @@ export default function App() {
           <Route path="/bestsellers" element={<BestSellers />} />
 
           {/* Static Pages */}
-          <Route path="/da-dau" element={<DaDau />} />
+          {/* <Route path="/da-dau" element={<DaDau />} />
           <Route path="/da-kho" element={<DaKho />} />
           <Route path="/da-thuong" element={<DaThuong />} />
           <Route path="/da-hon-hop" element={<DaHonHop />} />
-          <Route path="/da-nhay-cam" element={<DaNhayCam />} />
+          <Route path="/da-nhay-cam" element={<DaNhayCam />} /> */}
+          
+          {/* Quy trình chăm sóc da */}
+          <Route path="/care-process/:skinType" element={<CareDetail />} />
           <Route path="/intro" element={<Intro />} />
           <Route path="/buy" element={<Buy />} />
           <Route path="/term" element={<Term />} />

@@ -1,0 +1,152 @@
+/* Styles cho container chính */
+.content-container {
+    background-color: white;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+    width: 100%;
+}
+
+/* Fix cho container trang */
+body, html {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    overflow-x: hidden;
+}
+
+/* Styles cho container ảnh */
+.image-container {
+    padding: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+}
+
+/* Styles cho tiêu đề */
+.highlight-yellow {
+    position: relative;
+    display: inline-block;
+    margin-bottom: 15px;
+    color: #ffbb02; 
+    font-size: 1.5rem; 
+    font-weight: bold;
+    text-align: center;
+}
+
+/* Styles cho danh sách */
+.list-black {
+    color: black;
+    font-size: 1rem;
+    line-height: 1.6;
+}
+
+.list-black li {
+    margin-bottom: 8px;
+}
+
+/* Styles cho nội dung quy trình từ API */
+.routine-content {
+    color: black;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    text-align: left;
+    white-space: pre-line;
+    max-width: 100%;
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+}
+
+.routine-content ul, .routine-content ol {
+    padding-left: 20px;
+    margin-bottom: 15px;
+}
+
+.routine-content p {
+    margin-bottom: 10px;
+}
+
+.routine-content li {
+    margin-bottom: 8px;
+}
+
+.routine-content strong, .routine-content b {
+    color: #ffbb02;
+    font-weight: bold;
+}
+
+/* Styles cho sản phẩm */
+.product-item {
+    margin-bottom: 10px; 
+    cursor: pointer; 
+}
+
+.product-title {
+    color: #ffbb02; 
+    font-weight: bold; 
+}
+
+.product-name {
+    color: black; 
+    transition: color 0.3s, text-decoration 0.3s;
+}
+
+/* Styles cho container ảnh với kích thước nhỏ hơn */
+.image-container {
+    width: 90%;
+    margin: 0 auto;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.skin-image {
+    width: 100%;
+    height: auto;
+    display: block;
+    transition: transform 0.3s ease;
+}
+
+.skin-image:hover {
+    transform: scale(1.02);
+}
+
+/* Styles cho danh sách sản phẩm */
+.product-item {
+    padding: 10px 15px;
+    margin-bottom: 10px;
+    border-radius: 8px;
+    background-color: #f9f9f9;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.product-item:hover {
+    background-color: #ffebb3;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.product-title {
+    color: #ffbb02;
+    font-weight: bold;
+    margin-right: 5px;
+}
+
+.product-name {
+    color: #333;
+}
+
+/* Responsive styles */
+@media (max-width: 768px) {
+    .content-container {
+        padding: 15px;
+    }
+    
+    .image-container {
+        width: 100%;
+        margin-bottom: 20px;
+    }
+}

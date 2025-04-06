@@ -233,11 +233,11 @@ const handleClickAway = () => {
                     <MenuList>
                       {skinTypes.map((type) => {
                         const pathMap = {
-                          "Da Dầu": "/da-dau",
-                          "Da Khô": "/da-kho",
-                          "Da Thường": "/da-thuong",
-                          "Da Hỗn Hợp": "/da-hon-hop",
-                          "Da Nhạy Cảm": "/da-nhay-cam"
+                          "Da Dầu": "/care-process/dadau",
+                          "Da Khô": "/care-process/dakho",
+                          "Da Thường": "/care-process/dathuong",
+                          "Da Hỗn Hợp": "/care-process/dahonhop",
+                          "Da Nhạy Cảm": "/care-process/danhaycam"
                         };
                         return (
                           <MenuItem 
