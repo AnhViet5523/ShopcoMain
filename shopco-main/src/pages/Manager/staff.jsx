@@ -107,15 +107,39 @@ const Staff = () => {
         const data = await userService.getAllUsers();
         console.log('Data returned from getAllUsers:', data);
         
+        // Log chi tiết từng người dùng và role của họ
+        console.log('Chi tiết người dùng và role:');
+        data.forEach((user, index) => {
+          console.log(`User ${index + 1}:`, {
+            userId: user.userId,
+            name: user.name,
+            role: user.role,
+            roleLowerCase: user.role?.toLowerCase()
+          });
+        });
+        
         if (Array.isArray(data) && data.length > 0) {
-          // Lọc danh sách để chỉ lấy những người có vai trò là "Staff"
+          // Lọc danh sách để chỉ lấy những người có vai trò là "Staff" hoặc "Manager"
           let staffMembers = data.filter(member => {
-            // Kiểm tra vai trò của thành viên, xử lý cả trường hợp không phân biệt chữ hoa/thường
-            const memberRole = member?.role || '';
-            return memberRole.toLowerCase() === 'staff';
+            // Kiểm tra vai trò của thành viên, sử dụng includes() để bắt cả các biến thể
+            const memberRole = (member?.role || '').toLowerCase();
+            return memberRole.includes('staff') || memberRole.includes('manager');
           });
           
+          console.log('Lọc người dùng có role là Staff hoặc Manager');
+          
           console.log('Số lượng nhân viên tìm thấy:', staffMembers.length);
+          
+          // Log chi tiết danh sách nhân viên sau khi lọc
+          console.log('Danh sách nhân viên sau khi lọc:');
+          staffMembers.forEach((member, index) => {
+            console.log(`Staff member ${index + 1}:`, {
+              userId: member.userId,
+              name: member.name,
+              role: member.role,
+              roleLowerCase: member.role?.toLowerCase()
+            });
+          });
           
           // Nếu không tìm thấy nhân viên nào, có thể do cấu trúc dữ liệu khác
           if (staffMembers.length === 0) {
@@ -131,7 +155,8 @@ const Staff = () => {
                 );
                 
                 if (roleProps && typeof member[roleProps] === 'string') {
-                  return member[roleProps].toLowerCase().includes('staff');
+                  const roleLower = member[roleProps].toLowerCase();
+                  return roleLower.includes('staff') || roleLower.includes('manager');
                 }
               }
               return false;
@@ -342,6 +367,7 @@ const Staff = () => {
     const password = (member?.password || '').toLowerCase();
     const phone = (member?.phone || '').toLowerCase();
     const address = (member?.address || '').toLowerCase();
+    const role = (member?.role || '').toLowerCase();
     const searchTermLower = searchTerm.toLowerCase();
 
     return (
@@ -349,7 +375,8 @@ const Staff = () => {
       email.includes(searchTermLower) ||
       password.includes(searchTermLower) ||
       phone.includes(searchTermLower) ||
-      address.includes(searchTermLower)
+      address.includes(searchTermLower) ||
+      role.includes(searchTermLower)
     );
   });
 
@@ -602,7 +629,6 @@ const Staff = () => {
                   <th>TÊN</th>
                   <th>HỌ VÀ TÊN</th>
                   <th>EMAIL</th>
-                  <th>MẬT KHẨU</th>
                   <th>VAI TRÒ</th>
                   <th>SỐ ĐIỆN THOẠI</th>
                   <th>ĐỊA CHỈ</th>
@@ -630,12 +656,6 @@ const Staff = () => {
                       <td>{member.name || '-'}</td>
                       <td>{member.fullName || member.name || '-'}</td>
                       <td>{member.email || '-'}</td>
-                      <td>
-                        {member.password ? 
-                          (member.password === "string" || member.password.length < 6) ? 
-                            "******" : member.password 
-                          : "-"}
-                      </td>
                       <td>{member.role || '-'}</td>
                       <td>{member.phone || '-'}</td>
                       <td>{member.address || '-'}</td>
