@@ -1,11 +1,18 @@
 /* Styles cho container chính */
-.content-container {
+.care-detail-container {
+    max-width: 800px;
+    margin: 20px auto;
+    display: flex;
+    flex-direction: column;
     background-color: white;
-    border-radius: 10px;
-    padding: 20px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    margin-bottom: 20px;
-    width: 100%;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0px 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.content-container {
+    padding: 30px;
+    background-color: white;
 }
 
 /* Fix cho container trang */
@@ -18,11 +25,21 @@ body, html {
 
 /* Styles cho container ảnh */
 .image-container {
-    padding: 20px;
+    width: 100%;
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 100%;
+    background-color: #f4f9f5;
+    border-bottom: 1px solid #eaeaea;
+    overflow: hidden;
+}
+
+.care-banner-image {
+    width: 100%;
+    height: auto;
+    max-height: 400px;
+    object-fit: cover;
+    display: block;
 }
 
 /* Styles cho tiêu đề */
