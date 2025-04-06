@@ -31,7 +31,9 @@ import {
   Edit,
   ExitToApp,
   Headset,
-  ShoppingBag
+  ShoppingBag,
+  Visibility,
+  VisibilityOff
 } from '@mui/icons-material';
 import Banner from '../../components/Banner';
 import Footer from '../../components/Footer/Footer';
@@ -48,11 +50,28 @@ const Info = () => {
   });
 
   const [open, setOpen] = useState(false);
+  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
   const [updatedInfo, setUpdatedInfo] = useState(userInfo);
   const [loading, setLoading] = useState(false);
+  const [passwordLoading, setPasswordLoading] = useState(false);
   const [errors, setErrors] = useState({
     email: '',
     phone: ''
+  });
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [passwordErrors, setPasswordErrors] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [showPassword, setShowPassword] = useState({
+    currentPassword: false,
+    newPassword: false,
+    confirmPassword: false
   });
 
   useEffect(() => {
@@ -132,6 +151,81 @@ const Info = () => {
     setOpen(false);
   };
 
+  const handleOpenPasswordDialog = () => {
+    setPasswordDialogOpen(true);
+    // Reset password fields and errors when opening dialog
+    setPasswordData({
+      currentPassword: '',
+      newPassword: '',
+      confirmPassword: ''
+    });
+    setPasswordErrors({
+      currentPassword: '',
+      newPassword: '',
+      confirmPassword: ''
+    });
+    // Reset password visibility
+    setShowPassword({
+      currentPassword: false,
+      newPassword: false,
+      confirmPassword: false
+    });
+  };
+
+  const handleClosePasswordDialog = () => {
+    setPasswordDialogOpen(false);
+  };
+
+  const handleTogglePasswordVisibility = (field) => {
+    setShowPassword(prev => ({
+      ...prev,
+      [field]: !prev[field]
+    }));
+  };
+
+  const handlePasswordChange = (e) => {
+    const { name, value } = e.target;
+    setPasswordData(prev => ({ ...prev, [name]: value }));
+    
+    // Validate password fields
+    validatePasswordField(name, value);
+  };
+
+  const validatePasswordField = (name, value) => {
+    let error = '';
+    
+    switch (name) {
+      case 'currentPassword':
+        if (!value) error = 'Vui lòng nhập mật khẩu hiện tại';
+        break;
+      case 'newPassword':
+        if (!value) {
+          error = 'Vui lòng nhập mật khẩu mới';
+        } else if (value.length < 6) {
+          error = 'Mật khẩu phải có ít nhất 6 ký tự';
+        } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])/.test(value)) {
+          error = 'Mật khẩu phải chứa chữ hoa, chữ thường và số';
+        }
+        // Kiểm tra xem mật khẩu mới có trùng với mật khẩu hiện tại không
+        if (value === passwordData.currentPassword) {
+          error = 'Mật khẩu mới không được trùng với mật khẩu hiện tại';
+        }
+        break;
+      case 'confirmPassword':
+        if (!value) {
+          error = 'Vui lòng xác nhận mật khẩu mới';
+        } else if (value !== passwordData.newPassword) {
+          error = 'Mật khẩu xác nhận không khớp';
+        }
+        break;
+      default:
+        break;
+    }
+    
+    setPasswordErrors(prev => ({ ...prev, [name]: error }));
+    return error;
+  };
+
   const validateEmail = (email) => {
     const re = /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
     return re.test(String(email).toLowerCase());
@@ -159,6 +253,57 @@ const Info = () => {
       } else {
         setErrors(prev => ({ ...prev, phone: '' }));
       }
+    }
+  };
+
+  const handleChangePassword = async () => {
+    try {
+      // Validate all password fields
+      const currentPasswordError = validatePasswordField('currentPassword', passwordData.currentPassword);
+      const newPasswordError = validatePasswordField('newPassword', passwordData.newPassword);
+      const confirmPasswordError = validatePasswordField('confirmPassword', passwordData.confirmPassword);
+      
+      if (currentPasswordError || newPasswordError || confirmPasswordError) {
+        return; // Stop if there are validation errors
+      }
+      
+      setPasswordLoading(true);
+      const currentUser = userService.getCurrentUser();
+      if (!currentUser || !currentUser.userId) {
+        navigate('/login');
+        return;
+      }
+      
+      // Sử dụng hàm changePassword từ userService
+      const response = await userService.changePassword(
+        currentUser.userId,
+        passwordData.currentPassword,
+        passwordData.newPassword
+      );
+      
+      // Close dialog and show success message
+      setPasswordDialogOpen(false);
+      alert('Thay đổi mật khẩu thành công!');
+      
+      // Reset password fields
+      setPasswordData({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+      });
+    } catch (error) {
+      console.error('Lỗi khi thay đổi mật khẩu:', error);
+      
+      // Show specific error message
+      if (error.response && error.response.status === 400) {
+        alert('Mật khẩu hiện tại không đúng. Vui lòng kiểm tra lại.');
+      } else if (error.response && error.response.status) {
+        alert(`Có lỗi xảy ra khi thay đổi mật khẩu! (Mã lỗi: ${error.response.status})`);
+      } else {
+        alert('Có lỗi xảy ra khi thay đổi mật khẩu! Vui lòng thử lại sau.');
+      }
+    } finally {
+      setPasswordLoading(false);
     }
   };
 
@@ -381,17 +526,30 @@ const Info = () => {
                     Google
                   </Button>
                 </Grid> */}
-                <Grid item xs={12}>
-                  <Button 
-                    variant="contained" 
-                    color="primary" 
-                    onClick={handleOpenDialog}
-                    startIcon={<Edit />}
-                    sx={{ mb: 3 }}
-                    disabled={loading || !!errors.email || !!errors.phone}
-                  >
-                    {loading ? 'Đang cập nhật...' : 'Cập nhật thông tin'}
-                  </Button>
+                <Grid item xs={12} container spacing={2}>
+                  <Grid item>
+                    <Button 
+                      variant="contained" 
+                      color="primary" 
+                      onClick={handleOpenDialog}
+                      startIcon={<Edit />}
+                      sx={{ mb: 3 }}
+                      disabled={loading || !!errors.email || !!errors.phone}
+                    >
+                      {loading ? 'Đang cập nhật...' : 'Cập nhật thông tin'}
+                    </Button>
+                  </Grid>
+                  <Grid item>
+                    <Button 
+                      variant="outlined" 
+                      color="primary" 
+                      onClick={handleOpenPasswordDialog}
+                      sx={{ mb: 3 }}
+                      disabled={loading}
+                    >
+                      Thay đổi mật khẩu
+                    </Button>
+                  </Grid>
                 </Grid>
               </Grid>
             </Paper>
@@ -399,6 +557,91 @@ const Info = () => {
         </Grid>
       </Container>
       <Footer />
+
+      {/* Dialog thay đổi mật khẩu */}
+      <Dialog open={passwordDialogOpen} onClose={handleClosePasswordDialog} maxWidth="sm" fullWidth>
+        <DialogTitle>Thay đổi mật khẩu</DialogTitle>
+        <DialogContent>
+          <TextField
+            margin="dense"
+            label="Mật khẩu hiện tại"
+            type={showPassword.currentPassword ? 'text' : 'password'}
+            fullWidth
+            name="currentPassword"
+            value={passwordData.currentPassword}
+            onChange={handlePasswordChange}
+            error={!!passwordErrors.currentPassword}
+            helperText={passwordErrors.currentPassword}
+            sx={{ mb: 2, mt: 1 }}
+            InputProps={{
+              endAdornment: (
+                <Button 
+                  onClick={() => handleTogglePasswordVisibility('currentPassword')}
+                  sx={{ minWidth: 'auto', p: 0 }}
+                >
+                  {showPassword.currentPassword ? <VisibilityOff /> : <Visibility />}
+                </Button>
+              )
+            }}
+          />
+          <TextField
+            margin="dense"
+            label="Mật khẩu mới"
+            type={showPassword.newPassword ? 'text' : 'password'}
+            fullWidth
+            name="newPassword"
+            value={passwordData.newPassword}
+            onChange={handlePasswordChange}
+            error={!!passwordErrors.newPassword}
+            helperText={passwordErrors.newPassword}
+            sx={{ mb: 2 }}
+            InputProps={{
+              endAdornment: (
+                <Button 
+                  onClick={() => handleTogglePasswordVisibility('newPassword')}
+                  sx={{ minWidth: 'auto', p: 0 }}
+                >
+                  {showPassword.newPassword ? <VisibilityOff /> : <Visibility />}
+                </Button>
+              )
+            }}
+          />
+          <TextField
+            margin="dense"
+            label="Xác nhận mật khẩu mới"
+            type={showPassword.confirmPassword ? 'text' : 'password'}
+            fullWidth
+            name="confirmPassword"
+            value={passwordData.confirmPassword}
+            onChange={handlePasswordChange}
+            error={!!passwordErrors.confirmPassword}
+            helperText={passwordErrors.confirmPassword}
+            InputProps={{
+              endAdornment: (
+                <Button 
+                  onClick={() => handleTogglePasswordVisibility('confirmPassword')}
+                  sx={{ minWidth: 'auto', p: 0 }}
+                >
+                  {showPassword.confirmPassword ? <VisibilityOff /> : <Visibility />}
+                </Button>
+              )
+            }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleClosePasswordDialog} color="primary">
+            Hủy
+          </Button>
+          <Button 
+            onClick={handleChangePassword} 
+            color="primary" 
+            variant="contained"
+            disabled={passwordLoading || !!passwordErrors.currentPassword || !!passwordErrors.newPassword || !!passwordErrors.confirmPassword}
+          >
+            {passwordLoading ? 'Đang xử lý...' : 'Xác nhận'}
+          </Button>
+        </DialogActions>
+      </Dialog>
       <Dialog open={open} onClose={handleCloseDialog}>
         <DialogTitle>Xác nhận cập nhật</DialogTitle>
         <DialogContent>
