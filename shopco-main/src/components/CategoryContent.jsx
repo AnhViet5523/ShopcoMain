@@ -1149,46 +1149,7 @@ const CategoryContent = () => {
                             )}
                         </Typography>
 
-                        {/* Thay thế Typography bằng ô Search */}
-                        <Paper
-                            elevation={0}
-                            sx={{
-                                p: '2px 4px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                border: '1px solid #eee',
-                                borderRadius: 2,
-                                mb: 3,
-                                '&:hover': {
-                                    border: '1px solid',
-                                    borderColor: 'primary.main',
-                                },
-                                '&:focus-within': {
-                                    border: '1px solid',
-                                    borderColor: 'primary.main',
-                                }
-                            }}
-                        >
-                            <InputBase
-                                sx={{ ml: 1, flex: 1 }}
-                                placeholder="Bạn đang tìm kiếm..."
-                                inputProps={{ 'aria-label': 'tìm kiếm sản phẩm' }}
-                            />
-                            <IconButton 
-                                type="button" 
-                                sx={{ 
-                                    p: '10px',
-                                    color: 'primary.main',
-                                    '&:hover': {
-                                        backgroundColor: 'primary.lighter'
-                                    }
-                                }} 
-                                aria-label="search"
-                            >
-                                <SearchIcon />
-                            </IconButton>
-                        </Paper>
-
+                       
                         {/* Danh mục chính */}
                         <Box sx={{ mb: 2 }}>
                             {Object.entries(categories).map(([categoryType, categoryList]) => {
