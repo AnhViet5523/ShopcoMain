@@ -235,7 +235,8 @@ const BlogStaff = () => {
     { id: 'supportStaff', name: 'Đơn hỗ trợ', icon: '📫' },
     { id: 'voucherStaff', name: 'Vouchers', icon: '🎫' },
     { id: 'feedbackStaff', name: 'Đánh giá sản phẩm', icon: '📢' },
-    { id: 'blogStaff', name: 'Blog', icon: '📰' }
+    { id: 'blogStaff', name: 'Blog', icon: '📰' },
+    { id: 'skincareRoutineStaff', name: 'Quy trình chăm sóc da', icon: '💆‍♀️' }
   ];
 
   // Hàm mở dialog xác nhận xóa

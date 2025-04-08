@@ -51,6 +51,8 @@ import BestSellers from "./components/BestSellers";
 import BlogManager from "./pages/Manager/BlogManager";
 import BlogStaff from "./pages/Staff/BlogStaff";
 import CreatePost from "./pages/Blog/CreateEditPost/CreatePost";
+import SkincareRoutineStaff from "./pages/Staff/SkincareRoutineStaff";
+import SkincareRoutineManager from "./pages/Manager/SkincareRoutineManager";
 
 // Component để hủy request khi chuyển trang
 function NavigationHandler() {
@@ -250,6 +252,14 @@ export default function App() {
             }
           />
           <Route
+            path="/SkincareRoutineManager"
+            element={
+              <ProtectedRoute requiredRole="Manager">
+                <SkincareRoutineManager />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/product"
             element={
               <ProtectedRoute requiredRole="Manager">
@@ -370,6 +380,14 @@ export default function App() {
             element={
               <ProtectedRoute requiredRole="Staff">
                 <VoucherStaff />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/skincareRoutineStaff"
+            element={
+              <ProtectedRoute requiredRole="Staff">
+                <SkincareRoutineStaff />
               </ProtectedRoute>
             }
           />

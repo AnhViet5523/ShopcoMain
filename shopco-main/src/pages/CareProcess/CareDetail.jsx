@@ -29,7 +29,7 @@ const CareDetail = () => {
             // Trong thực tế, sẽ gọi API để lấy sản phẩm được đề xuất cho loại da
             // Ví dụ: const response = await productService.getRecommendedProducts(skinType);
             
-            // Tạm thời hiển thị sản phẩm đề xuất từ dữ liệu routineData nếu có
+            // Tạm thởi hiển thị sản phẩm đề xuất từ dữ liệu routineData nếu có
             if (routineData && routineData.recommendedProducts) {
                 console.log('Sản phẩm đề xuất:', routineData.recommendedProducts);
                 setProducts(routineData.recommendedProducts);
@@ -104,45 +104,86 @@ const CareDetail = () => {
         }
     };
 
-    const fetchRoutineData = async () => {
+    // Dữ liệu mặc định cho trường hợp không tìm thấy dữ liệu từ API
+    const fallbackData = {
+        skinType: skinType,
+        title: `Quy trình chăm sóc da ${skinType}`,
+        content: "Chúng tôi đang cập nhật quy trình chăm sóc chi tiết cho loại da này. Vui lòng quay lại sau!",
+        imageUrl: '/images/default-skincare.jpg',
+        recommendedProducts: []
+    };
+
+    // Sửa fetchRoutineData để nhận signal và cải thiện xử lý lỗi
+    const fetchRoutineData = async (signal) => {
         try {
             setLoading(true);
             
             if (skinType) {
                 console.log('Đang gọi API với skinType:', skinType);
-                // Lấy dữ liệu quy trình chăm sóc da trực tiếp từ URL parameter
-                const response = await skincareService.getRoutineBySkinType(skinType);
-                console.log('Response từ API:', response);
-                
+                // Truyền signal vào hàm gọi API
+                const response = await skincareService.getRoutineBySkinType(skinType, signal);
+                console.log('Response từ API:', response); 
+                console.log('Kiểu dữ liệu của response:', typeof response); 
+                console.log('Kiểm tra giá trị boolean của response:', !!response); 
+
                 // Kiểm tra response và lưu vào state
-                if (response) {
-                    setRoutineData(response);
+                if (response) { 
+                    console.log('>>> Bước 1: Vào khối if (response) thành công'); 
+                    // Xử lý dữ liệu trước khi lưu vào state
+                    const processedData = {
+                        ...response,
+                        // Đảm bảo các trường bắt buộc có giá trị mặc định nếu không có
+                        title: response.title || `Quy trình chăm sóc da ${skinType}`,
+                        content: response.content || 'Không có nội dung',
+                        imageUrl: response.imageUrl || '/images/default-skincare.jpg',
+                        recommendedProducts: response.recommendedProducts || []
+                    };
+                    
+                    setRoutineData(processedData);
+                    console.log('>>> Bước 2: Đã gọi setRoutineData với dữ liệu đã xử lý'); 
                     setError(null);
+                    console.log('>>> Bước 3: Đã gọi setError(null)'); 
                     
                     // Lấy dữ liệu sản phẩm đề xuất nếu có
-                    if (response.recommendedProducts) {
-                        setRecommendedProducts(response.recommendedProducts);
+                    if (processedData.recommendedProducts && processedData.recommendedProducts.length > 0) {
+                        setRecommendedProducts(processedData.recommendedProducts);
+                        console.log('>>> Bước 4: Đã cập nhật recommendedProducts');
                     }
                 } else {
-                    console.log('Không có dữ liệu trả về');
-                    throw new Error(`Không tìm thấy quy trình chăm sóc cho loại da: ${skinType}`);
+                    console.log('>>> LỖI: Khối else được thực thi, response là falsy'); 
+                    // Sử dụng dữ liệu mặc định thay vì throw lỗi
+                    console.log('Sử dụng dữ liệu mặc định');
+                    setRoutineData(fallbackData);
+                    setError('Không tìm thấy dữ liệu chi tiết cho loại da này. Hiển thị thông tin cơ bản.');
                 }
             } else {
-                // Nếu không có loại da, hiển thị lỗi
-                throw new Error('Không xác định được loại da');
+                // Nếu không có loại da, sử dụng dữ liệu mặc định
+                console.log('Không có tham số skinType, sử dụng dữ liệu mặc định');
+                setRoutineData(fallbackData);
+                setError('Không xác định được loại da. Hiển thị thông tin cơ bản.');
             }
-        } catch (err) {
-            console.error('Lỗi khi lấy dữ liệu quy trình chăm sóc da:', err);
-            setError(err.message || 'Không thể tải dữ liệu quy trình chăm sóc da. Vui lòng thử lại sau.');
-            setRoutineData(null); // Đảm bảo xóa dữ liệu cũ nếu có lỗi
+        } catch (err) { 
+            if (err.name !== 'CanceledError') {
+                console.error('>>> LỖI: Bị bắt trong catch block:', err); 
+                // Sử dụng dữ liệu mặc định thay vì chỉ hiển thị lỗi
+                setRoutineData(fallbackData);
+                setError(`Gặp lỗi khi tải dữ liệu: ${err.message}. Hiển thị thông tin cơ bản.`);
+            }
         } finally {
-            setLoading(false);
+            // Chỉ tắt loading nếu yêu cầu không bị hủy
+            if (signal && !signal.aborted) { 
+                setLoading(false);
+            }
         }
     };
 
     useEffect(() => {
-        // Gọi hàm fetchRoutineData khi component mount hoặc khi skinType thay đổi
-        fetchRoutineData();
+        // Tạo AbortController
+        const controller = new AbortController();
+        const signal = controller.signal;
+        
+        // Gọi hàm fetchRoutineData với signal
+        fetchRoutineData(signal);
         
         // Kiểm tra xem có nên hiển thị sản phẩm hay không dựa trên sessionStorage
         const shouldShowProducts = sessionStorage.getItem('showProducts') === 'true';
@@ -150,8 +191,9 @@ const CareDetail = () => {
             setShowRoutine(false);
         }
 
-        // Cleanup function khi component unmount
+        // Cleanup function khi component unmount hoặc skinType thay đổi
         return () => {
+            controller.abort(); // Hủy yêu cầu API
             sessionStorage.removeItem('showProducts');
         };
     }, [skinType]); // Chỉ gọi lại khi skinType thay đổi để tránh vòng lặp vô hạn
@@ -177,7 +219,7 @@ const CareDetail = () => {
                     {/* Phần nội dung ở dưới */}
                     <Box className="content-container">
                         <Typography variant="h5" gutterBottom sx={{ color: '#ffbb02', fontWeight: 'bold', textAlign: 'center' }} className="highlight-yellow">
-                            🌿 {routineData?.title || 'Quy trình chăm sóc da'} 🌿
+                            {routineData?.title || 'Quy trình chăm sóc da'} 
                         </Typography>
                     
                         {loading ? (
