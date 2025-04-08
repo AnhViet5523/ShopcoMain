@@ -60,7 +60,8 @@ const Revenue = () => {
     { id: 'viewSupport', name: 'Đơn hỗ trợ', icon: '📫' },
     { id: 'voucher', name: 'Vouchers', icon: '🎫' },
     { id: 'feedback', name: 'Đánh giá sản phẩm', icon: '📢' },
-    { id: 'blogManager', name: 'Blog', icon: '📰' }
+    { id: 'blogManager', name: 'Blog', icon: '📰' },
+    { id: 'skincareRoutineManager', name: 'Quy trình chăm sóc da', icon: '💆‍♀️' }
   ];
 
   useEffect(() => {

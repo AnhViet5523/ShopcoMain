@@ -119,15 +119,14 @@ const Product = () => {
   const [previewUrl, setPreviewUrl] = useState(null); // Thêm state để lưu URL xem trước của ảnh
 
   const sidebarItems = [
-    { id: 'revenue', name: 'Doanh thu', icon: '📊' },
-    { id: 'staff', name: 'Nhân viên', icon: '👤' },
-    { id: 'viewOrder', name: 'Đơn hàng', icon: '📋' },
-    { id: 'product', name: 'Sản phẩm', icon: '📦' },
-    { id: 'viewCustomer', name: 'Hồ sơ khách hàng', icon: '📝' },
-    { id: 'viewSupport', name: 'Đơn hỗ trợ', icon: '📫' },
-    { id: 'voucher', name: 'Vouchers', icon: '🎫' },
-    { id: 'feedback', name: 'Đánh giá sản phẩm', icon: '📢' },
-    { id: 'blogManager', name: 'Blog', icon: '📰' }
+    { id: 'ViewOrder', name: 'Đơn hàng', icon: '📋' },
+    { id: 'Product', name: 'Sản phẩm', icon: '📦' },
+    { id: 'ViewCustomer', name: 'Hồ sơ khách hàng', icon: '📝' },
+    { id: 'ViewSupport', name: 'Đơn hỗ trợ', icon: '📫' },
+    { id: 'Voucher', name: 'Vouchers', icon: '🎫' },
+    { id: 'Feedback', name: 'Đánh giá sản phẩm', icon: '📢' },
+    { id: 'BlogManager', name: 'Blog', icon: '📰' },
+    { id: 'SkincareRoutineManager', name: 'Quy trình chăm sóc da', icon: '💆‍♀️' }
   ];
 
   const tabs = ['Tất cả', 'Hàng mới nhập', 'Hàng sắp hết'];
