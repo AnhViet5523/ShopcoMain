@@ -119,14 +119,16 @@ const Product = () => {
   const [previewUrl, setPreviewUrl] = useState(null); // Thêm state để lưu URL xem trước của ảnh
 
   const sidebarItems = [
-    { id: 'ViewOrder', name: 'Đơn hàng', icon: '📋' },
-    { id: 'Product', name: 'Sản phẩm', icon: '📦' },
-    { id: 'ViewCustomer', name: 'Hồ sơ khách hàng', icon: '📝' },
-    { id: 'ViewSupport', name: 'Đơn hỗ trợ', icon: '📫' },
-    { id: 'Voucher', name: 'Vouchers', icon: '🎫' },
-    { id: 'Feedback', name: 'Đánh giá sản phẩm', icon: '📢' },
-    { id: 'BlogManager', name: 'Blog', icon: '📰' },
-    { id: 'SkincareRoutineManager', name: 'Quy trình chăm sóc da', icon: '💆‍♀️' }
+    { id: 'revenue', name: 'Doanh thu', icon: '📊' }, 
+    { id: 'staff', name: 'Nhân viên', icon: '👤' }, 
+    { id: 'viewOrder', name: 'Đơn hàng', icon: '📋' }, 
+    { id: 'product', name: 'Sản phẩm', icon: '📦' }, 
+    { id: 'viewCustomer', name: 'Hồ sơ khách hàng', icon: '📝' }, 
+    { id: 'viewSupport', name: 'Đơn hỗ trợ', icon: '📫' }, 
+    { id: 'voucher', name: 'Vouchers', icon: '🎫' }, 
+    { id: 'feedback', name: 'Đánh giá sản phẩm', icon: '📢' }, 
+    { id: 'blogManager', name: 'Blog', icon: '📰' }, 
+    { id: 'SkincareRoutineManager', name: 'Quy trình chăm sóc da', icon: '💆‍♀️' } 
   ];
 
   const tabs = ['Tất cả', 'Hàng mới nhập', 'Hàng sắp hết'];
@@ -817,9 +819,6 @@ const Product = () => {
     }
   };
   
-  // Thêm options cho status vào component
-  const statusOptions = ['Available', 'Unavailable', 'OutOfStock'];
-
   // Thêm hàm formatCurrency để định dạng số tiền
   const formatCurrency = (value) => {
     if (!value) return '';
@@ -1344,9 +1343,9 @@ const Product = () => {
           // Đổi từ productService.updateMainImage sang productImageService.setMainImage
           console.log(`Cập nhật ảnh đại diện, sản phẩm ID: ${selectedProduct.ProductID}, ảnh ID: ${mainImage.imageID}`);
           await productImageService.setMainImage(selectedProduct.ProductID, mainImage.imageID);
-          console.log("Đã đặt ảnh đại diện:", mainImage.imageID);
+          console.log("Main image set successfully");
         } catch (error) {
-          console.error('Lỗi khi đặt ảnh đại diện:', error);
+          console.error("Error setting main image:", error);
           // Tiếp tục xử lý các phần khác, không dừng lại
         }
       }
@@ -1617,7 +1616,7 @@ const Product = () => {
   const handleDragStart = (e, image) => {
     setDraggedItem(image);
     e.dataTransfer.effectAllowed = 'move';
-    // Cần phải thiết lập dữ liệu để Firefox hoạt động
+    // Cần thiết để cho phép thả
     e.dataTransfer.setData('text/plain', '');
   };
 
@@ -2599,7 +2598,7 @@ const Product = () => {
                   value={newProduct.quantity}
                   onChange={handleInputChange}
                   disabled={editingProductId !== null}
-                  helperText={editingProductId !== null ? "Số lượng chỉ có thể thay đổi thông qua chức năng nhập kho" : ""}
+                  helperText="Số lượng chỉ có thể thay đổi thông qua chức năng nhập kho"
                 />
               </Grid>
               <Grid item xs={12}>
@@ -3079,8 +3078,8 @@ const Product = () => {
                 productImages.map((image, index) => (
                   <Box 
                     key={index} 
-                    sx={{
-                      border: '1px solid #ddd',
+                    sx={{ 
+                      border: '1px solid #ddd', 
                       borderRadius: '4px',
                       overflow: 'hidden',
                       position: 'relative'
@@ -3249,7 +3248,7 @@ const Product = () => {
                         <Box 
                           sx={{ 
                             p: 2, 
-                            border: '1px solid #ddd', 
+                            border: '1px solid #ddd',
                             borderRadius: '4px',
                             display: 'flex',
                             alignItems: 'center',
@@ -3296,8 +3295,7 @@ const Product = () => {
                                           color: 'white',
                                           padding: '4px 8px',
                                           fontSize: '12px',
-                                          borderRadius: '0 0 0 4px',
-                                          zIndex: 1
+                                          borderRadius: '0 0 4px 0'
                                         }}>
                                           Ảnh đại diện
                                         </div>
