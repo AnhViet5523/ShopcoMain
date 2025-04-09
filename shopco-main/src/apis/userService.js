@@ -313,6 +313,20 @@ const userService = {
             throw error;
         }
     },
+
+    // Thay đổi mật khẩu người dùng
+    changePassword: async (userId, currentPassword, newPassword) => {
+        try {
+            const response = await axiosClient.put(`/api/Users/${userId}/change-password`, {
+                currentPassword,
+                newPassword
+            });
+            return response;
+        } catch (error) {
+            console.error('Error changing password:', error);
+            throw error;
+        }
+    },
     // Hàm mới: kiểm tra và sửa role người dùng nếu cần
     fixUserRole: () => {
         try {
